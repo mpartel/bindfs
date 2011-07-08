@@ -1,0 +1,338 @@
+.TH BINDFS 1
+
+
+.SH NAME
+bindfs \(hy mount \-\-bind in user\-space
+
+
+.SH SYNOPSIS
+\fBbindfs\fP [\fIoptions\fP]\fI dir mountpoint
+
+
+.SH DESCRIPTION
+A FUSE filesystem for mirroring the contents of a directory to another
+directory. Additionally, one can change the permissions
+of files in the mirrored directory.
+
+
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Displays a help message and exits.
+
+.TP
+.B \-V, \-\-version
+Displays version information and exits.
+
+.TP
+.B \-u, \-\-user, \-\-owner=\fIuser\fP, \-o owner=...
+Makes all files owned by the specified user.
+Also causes chown on the mounted filesystem to always fail.
+
+.TP
+.B \-g, \-\-group=\fIgroup\fP, \-o group=...
+Makes all files owned by the specified group.
+Also causes chgrp on the mounted filesystem to always fail.
+
+.TP
+.B \-p, \-\-perms=\fIpermissions\fP, \-o perms=...
+Takes a comma\- or colon\-separated list of chmod\-like permission
+specifications to be applied to the permission bits in order.
+See \fB\%PERMISSION \%SPECIFICATION\fP below for details.
+
+This only affects how the permission bits of existing files are altered
+when shown in the mounted directory. You can use \-\-create\-with\-perms to
+change the permissions that newly created files get in the source directory.
+
+Note that, as usual, the root user isn't bound by the permissions set here.
+You can get a truly read-only mount by using \fB-r\fP.
+
+.TP
+.B \-m, \-\-mirror=\fIusers\fP, \-o mirror=...
+Takes a comma\- or colon\-separated list of users who will see themselves as
+the owners of all files. Users who are not listed here will still be able
+to access the mount if the permissions otherwise allow them to.
+
+You can also give a group name prefixed with an '@' to mirror all members of
+a group. This will not change which group the files are shown to have.
+
+.TP
+.B \-M, \-\-mirror\-only=\fIusers\fP, \-o mirror\-only=...
+Like \fB\-\-mirror\fP but disallows access for all other users (except root).
+
+.TP
+.B \-n, \-\-no\-allow\-other, \-o no\-allow\-other
+Does not add \fB\-o allow_other\fP to FUSE options.
+This causes the mount to be accessible only by the current user.
+
+
+.SH FILE CREATION POLICY
+New files and directories are created so they are owned by the mounter.
+bindfs can let this happen (the default for normal users),
+or it can try to change the owner to the uid/gid of the process that
+wants to create the file (the default for root).  It is also possible to
+have bindfs try to change the owner to a particular user or group.
+
+.TP
+.B \-\-create\-as\-user, \-o create\-as\-user
+Tries to change the owner and group of new files and directories to the
+uid and gid of the caller. This can work only if the mounter is root.
+It is also the default behavior (mimicing mount \-\-bind) if the mounter is root.
+
+.TP
+.B \-\-create\-as\-mounter, \-o create\-as\-mounter
+All new files and directories will be owned by the mounter.
+This is the default behavior for non\-root mounters.
+
+.TP
+.B \-\-create\-for\-user=\fIuser\fP, \-o create\-for\-user=...
+Tries to change the owner of new files and directories to the user
+specified here.  This can work only if the mounter is root.  This
+option overrides the \-\-create\-as\-user and \-\-create\-as\-mounter options.
+
+.TP
+.B \-\-create\-for\-group=\fIgroup\fP, \-o create\-for\-group=...
+Tries to change the owning group of new files and directories to the 
+group specified here.  This can work only if the mounter is root.  This
+option overrides the \-\-create\-as\-user and \-\-create\-as\-mounter options.
+
+.TP
+.B \-\-create\-with\-perms=\fIpermissions\fP, \-o create\-with\-perms=...
+Works like \-\-perms but is applied to the permission bits of new files
+get in the source directory.
+Normally the permissions of new files depend on the creating process's
+preferences and umask.
+This option can be used to modify those permissions or override
+them completely.
+See \fB\%PERMISSION \%SPECIFICATION\fP below for details.
+
+
+.SH CHOWN/CHGRP POLICY
+The behaviour on chown/chgrp calls can be changed. By default they are passed
+through to the source directory even if bindfs is set to show
+a fake owner/group. A chown/chgrp call will only succeed if the user has
+enough mirrored permissions to chmod the mirrored file AND
+the mounter has enough permissions to chmod the real file.
+
+.TP
+.B \-\-chown\-normal, \-o chown\-normal
+Tries to chown the underlying file. This is the default.
+
+.TP
+.B \-\-chown\-ignore, \-o chown\-ignore
+Lets chown succeed (if the user has enough mirrored permissions)
+but actually does nothing. A combined chown/chgrp is effectively turned
+into a chgrp-only request.
+
+.TP
+.B \-\-chown\-deny, \-o chown\-deny
+Makes chown always fail with a 'permission denied' error.
+A combined chown/chgrp request will fail as well.
+
+.TP
+.B \-\-chgrp\-normal, \-o chgrp\-normal
+Tries to chgrp the underlying file. This is the default.
+
+.TP
+.B \-\-chgrp\-ignore, \-o chgrp\-ignore
+Lets chgrp succeed (if the user has enough mirrored permissions)
+but actually does nothing. A combined chown/chgrp is effectively turned into a
+chown-only request.
+
+.TP
+.B \-\-chgrp\-deny, \-o chgrp\-deny
+Makes chgrp always fail with a 'permission denied' error.
+A combined chown/chgrp request will fail as well.
+
+
+.SH CHMOD POLICY
+Chmod calls are forwarded to the source directory by default.
+This may cause unexpected behaviour if bindfs is altering permission bits.
+
+.TP
+.B \-\-chmod\-normal, \-o chmod\-normal
+Tries to chmod the underlying file. This will succeed if the user has
+the appropriate mirrored permissions to chmod the mirrored file AND
+the mounter has enough permissions to chmod the real file.
+This is the default (in order to behave like mount \-\-bind by default).
+
+.TP
+.B \-\-chmod\-ignore, \-o chmod\-ignore
+Lets chmod succeed (if the user has enough mirrored permissions)
+but actually does nothing.
+
+.TP
+.B \-\-chmod\-deny, \-o chmod\-deny
+Makes chmod always fail with a 'permission denied' error.
+
+.TP
+.B \-\-chmod\-allow\-x, \-o chmod\-allow\-x
+Allows setting and clearing the executable attribute on files
+(but not directories). When used with \-\-chmod\-ignore,
+chmods will only affect execute bits on files and changes to other bits are
+discarded.
+With \-\-chmod\-deny, all chmods that would change any bits except
+excecute bits on files will still fail with a 'permission denied'.
+This option does nothing with \-\-chmod\-normal.
+
+
+.SH XATTR POLICY
+Extended attributes are mirrored by default,
+though not all underlying file systems support xattrs.
+
+.TP
+.B \-\-xattr\-none, \-o xattr\-none
+Disable extended attributes altogether. All operations will
+return 'Operation not supported'.
+
+.TP
+.B \-\-xattr\-ro, \-o xattr\-ro
+Let extended attributes be read\-only.
+
+.TP
+.B \-\-xattr\-rw, \-o xattr\-rw
+Let extended attributes be read\-write (the default).
+The read/write permissions are checked against the (possibly modified)
+file permissions inside the mount.
+
+
+.SH TIME-RELATED OPTIONS
+
+Recall that a unix file has three standard timestamps:
+\fBatime\fP (last access i.e. read time),
+\fBmtime\fP (last content modification time)
+\fBctime\fP (last content or metadata (inode) change time)
+
+It may sometimes be useful to alter these timestamps, but care should be taken
+not to cause programs (e.g. backup jobs) to miss important changes.
+
+.TP
+.B \-\-ctime\-from-mtime, \-o ctime\-from\-mtime
+Reads the ctime of each file and directory from its mtime.
+In other words, only content modifications (as opposed to metadata changes)
+will be reflected in a mirrored file's ctime.
+(The underlying file's ctime will still be updated normally.)
+
+
+.SH FUSE OPTIONS
+.TP
+.B \-o \fIoptions
+Fuse options.
+
+.TP
+.B \-r, \-o ro
+Make the mount strictly read-only.
+This even prevents root from writing to it.
+If this is all you need, then (since Linux 2.6.26) you can get a
+more efficent mount with \fBmount \-\-bind\fP and then \fBmount \-o remount,ro\fP.
+
+.TP
+.B \-d, \-o debug
+Enable debug output (implies \-f).
+
+.TP
+.B \-f
+Foreground operation.
+
+.TP
+.B \-s
+Disable multithreaded operation. bindfs should be thread-safe.
+
+
+.SH PERMISSION SPECIFICATION
+The \fB\-p\fP option takes a comma\- or colon\-separated list of either octal
+numeric permission bits or symbolic representations of permission bit
+operations.
+The symbolic representation is based on that of the  \fBchmod\fP(1) command.
+setuid, setgid and sticky bits are ignored.
+
+This program extends the chmod symbolic representation with the following
+operands:
+
+`\fBD\fP' (right hand side)
+    Works like \fBX\fP but applies only to directories (not to executables).
+
+`\fBd\fP' and `\fBf\fP' (left hand side)
+    Makes this directive only apply to directories (d) or files (f).
+    e.g. \fBgd\-w\fP would remove the group write bit from all directories.
+
+`\fBu\fP', `\fBg\fP', `\fBo\fP' (right hand side)
+    Uses the user (u), group (g) or others (o) permission bits of
+    the original file.
+    e.g. \fBg=u\fP would copy the user's permission bits to the group.
+         \fBug+o\fP would add the others' permissions to the owner and group.
+
+
+.I Examples
+.TP
+.B o\-rwx
+Removes all permission bits from others.
+
+.TP
+.B g=rD
+Allows group to read all files and enter all directories, but nothing else.
+
+.TP
+.B 0644,a+X
+Sets permission bits to 0644 and adds the execute bit for everyone
+to all directories and executables.
+
+.TP
+.B og\-x:og+rD:u=rwX:g+rw
+Removes execute bit for others and group,
+adds read and directory execute for others and group,
+sets user permissions to read, write and execute directory/executable,
+adds read and write for group.
+
+
+.SH EXAMPLES
+.BR
+.TP
+.B bindfs \-u www \-g nogroup \-p 0000,u=rD ~/mywebsite ~/public_html/mysite
+
+Publishes a website in public_html so that only the 'www' user can
+read the site.
+
+.TP
+.B bindfs \-M foo,bar,1007,@mygroup \-p 0600,u+X dir mnt
+
+Gives access to 'foo', 'bar', the user with the UID 1007 as well as
+everyone in the group 'mygroup'. Sets the permission bits to 0600,
+thus giving the specified users read/write access,
+and adds the user execute bit for directories and executables.
+
+.TP
+.B bindfs \-ono\-allow\-other,perms=a\-w somedir somedir
+
+Makes a directory read\-only and accessable only by the current user.
+
+.TP
+.B bindfs#/home/bob/shared /var/www/shared/bob  fuse  perms=0000:u+rD   0   0
+
+An example \fI/etc/fstab\fP entry. Note that the colon must be used to
+separate arguments to perms, because the comma is an option separator in
+\fI/etc/fstab\fP.
+
+
+.SH NOTES
+
+Setuid and setgid bits have no effect inside the mount.
+This is a necessary security feature of FUSE.
+
+MacFuse caches file contents by default.
+This means that changes in source files are not always immediately visible under the mount point.
+\fB\-o nolocalcaches\fP can be used to disable the cache.
+
+.SH BUGS
+
+Please report to the issue tracker on the project home page at
+http://code.google.com/p/bindfs/
+
+
+.SH AUTHOR
+Martin P\[:a]rtel <martin dot partel at gmail dot com>
+
+
+.SH SEE ALSO
+\fBchmod\fP(1), \fBfusermount\fP(1)
+

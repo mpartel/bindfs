@@ -1,0 +1,32 @@
+# Autotools stuff
+Makefile.in
+Makefile
+
+/autom4te.cache
+/aclocal.m4
+/compile
+/configure
+/depcomp
+/install-sh
+/missing
+
+/config.log
+/config.sub
+/config.guess
+/config.status
+/config.h.in
+/config.h
+/libtool
+/ltmain.sh
+/stamp-h1
+
+# C stuff
+
+*.o
+.libs
+.deps
+
+# Products
+
+src/bindfs
+

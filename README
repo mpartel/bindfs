@@ -1,0 +1,41 @@
+
+bindfs  -  http://code.google.com/p/bindfs/
+
+-- Overview --
+
+bindfs is a FUSE filesystem for mirroring a directory to another
+directory, similarly to mount --bind. The permissions of the mirrored
+directory can be altered in various ways.
+
+Some things bindfs can be used for:
+ - Making a directory read-only.
+ - Making all executables non-executable.
+ - Sharing a directory with a list of users (or groups).
+ - Modifying permission bits using rules with chmod-like syntax.
+ - Changing the permissions with which files are created.
+
+Non-root users can use almost all features, but most interesting
+use-cases need user_allow_other to be defined in /etc/fuse.conf
+
+
+-- Installation --
+
+Make sure fuse 2.5.3 or above is installed (http://fuse.sf.net/).
+Then compile and install as usual:
+./configure
+make
+make install
+
+If you want the mounts made by non-root users to be visible to other users,
+you may have to add the line user_allow_other to /etc/fuse.conf.
+
+
+-- Usage --
+
+See the bindfs --help or the man-page for instructions and examples.
+
+
+-- License --
+
+GNU General Public License version 2 or any later version.
+See the file COPYING.
