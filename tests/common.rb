@@ -77,11 +77,10 @@ def testenv(bindfs_args, &block)
     # Wait for bindfs to daemonize itself
     Process.wait bindfs_pid
 
-    # Wait for the mount to appear (fuse4bsd is sometimes slow)
+    # fuse4bsd is sometimes slow to activate the mount.
+    # http://www.freebsd.org/cgi/query-pr.cgi?pr=159102
     if `uname -a`.downcase.include? 'freebsd'
         puts "Waiting for fuse4bsd"
-        # The mount is sometimes not ready even after it appears in `mount`.
-        # If there's a better solution, I'd like to hear it.
         sleep 0.5
     end
 
