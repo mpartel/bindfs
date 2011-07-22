@@ -85,7 +85,11 @@ def testenv(bindfs_args, &block)
         sleep 0.5
     end
 
-    # TODO: check that mounting was successful
+    # Check that mount appeared in `mount`
+    if !`mount`.include? TESTDIR_NAME
+        $stderr.puts "Mount point did not appear in `mount`"
+        exit! 1
+    end
 
     testcase_ok = true
     begin
