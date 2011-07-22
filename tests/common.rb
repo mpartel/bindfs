@@ -33,6 +33,8 @@ $only_these_tests = nil
 # Prepares a test environment with a mounted directory
 def testenv(bindfs_args, &block)
 
+    # todo: less repetitive and more careful error handling and cleanup
+
     testcase_title = bindfs_args
 
     return unless $only_these_tests == nil or $only_these_tests.member? testcase_title
@@ -68,7 +70,6 @@ def testenv(bindfs_args, &block)
     rescue Exception => ex
         $stderr.puts "ERROR running bindfs"
         $stderr.puts ex
-        Dir.chdir '..'
         system("rm -Rf #{TESTDIR_NAME}")
         exit! 1
     end
