@@ -947,7 +947,7 @@ static void print_usage(const char *progname)
            "Workarounds:\n"
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
-           "  --hide-hard-links         Always report a hard link count of 0.\n"
+           "  --hide-hard-links         Always report a hard link count of 1.\n"
            "\n"
            "FUSE options:\n"
            "  -o opt[,opt,...]          Mount options.\n"
