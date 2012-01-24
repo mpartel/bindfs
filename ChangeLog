@@ -1,3 +1,7 @@
+2012-01-24  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added --hide-hard-links.
+
 2010-08-07  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Improved --help and manpage.

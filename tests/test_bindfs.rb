@@ -91,7 +91,14 @@ testenv("--ctime-from-mtime") do
     # to_i gives us prceision of 1 sec
     assert { File.stat(mf).ctime.to_i == File.stat(mf).mtime.to_i }
     assert { File.stat(sf).ctime > File.stat(sf).mtime }
-    
+end
+
+testenv("--hide-hard-links") do
+  touch('src/one')
+  ln('src/one', 'src/two')
+  
+  assert { File.stat('src/one').nlink == 2 }
+  assert { File.stat('mnt/one').nlink == 1 }
 end
 
 # Define expectation for changing [uid, gid, both]

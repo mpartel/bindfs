@@ -118,6 +118,9 @@ static struct settings {
     int num_mirrored_members;
 
     int ctime_from_mtime;
+
+    int hide_hard_links;
+    
 } settings;
 
 
@@ -256,6 +259,10 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     if (access(procpath, X_OK) == -1)
         stbuf->st_mode &= ~0111;
 
+    /* Hide hard links */
+    if (settings.hide_hard_links)
+        stbuf->st_nlink = 1;
+
     return 0;
 }
 
@@ -342,8 +349,8 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 {
     DIR *dp = get_dirp(fi);
     struct dirent *de;
-
     (void) path;
+    
     seekdir(dp, offset);
     while ((de = readdir(dp)) != NULL) {
         struct stat st;
@@ -628,7 +635,6 @@ static int bindfs_ftruncate(const char *path, off_t size,
                             struct fuse_file_info *fi)
 {
     int res;
-
     (void) path;
 
     res = ftruncate(fi->fh, size);
@@ -706,8 +712,8 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi)
 {
     int res;
-
     (void) path;
+    
     res = pread(fi->fh, buf, size, offset);
     if (res == -1)
         res = -errno;
@@ -719,8 +725,8 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
                         off_t offset, struct fuse_file_info *fi)
 {
     int res;
-
     (void) path;
+
     res = pwrite(fi->fh, buf, size, offset);
     if (res == -1)
         res = -errno;
@@ -744,6 +750,7 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
 static int bindfs_release(const char *path, struct fuse_file_info *fi)
 {
     (void) path;
+    
     close(fi->fh);
 
     return 0;
@@ -937,9 +944,10 @@ static void print_usage(const char *progname)
            "  --xattr-ro                Read-only xattr operations.\n"
            "  --xattr-rw                Read-write xattr operations (the default).\n"
            "\n"
-           "Time-related:\n"
+           "Workarounds:\n"
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
+           "  --hide-hard-links         Always report a hard link count of 0.\n"
            "\n"
            "FUSE options:\n"
            "  -o opt[,opt,...]          Mount options.\n"
@@ -986,7 +994,8 @@ enum OptionKey {
     OPTKEY_XATTR_NONE,
     OPTKEY_XATTR_READ_ONLY,
     OPTKEY_XATTR_READ_WRITE,
-    OPTKEY_CTIME_FROM_MTIME
+    OPTKEY_CTIME_FROM_MTIME,
+    OPTKEY_HIDE_HARD_LINKS
 };
 
 static int process_option(void *data, const char *arg, int key,
@@ -1060,7 +1069,11 @@ static int process_option(void *data, const char *arg, int key,
 
     case OPTKEY_CTIME_FROM_MTIME:
         settings.ctime_from_mtime = 1;
-	return 0;
+        return 0;
+
+    case OPTKEY_HIDE_HARD_LINKS:
+        settings.hide_hard_links = 1;
+        return 0;
 
     case OPTKEY_NONOPTION:
         if (!settings.mntsrc) {
@@ -1136,6 +1149,7 @@ int main(int argc, char *argv[])
         OPT2("--xattr-ro", "xattr-ro", OPTKEY_XATTR_READ_ONLY),
         OPT2("--xattr-rw", "xattr-rw", OPTKEY_XATTR_READ_WRITE),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
+        OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
         FUSE_OPT_END
     };
 
@@ -1168,6 +1182,7 @@ int main(int argc, char *argv[])
     settings.mirrored_members = NULL;
     settings.num_mirrored_members = 0;
     settings.ctime_from_mtime = 0;
+    settings.hide_hard_links = 0;
     atexit(&atexit_func);
 
     /* Parse options */

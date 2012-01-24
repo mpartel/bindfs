@@ -196,22 +196,23 @@ The read/write permissions are checked against the (possibly modified)
 file permissions inside the mount.
 
 
-.SH TIME-RELATED OPTIONS
+.SH MISCELLANEOUS WORKAROUNDS
 
+.TP
+.B \-\-ctime\-from-mtime, \-o ctime\-from\-mtime
 Recall that a unix file has three standard timestamps:
 \fBatime\fP (last access i.e. read time),
 \fBmtime\fP (last content modification time)
 \fBctime\fP (last content or metadata (inode) change time)
 
-It may sometimes be useful to alter these timestamps, but care should be taken
-not to cause programs (e.g. backup jobs) to miss important changes.
-
-.TP
-.B \-\-ctime\-from-mtime, \-o ctime\-from\-mtime
-Reads the ctime of each file and directory from its mtime.
+With this option, the ctime of each file and directory is read from its mtime.
 In other words, only content modifications (as opposed to metadata changes)
 will be reflected in a mirrored file's ctime.
-(The underlying file's ctime will still be updated normally.)
+The underlying file's ctime will still be updated normally.
+
+.TP
+.B \-\-hide-hard-links, \-o hide-hard-links
+Shows the hard link count of all files as 1.
 
 
 .SH FUSE OPTIONS
