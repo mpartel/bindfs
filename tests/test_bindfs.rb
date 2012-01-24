@@ -18,7 +18,7 @@
 #   along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-require 'common.rb'
+require './common.rb'
 
 include Errno
 
@@ -88,7 +88,8 @@ testenv("--ctime-from-mtime") do
     sleep(1.1)
     chmod(0777, mf)
     
-    assert { File.stat(mf).ctime == File.stat(mf).mtime }
+    # to_i gives us prceision of 1 sec
+    assert { File.stat(mf).ctime.to_i == File.stat(mf).mtime.to_i }
     assert { File.stat(sf).ctime > File.stat(sf).mtime }
     
 end

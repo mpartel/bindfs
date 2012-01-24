@@ -17,7 +17,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 #
-require 'common.rb'
+require './common.rb'
 
 raise "Please run this as root" unless Process.uid == 0
 
