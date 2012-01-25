@@ -1,6 +1,8 @@
 2012-01-24  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --hide-hard-links.
+	* Moved some questionable default behavior to new
+	  option --realistic-permissions.
 
 2010-08-07  Martin Pärtel <martin dot partel at gmail dot com>
 

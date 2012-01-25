@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-#   Copyright 2006,2007,2008,2009,2010 Martin Pärtel <martin.partel@gmail.com>
+#   Copyright 2006,2007,2008,2009,2010,2012 Martin Pärtel <martin.partel@gmail.com>
 #
 #   This file is part of bindfs.
 #
@@ -78,6 +78,23 @@ testenv("--create-with-perms=og=r:ogd+x") do
 
     assert { File.stat('mnt/file').mode & 0077 == 0044 }
     assert { File.stat('mnt/dir').mode & 0077 == 0055 }
+end
+
+testenv("-p 0777 --realistic-permissions", :title => '--realistic-permissions') do
+    touch('src/noexecfile')
+    touch('src/execfile')
+    chmod(0600, 'src/noexecfile')
+    chmod(0700, 'src/execfile')
+    
+    assert { File.stat('mnt/noexecfile').mode & 0777 == 0666 }
+    assert { File.stat('mnt/execfile').mode & 0777 == 0777 }
+end
+
+testenv("-p 0777", :title => '--realistic-permissions not the default') do
+    touch('src/noexecfile')
+    chmod(0600, 'src/noexecfile')
+    
+    assert { File.stat('mnt/noexecfile').mode & 0777 == 0777 }
 end
 
 testenv("--ctime-from-mtime") do

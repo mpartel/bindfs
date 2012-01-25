@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-#   Copyright 2006,2007,2008,2009,2010 Martin Pärtel <martin.partel@gmail.com>
+#   Copyright 2006,2007,2008,2009,2010,2012 Martin Pärtel <martin.partel@gmail.com>
 #
 #   This file is part of bindfs.
 #
@@ -31,15 +31,17 @@ TESTDIR_NAME = 'tmp_test_bindfs'
 $only_these_tests = nil
 
 # Prepares a test environment with a mounted directory
-def testenv(bindfs_args, &block)
+def testenv(bindfs_args, options = {}, &block)
 
+    options = {
+        :title => bindfs_args
+    }.merge(options)
+  
     # todo: less repetitive and more careful error handling and cleanup
 
-    testcase_title = bindfs_args
+    return unless $only_these_tests == nil or $only_these_tests.member? options[:title]
 
-    return unless $only_these_tests == nil or $only_these_tests.member? testcase_title
-
-    puts "--- #{testcase_title} ---"
+    puts "--- #{options[:title]} ---"
     puts "[  #{bindfs_args}  ]"
 
     begin
@@ -94,7 +96,7 @@ def testenv(bindfs_args, &block)
     begin
         yield
     rescue Exception => ex
-        $stderr.puts "ERROR: testcase `#{testcase_title}' failed"
+        $stderr.puts "ERROR: testcase `#{options[:title]}' failed"
         $stderr.puts ex
         $stderr.puts ex.backtrace
         testcase_ok = false

@@ -1,5 +1,5 @@
 /*
-    Copyright 2006,2007,2008,2009,2010 Martin Pärtel <martin.partel@gmail.com>
+    Copyright 2006,2007,2008,2009,2010,2012 Martin Pärtel <martin.partel@gmail.com>
 
     This file is part of bindfs.
 
@@ -117,8 +117,9 @@ static struct settings {
     gid_t *mirrored_members;
     int num_mirrored_members;
 
-    int ctime_from_mtime;
+    int realistic_permissions;
 
+    int ctime_from_mtime;
     int hide_hard_links;
     
 } settings;
@@ -251,13 +252,15 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     /* Apply user-defined permission bit modifications */
     stbuf->st_mode = permchain_apply(settings.permchain, stbuf->st_mode);
 
-    /* Check that we can really do what we promise */
-    if (access(procpath, R_OK) == -1)
-        stbuf->st_mode &= ~0444;
-    if (access(procpath, W_OK) == -1)
-        stbuf->st_mode &= ~0222;
-    if (access(procpath, X_OK) == -1)
-        stbuf->st_mode &= ~0111;
+    /* Check that we can really do what we promise if --realistic-permissions was given */
+    if (settings.realistic_permissions) {
+        if (access(procpath, R_OK) == -1)
+            stbuf->st_mode &= ~0444;
+        if (access(procpath, W_OK) == -1)
+            stbuf->st_mode &= ~0222;
+        if (access(procpath, X_OK) == -1)
+            stbuf->st_mode &= ~0111;
+    }
 
     /* Hide hard links */
     if (settings.hide_hard_links)
@@ -944,7 +947,8 @@ static void print_usage(const char *progname)
            "  --xattr-ro                Read-only xattr operations.\n"
            "  --xattr-rw                Read-write xattr operations (the default).\n"
            "\n"
-           "Workarounds:\n"
+           "Miscellaneous:\n"
+           "  --realistic-permissions   Hide permission bits for actions mounter can't do.\n"
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
            "  --hide-hard-links         Always report a hard link count of 1.\n"
@@ -994,6 +998,7 @@ enum OptionKey {
     OPTKEY_XATTR_NONE,
     OPTKEY_XATTR_READ_ONLY,
     OPTKEY_XATTR_READ_WRITE,
+    OPTKEY_REALISTIC_PERMISSIONS,
     OPTKEY_CTIME_FROM_MTIME,
     OPTKEY_HIDE_HARD_LINKS
 };
@@ -1067,10 +1072,12 @@ static int process_option(void *data, const char *arg, int key,
         settings.xattr_policy = XATTR_READ_WRITE;
         return 0;
 
+    case OPTKEY_REALISTIC_PERMISSIONS:
+        settings.realistic_permissions = 1;
+        return 0;
     case OPTKEY_CTIME_FROM_MTIME:
         settings.ctime_from_mtime = 1;
         return 0;
-
     case OPTKEY_HIDE_HARD_LINKS:
         settings.hide_hard_links = 1;
         return 0;
@@ -1148,6 +1155,7 @@ int main(int argc, char *argv[])
         OPT2("--xattr-none", "xattr-none", OPTKEY_XATTR_NONE),
         OPT2("--xattr-ro", "xattr-ro", OPTKEY_XATTR_READ_ONLY),
         OPT2("--xattr-rw", "xattr-rw", OPTKEY_XATTR_READ_WRITE),
+        OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
         FUSE_OPT_END
@@ -1181,6 +1189,7 @@ int main(int argc, char *argv[])
     settings.num_mirrored_users = 0;
     settings.mirrored_members = NULL;
     settings.num_mirrored_members = 0;
+    settings.realistic_permissions = 0;
     settings.ctime_from_mtime = 0;
     settings.hide_hard_links = 0;
     atexit(&atexit_func);
