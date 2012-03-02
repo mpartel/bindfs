@@ -192,18 +192,14 @@ static int is_mirrored_user(uid_t uid)
 {
     int i;
     for (i = 0; i < settings.num_mirrored_users; ++i) {
-        if (settings.mirrored_users[i] == uid)
-            break;
-    }
-    if (i < settings.num_mirrored_users) { /* found in mirrored_users */
-        return 1;
-    } else {
-        for (i = 0; i < settings.num_mirrored_members; ++i) {
-            if (user_belongs_to_group(uid, settings.mirrored_members[i]))
-                break;
-        }
-        if (i < settings.num_mirrored_members) /* found in mirrored_members */
+        if (settings.mirrored_users[i] == uid) {
             return 1;
+        }
+    }
+    for (i = 0; i < settings.num_mirrored_members; ++i) {
+        if (user_belongs_to_group(uid, settings.mirrored_members[i])) {
+            return 1;
+        }
     }
     return 0;
 }

@@ -30,6 +30,24 @@ TESTDIR_NAME = 'tmp_test_bindfs'
 # If set to an array of test names, only those will be run
 $only_these_tests = nil
 
+def fail(msg, error = nil, options = {})
+    options = {:exit => false}.merge(options)
+    if options[:msg]
+        $stderr.puts(options[:msg])
+    end
+    if error.is_a?(Exception)
+        $stderr.puts(error.message + "\n  " + error.backtrace.join("\n  "))
+    elsif error != nil
+        $stderr.puts(error.to_s)
+    end
+    exit! 1 if options[:exit]
+end
+
+def fail!(msg, error = nil, options = {})
+    options = {:exit => true}.merge(options)
+    fail(msg, error, options)
+end
+
 # Prepares a test environment with a mounted directory
 def testenv(bindfs_args, options = {}, &block)
 
@@ -47,9 +65,7 @@ def testenv(bindfs_args, options = {}, &block)
     begin
         Dir.mkdir TESTDIR_NAME
     rescue Exception => ex
-        $stderr.puts "ERROR creating testdir at #{TESTDIR_NAME}"
-        $stderr.puts ex
-        exit! 1
+        fail!("ERROR creating testdir at #{TESTDIR_NAME}", ex)
     end
 
     begin
@@ -57,9 +73,7 @@ def testenv(bindfs_args, options = {}, &block)
         Dir.mkdir 'src'
         Dir.mkdir 'mnt'
     rescue Exception => ex
-        $stderr.puts "ERROR preparing testdir at #{TESTDIR_NAME}"
-        $stderr.puts ex
-        exit! 1
+        fail!("ERROR preparing testdir at #{TESTDIR_NAME}", ex)
     end
 
     bindfs_pid = nil
@@ -70,10 +84,8 @@ def testenv(bindfs_args, options = {}, &block)
             exit! 127
         end
     rescue Exception => ex
-        $stderr.puts "ERROR running bindfs"
-        $stderr.puts ex
         system("rm -Rf #{TESTDIR_NAME}")
-        exit! 1
+        fail!("ERROR running bindfs", ex)
     end
 
     # Wait for bindfs to daemonize itself
@@ -88,17 +100,14 @@ def testenv(bindfs_args, options = {}, &block)
 
     # Check that mount appeared in `mount`
     if !`mount`.include? TESTDIR_NAME
-        $stderr.puts "Mount point did not appear in `mount`"
-        exit! 1
+        fail!("Mount point did not appear in `mount`")
     end
 
     testcase_ok = true
     begin
         yield
     rescue Exception => ex
-        $stderr.puts "ERROR: testcase `#{options[:title]}' failed"
-        $stderr.puts ex
-        $stderr.puts ex.backtrace
+        fail("ERROR: testcase `#{options[:title]}' failed", ex)
         testcase_ok = false
     end
 
@@ -107,24 +116,18 @@ def testenv(bindfs_args, options = {}, &block)
             raise Exception.new(umount_cmd + " failed with status #{$?}")
         end
     rescue Exception => ex
-        $stderr.puts "ERROR: failed to umount"
-        $stderr.puts ex
-        $stderr.puts ex.backtrace
+        fail("ERROR: failed to umount")
         testcase_ok = false
     end
 
     begin
         Dir.chdir '..'
     rescue Exception => ex
-        $stderr.puts "ERROR: failed to exit test env"
-        $stderr.puts ex
-        $stderr.puts ex.backtrace
-        exit! 1
+        fail!("ERROR: failed to exit test env")
     end
 
     unless system "rm -Rf #{TESTDIR_NAME}"
-        $stderr.puts "ERROR: failed to clear test directory"
-        exit! 1
+        fail!("ERROR: failed to clear test directory")
     end
 
     if testcase_ok
