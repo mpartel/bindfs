@@ -181,6 +181,7 @@ static void print_usage(const char *progname);
 static void atexit_func();
 static int process_option(void *data, const char *arg, int key,
                           struct fuse_args *outargs);
+static int parse_mirrored_users(char* mirror);
 
 static int is_mirroring_enabled()
 {
@@ -1099,13 +1100,63 @@ static int process_option(void *data, const char *arg, int key,
     }
 }
 
+static int parse_mirrored_users(char* mirror)
+{
+    int i;
+    int j;
+    char *p, *tmpstr;
+
+    settings.num_mirrored_users = count_chars(mirror, ',') +
+                                    count_chars(mirror, ':') + 1;
+    settings.num_mirrored_members = ((*mirror == '@') ? 1 : 0) +
+                                    count_substrs(mirror, ",@") +
+                                    count_substrs(mirror, ":@");
+    settings.num_mirrored_users -= settings.num_mirrored_members;
+    settings.mirrored_users = malloc(settings.num_mirrored_users*sizeof(uid_t));
+    settings.mirrored_members = malloc(settings.num_mirrored_members*sizeof(gid_t));
+
+    i = 0; /* iterate over mirrored_users */
+    j = 0; /* iterate over mirrored_members */
+    p = mirror;
+    while (i < settings.num_mirrored_users || j < settings.num_mirrored_members) {
+        tmpstr = strdup_until(p, ",:");
+
+        if (*tmpstr == '@') { /* This is a group name */
+            if (!group_gid(tmpstr + 1, &settings.mirrored_members[j++])) {
+                fprintf(stderr, "Invalid group ID: '%s'\n", tmpstr + 1);
+                free(tmpstr);
+                return 0;
+            }
+        } else {
+            if (!user_uid(tmpstr, &settings.mirrored_users[i++])) {
+                fprintf(stderr, "Invalid user ID: '%s'\n", tmpstr);
+                free(tmpstr);
+                return 0;
+            }
+        }
+        free(tmpstr);
+
+        while (*p != '\0' && *p != ',' && *p != ':')
+            ++p;
+        if (*p != '\0')
+            ++p;
+        else {
+            /* Done. The counters should match. */
+            assert(i == settings.num_mirrored_users);
+            assert(j == settings.num_mirrored_members);
+        }
+    }
+    
+    return 1;
+}
+
 
 int main(int argc, char *argv[])
 {
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
     /* Fuse's option parser will store things here. */
-    static struct OptionData {
+    struct OptionData {
         char *user;
         char *group;
         char *perms;
@@ -1115,7 +1166,7 @@ int main(int argc, char *argv[])
         char *create_for_group;
         char *create_with_perms;
         int no_allow_other;
-    } od = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0};
+    } od;
 
     #define OPT2(one, two, key) \
             FUSE_OPT_KEY(one, key), \
@@ -1161,14 +1212,11 @@ int main(int argc, char *argv[])
         FUSE_OPT_END
     };
 
-    /* General-purpose variables */
-    int i, j;
-    char *p, *tmpstr;
-
     int fuse_main_return;
 
 
     /* Initialize settings */
+    memset(&od, 0, sizeof(od));
     settings.progname = argv[0];
     settings.permchain = permchain_create();
     settings.new_uid = -1;
@@ -1250,45 +1298,8 @@ int main(int argc, char *argv[])
         od.mirror = od.mirror_only;
     }
     if (od.mirror) {
-        settings.num_mirrored_users = count_chars(od.mirror, ',') +
-                                      count_chars(od.mirror, ':') + 1;
-        settings.num_mirrored_members = ((*od.mirror == '@') ? 1 : 0) +
-                                        count_substrs(od.mirror, ",@") +
-                                        count_substrs(od.mirror, ":@");
-        settings.num_mirrored_users -= settings.num_mirrored_members;
-        settings.mirrored_users = malloc(settings.num_mirrored_users*sizeof(uid_t));
-        settings.mirrored_members = malloc(settings.num_mirrored_members*sizeof(gid_t));
-
-        i = 0; /* iterate over mirrored_users */
-        j = 0; /* iterate over mirrored_members */
-        p = od.mirror;
-        while (i < settings.num_mirrored_users || j < settings.num_mirrored_members) {
-            tmpstr = strdup_until(p, ",:");
-
-            if (*tmpstr == '@') { /* This is a group name */
-                if (!group_gid(tmpstr + 1, &settings.mirrored_members[j++])) {
-                    fprintf(stderr, "Invalid group ID: '%s'\n", tmpstr + 1);
-                    free(tmpstr);
-                    return 1;
-                }
-            } else {
-                if (!user_uid(tmpstr, &settings.mirrored_users[i++])) {
-                    fprintf(stderr, "Invalid user ID: '%s'\n", tmpstr);
-                    free(tmpstr);
-                    return 1;
-                }
-            }
-            free(tmpstr);
-
-            while (*p != '\0' && *p != ',' && *p != ':')
-                ++p;
-            if (*p != '\0')
-                ++p;
-            else {
-                /* Done. The counters should match. */
-                assert(i == settings.num_mirrored_users);
-                assert(j == settings.num_mirrored_members);
-            }
+        if (!parse_mirrored_users(od.mirror)) {
+            return 0;
         }
     }
 
