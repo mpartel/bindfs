@@ -194,6 +194,14 @@ root_testenv("--chown-deny") do
     chown(nil, 'nogroup', 'mnt/file')
 end
 
+root_testenv("--mirror=root") do
+    touch('src/file')
+    chown('nobody', 'nogroup', 'src/file')
+
+    assert { File.stat('mnt/file').uid == 0 }
+    assert { File.stat('mnt/file').gid == $nogroup_gid }
+end
+
 testenv("--chmod-allow-x --chmod-ignore") do 
     touch('src/file')
 
