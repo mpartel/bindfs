@@ -1,5 +1,9 @@
 2012-01-24  Martin Pärtel <martin dot partel at gmail dot com>
 
+	* Added --map.
+
+2012-01-24  Martin Pärtel <martin dot partel at gmail dot com>
+
 	* Added --hide-hard-links.
 	* Moved some questionable default behavior to new
 	  option --realistic-permissions.

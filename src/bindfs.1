@@ -15,15 +15,7 @@ directory. Additionally, one can change the permissions
 of files in the mirrored directory.
 
 
-.SH OPTIONS
-.TP
-.B \-h, \-\-help
-Displays a help message and exits.
-
-.TP
-.B \-V, \-\-version
-Displays version information and exits.
-
+.SH FILE OWNERSHIP
 .TP
 .B \-u, \-\-user, \-\-owner=\fIuser\fP, \-o owner=...
 Makes all files owned by the specified user.
@@ -48,7 +40,7 @@ Note that, as usual, the root user isn't bound by the permissions set here.
 You can get a truly read-only mount by using \fB-r\fP.
 
 .TP
-.B \-m, \-\-mirror=\fIusers\fP, \-o mirror=...
+.B \-m, \-\-mirror=\fIuser1:user2:...\fP, \-o mirror=...
 Takes a comma\- or colon\-separated list of users who will see themselves as
 the owners of all files. Users who are not listed here will still be able
 to access the mount if the permissions otherwise allow them to.
@@ -57,13 +49,19 @@ You can also give a group name prefixed with an '@' to mirror all members of
 a group. This will not change which group the files are shown to have.
 
 .TP
-.B \-M, \-\-mirror\-only=\fIusers\fP, \-o mirror\-only=...
+.B \-M, \-\-mirror\-only=\fIuser1:user2:...\fP, \-o mirror\-only=...
 Like \fB\-\-mirror\fP but disallows access for all other users (except root).
 
 .TP
-.B \-n, \-\-no\-allow\-other, \-o no\-allow\-other
-Does not add \fB\-o allow_other\fP to FUSE options.
-This causes the mount to be accessible only by the current user.
+.B \-\-map=\fIuser1/user2:@group1/@group2:...\fP, \-o map=...
+Given a mapping \fIuser1/user2\fP, all files owned by user1 are shown
+as owned by user2. Additionally, when user2 creates files, they are chowned
+to user1 in the underlying directory. Works similarly for groups.
+
+A single user or group may appear no more than once on the left and once on the
+right of a slash in the list of mappings.
+Currently, the options \fB--user\fP, \fB--group\fP, \fB--mirror\fP and
+\fB--create-for-*\fP override the corresponding behavior of this option.
 
 
 .SH FILE CREATION POLICY
@@ -197,6 +195,19 @@ file permissions inside the mount.
 
 
 .SH MISCELLANEOUS OPTIONS
+
+.TP
+.B \-h, \-\-help
+Displays a help message and exits.
+
+.TP
+.B \-V, \-\-version
+Displays version information and exits.
+
+.TP
+.B \-n, \-\-no\-allow\-other, \-o no\-allow\-other
+Does not add \fB\-o allow_other\fP to FUSE options.
+This causes the mount to be accessible only by the current user.
 
 .TP
 .B \-\-realistic\-permissions, \-o realistic\-permissions

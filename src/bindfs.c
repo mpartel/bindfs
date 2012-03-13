@@ -64,6 +64,7 @@
 #include "debug.h"
 #include "permchain.h"
 #include "userinfo.h"
+#include "usermap.h"
 #include "misc.h"
 
 /* SETTINGS */
@@ -77,6 +78,12 @@ static struct settings {
     const char *mntsrc;
     const char *mntdest;
     int mntsrc_fd;
+    
+    char* original_working_dir;
+    mode_t original_umask;
+    
+    UserMap* usermap; /* From the --map option. */
+    UserMap* usermap_reverse;
 
     enum CreatePolicy {
         CREATE_AS_USER,
@@ -178,10 +185,13 @@ static int bindfs_fsync(const char *path, int isdatasync,
 
 
 static void print_usage(const char *progname);
-static void atexit_func();
 static int process_option(void *data, const char *arg, int key,
                           struct fuse_args *outargs);
 static int parse_mirrored_users(char* mirror);
+static int parse_user_map(UserMap *map, UserMap *reverse_map, char *spec);
+static char* get_working_dir();
+static void maybe_stdout_stderr_to_file();
+static void atexit_func();
 
 static int is_mirroring_enabled()
 {
@@ -229,6 +239,10 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     if (settings.ctime_from_mtime)
         stbuf->st_ctime = stbuf->st_mtime;
 
+    /* Possibly map user/group */
+    stbuf->st_uid = usermap_get_uid(settings.usermap, stbuf->st_uid);
+    stbuf->st_gid = usermap_get_gid(settings.usermap, stbuf->st_gid);
+    
     /* Report user-defined owner/group if specified */
     if (settings.new_uid != -1)
         stbuf->st_uid = settings.new_uid;
@@ -243,25 +257,25 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
         return 0;
     }
 
-    if ((stbuf->st_mode & S_IFLNK) == S_IFLNK)
-        return 0; /* don't bother with symlink permissions -- they don't matter */
-
-    /* Apply user-defined permission bit modifications */
-    stbuf->st_mode = permchain_apply(settings.permchain, stbuf->st_mode);
-
-    /* Check that we can really do what we promise if --realistic-permissions was given */
-    if (settings.realistic_permissions) {
-        if (access(procpath, R_OK) == -1)
-            stbuf->st_mode &= ~0444;
-        if (access(procpath, W_OK) == -1)
-            stbuf->st_mode &= ~0222;
-        if (access(procpath, X_OK) == -1)
-            stbuf->st_mode &= ~0111;
-    }
-
     /* Hide hard links */
     if (settings.hide_hard_links)
         stbuf->st_nlink = 1;
+
+    /* Then permission bits. Symlink permissions don't matter, though. */
+    if ((stbuf->st_mode & S_IFLNK) != S_IFLNK) {
+        /* Apply user-defined permission bit modifications */
+        stbuf->st_mode = permchain_apply(settings.permchain, stbuf->st_mode);
+
+        /* Check that we can really do what we promise if --realistic-permissions was given */
+        if (settings.realistic_permissions) {
+            if (access(procpath, R_OK) == -1)
+                stbuf->st_mode &= ~0444;
+            if (access(procpath, W_OK) == -1)
+                stbuf->st_mode &= ~0222;
+            if (access(procpath, X_OK) == -1)
+                stbuf->st_mode &= ~0111;
+        }
+    }
 
     return 0;
 }
@@ -270,6 +284,8 @@ static void *bindfs_init()
 {
     assert(settings.permchain != NULL);
     assert(settings.mntsrc_fd > 0);
+    
+    maybe_stdout_stderr_to_file();
 
     if (fchdir(settings.mntsrc_fd) != 0) {
         fprintf(
@@ -376,8 +392,8 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
     int res;
     struct fuse_context *fc;
-    uid_t file_owner = -1;
-    gid_t file_group = -1;
+    uid_t file_owner;
+    gid_t file_group;
 
     path = process_path(path);
 
@@ -390,11 +406,15 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
     if (res == -1)
         return -errno;
 
+    fc = fuse_get_context();
+    
     if (settings.create_policy == CREATE_AS_USER) {
-        fc = fuse_get_context();
         file_owner = fc->uid;
         file_group = fc->gid;
     }
+    
+    file_owner = usermap_get_uid_or_none(settings.usermap_reverse, fc->uid);
+    file_group = usermap_get_gid_or_none(settings.usermap_reverse, fc->gid);
 
     if (settings.create_for_uid != -1)
         file_owner = settings.create_for_uid;
@@ -414,8 +434,8 @@ static int bindfs_mkdir(const char *path, mode_t mode)
 {
     int res;
     struct fuse_context *fc;
-    uid_t file_owner = -1;
-    gid_t file_group = -1;
+    uid_t file_owner;
+    gid_t file_group;
 
     path = process_path(path);
 
@@ -426,11 +446,15 @@ static int bindfs_mkdir(const char *path, mode_t mode)
     if (res == -1)
         return -errno;
 
+    fc = fuse_get_context();
+    
     if (settings.create_policy == CREATE_AS_USER) {
-        fc = fuse_get_context();
         file_owner = fc->uid;
         file_group = fc->gid;
     }
+    
+    file_owner = usermap_get_uid_or_none(settings.usermap_reverse, fc->uid);
+    file_group = usermap_get_gid_or_none(settings.usermap_reverse, fc->gid);
 
     if (settings.create_for_uid != -1)
         file_owner = settings.create_for_uid;
@@ -476,8 +500,8 @@ static int bindfs_symlink(const char *from, const char *to)
 {
     int res;
     struct fuse_context *fc;
-    uid_t file_owner = -1;
-    gid_t file_group = -1;
+    uid_t file_owner;
+    gid_t file_group;
 
     to = process_path(to);
 
@@ -485,11 +509,15 @@ static int bindfs_symlink(const char *from, const char *to)
     if (res == -1)
         return -errno;
 
+    fc = fuse_get_context();
+    
     if (settings.create_policy == CREATE_AS_USER) {
-        fc = fuse_get_context();
         file_owner = fc->uid;
         file_group = fc->gid;
     }
+    
+    file_owner = usermap_get_uid_or_none(settings.usermap_reverse, fc->uid);
+    file_group = usermap_get_gid_or_none(settings.usermap_reverse, fc->gid);
 
     if (settings.create_for_uid != -1)
         file_owner = settings.create_for_uid;
@@ -661,8 +689,8 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
 {
     int fd;
     struct fuse_context *fc;
-    uid_t file_owner = -1;
-    gid_t file_group = -1;
+    uid_t file_owner;
+    gid_t file_group;
 
     path = process_path(path);
 
@@ -673,11 +701,15 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
     if (fd == -1)
         return -errno;
 
+    fc = fuse_get_context();
+
     if (settings.create_policy == CREATE_AS_USER) {
-        fc = fuse_get_context();
         file_owner = fc->uid;
         file_group = fc->gid;
     }
+    
+    file_owner = usermap_get_uid_or_none(settings.usermap_reverse, fc->uid);
+    file_group = usermap_get_gid_or_none(settings.usermap_reverse, fc->gid);
 
     if (settings.create_for_uid != -1)
         file_owner = settings.create_for_uid;
@@ -903,14 +935,14 @@ static void print_usage(const char *progname)
            "  -h      --help            Print this and exit.\n"
            "  -V      --version         Print version number and exit.\n"
            "\n"
-           "Options:\n"
+           "File ownership:\n"
            "  -u      --user, --owner   Set file owner.\n"
            "  -g      --group           Set file group.\n"
            "  -m      --mirror          Comma-separated list of users who will see\n"
            "                            themselves as the owners of all files.\n"
            "  -M      --mirror-only     Like --mirror but disallow access for\n"
            "                            all other users.\n"
-           "  -n      --no-allow-other  Do not add -o allow_other to fuse options.\n"
+           " --map=user1/user2:...      Let user2 see files of user1 as his own.\n"
            "\n"
            "Permission bits:\n"
            "  -p      --perms           Specify permissions, similar to chmod\n"
@@ -945,6 +977,7 @@ static void print_usage(const char *progname)
            "  --xattr-rw                Read-write xattr operations (the default).\n"
            "\n"
            "Miscellaneous:\n"
+           "  -n      --no-allow-other  Do not add -o allow_other to fuse options.\n"
            "  --realistic-permissions   Hide permission bits for actions mounter can't do.\n"
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
@@ -962,18 +995,6 @@ static void print_usage(const char *progname)
            progname);
 }
 
-
-static void atexit_func()
-{
-    permchain_destroy(settings.permchain);
-    settings.permchain = NULL;
-    permchain_destroy(settings.create_permchain);
-    settings.create_permchain = NULL;
-    free(settings.mirrored_users);
-    settings.mirrored_users = NULL;
-    free(settings.mirrored_members);
-    settings.mirrored_members = NULL;
-}
 
 enum OptionKey {
     OPTKEY_NONOPTION = -2,
@@ -1132,11 +1153,12 @@ static int parse_mirrored_users(char* mirror)
         }
         free(tmpstr);
 
-        while (*p != '\0' && *p != ',' && *p != ':')
+        while (*p != '\0' && *p != ',' && *p != ':') {
             ++p;
-        if (*p != '\0')
+        }
+        if (*p != '\0') {
             ++p;
-        else {
+        } else {
             /* Done. The counters should match. */
             assert(i == settings.num_mirrored_users);
             assert(j == settings.num_mirrored_members);
@@ -1146,6 +1168,144 @@ static int parse_mirrored_users(char* mirror)
     return 1;
 }
 
+static int parse_user_map(UserMap *map, UserMap *reverse_map, char *spec)
+{
+    char *p = spec;
+    char *tmpstr = NULL;
+    char *q;
+    uid_t uid_from, uid_to;
+    gid_t gid_from, gid_to;
+    UsermapStatus status;
+    
+    while (*p != '\0') {
+        free(tmpstr);
+        tmpstr = strdup_until(p, ",:");
+        
+        if (tmpstr[0] == '@') { /* group */
+            q = strstr(tmpstr, "/@");
+            if (!q) {
+                fprintf(stderr, "Invalid syntax: expected @group1/@group2 but got `%s`\n", tmpstr);
+                goto fail;
+            }
+            *q = '\0';
+            if (!group_gid(tmpstr + 1, &gid_from)) {
+                fprintf(stderr, "Invalid group: %s\n", tmpstr);
+                goto fail;
+            }
+            q += strlen("/@");
+            if (!group_gid(q, &gid_to)) {
+                fprintf(stderr, "Invalid group: %s\n", tmpstr);
+                goto fail;
+            }
+            
+            status = usermap_add_gid(map, gid_from, gid_to);
+            if (status != 0) {
+                fprintf(stderr, "%s\n", usermap_errorstr(status));
+                goto fail;
+            }
+            status = usermap_add_gid(reverse_map, gid_to, gid_from);
+            if (status != 0) {
+                fprintf(stderr, "%s\n", usermap_errorstr(status));
+                goto fail;
+            }
+            
+        } else {
+            
+            q = strstr(tmpstr, "/");
+            if (!q) {
+                fprintf(stderr, "Invalid syntax: expected user1/user2 but got `%s`\n", tmpstr);
+                goto fail;
+            }
+            *q = '\0';
+            if (!user_uid(tmpstr, &uid_from)) {
+                fprintf(stderr, "Invalid username: %s\n", tmpstr);
+                goto fail;
+            }
+            q += strlen("/");
+            if (!user_uid(q, &uid_to)) {
+                fprintf(stderr, "Invalid username: %s\n", tmpstr);
+                goto fail;
+            }
+            
+            status = usermap_add_uid(map, uid_from, uid_to);
+            if (status != 0) {
+                fprintf(stderr, "%s\n", usermap_errorstr(status));
+                goto fail;
+            }
+            status = usermap_add_uid(reverse_map, uid_to, uid_from);
+            if (status != 0) {
+                fprintf(stderr, "%s\n", usermap_errorstr(status));
+                goto fail;
+            }
+        }
+        
+        while (*p != '\0' && *p != ',' && *p != ':') {
+            ++p;
+        }
+        if (*p != '\0') {
+            ++p;
+        }
+    }
+    
+    free(tmpstr);
+    return 1;
+    
+fail:
+    free(tmpstr);
+    return 0;
+}
+
+static void maybe_stdout_stderr_to_file()
+{
+    /* TODO: make this a command line option. */
+#if 0
+    int fd;
+    
+    const char *filename = "bindfs.log";
+    char *path = malloc(strlen(settings.original_working_dir) + 1 + strlen(filename) + 1);
+    strcpy(path, settings.original_working_dir);
+    strcat(path, "/");
+    strcat(path, filename);
+    
+    fd = open(path, O_CREAT | O_WRONLY);
+    free(path);
+    
+    fchmod(fd, 0777 & ~settings.original_umask);
+    fflush(stdout);
+    fflush(stderr);
+    dup2(fd, 1);
+    dup2(fd, 2);
+#endif
+}
+
+static char* get_working_dir()
+{
+    size_t buf_size = 4096;
+    char* buf = malloc(buf_size);
+    while (!getcwd(buf, buf_size)) {
+        buf_size *= 2;
+        buf = realloc(buf, buf_size);
+    }
+    return buf;
+}
+
+static void atexit_func()
+{
+    free(settings.original_working_dir);
+    settings.original_working_dir = NULL;
+    usermap_destroy(settings.usermap);
+    settings.usermap = NULL;
+    usermap_destroy(settings.usermap_reverse);
+    settings.usermap_reverse = NULL;
+    permchain_destroy(settings.permchain);
+    settings.permchain = NULL;
+    permchain_destroy(settings.create_permchain);
+    settings.create_permchain = NULL;
+    free(settings.mirrored_users);
+    settings.mirrored_users = NULL;
+    free(settings.mirrored_members);
+    settings.mirrored_members = NULL;
+}
 
 int main(int argc, char *argv[])
 {
@@ -1158,6 +1318,7 @@ int main(int argc, char *argv[])
         char *perms;
         char *mirror;
         char *mirror_only;
+        char *map;
         char *create_for_user;
         char *create_for_group;
         char *create_with_perms;
@@ -1183,6 +1344,7 @@ int main(int argc, char *argv[])
         OPT_OFFSET3("-p %s", "--perms=%s", "perms=%s", perms, -1),
         OPT_OFFSET3("-m %s", "--mirror=%s", "mirror=%s", mirror, -1),
         OPT_OFFSET3("-M %s", "--mirror-only=%s", "mirror-only=%s", mirror_only, -1),
+        OPT_OFFSET2("--map=%s", "map=%s", map, -1),
         OPT_OFFSET3("-n", "--no-allow-other", "no-allow-other", no_allow_other, -1),
         OPT2("--create-as-user", "create-as-user", OPTKEY_CREATE_AS_USER),
         OPT2("--create-as-mounter", "create-as-mounter", OPTKEY_CREATE_AS_MOUNTER),
@@ -1215,12 +1377,15 @@ int main(int argc, char *argv[])
     memset(&od, 0, sizeof(od));
     settings.progname = argv[0];
     settings.permchain = permchain_create();
+    settings.usermap = usermap_create();
+    settings.usermap_reverse = usermap_create();
     settings.new_uid = -1;
     settings.new_gid = -1;
     settings.create_for_uid = -1;
     settings.create_for_gid = -1;
     settings.mntsrc = NULL;
     settings.mntdest = NULL;
+    settings.original_working_dir = get_working_dir();
     settings.create_policy = (getuid() == 0) ? CREATE_AS_USER : CREATE_AS_MOUNTER;
     settings.create_permchain = permchain_create();
     settings.chown_policy = CHOWN_NORMAL;
@@ -1237,7 +1402,7 @@ int main(int argc, char *argv[])
     settings.ctime_from_mtime = 0;
     settings.hide_hard_links = 0;
     atexit(&atexit_func);
-
+    
     /* Parse options */
     if (fuse_opt_parse(&args, &od, options, &process_option) == -1)
         return 1;
@@ -1258,6 +1423,14 @@ int main(int argc, char *argv[])
     if (od.group) {
         if (!group_gid(od.group, &settings.new_gid)) {
             fprintf(stderr, "Not a valid group ID: %s\n", od.group);
+            return 1;
+        }
+    }
+    
+    /* Parse usermap */
+    if (od.map) {
+        if (!parse_user_map(settings.usermap, settings.usermap_reverse, od.map)) {
+            /* parse_user_map printed an error */
             return 1;
         }
     }
@@ -1341,7 +1514,7 @@ int main(int argc, char *argv[])
     }
 
     /* Ignore the umask of the mounter on file creation */
-    umask(0);
+    settings.original_umask = umask(0);
 
     /* Remove xattr implementation if the user doesn't want it */
     if (settings.xattr_policy == XATTR_UNIMPLEMENTED) {

@@ -237,3 +237,59 @@ testenv("--chmod-deny --chmod-allow-x") do
     assert_exception(EPERM) { chmod(0700, 'mnt/dir') } # chmod on dir should not work
 end
 
+root_testenv("--map=nobody/root:@nogroup/@root") do
+    touch('src/file')
+    chown('nobody', 'nogroup', 'src/file')
+    
+    assert { File.stat('mnt/file').uid == 0 }
+    assert { File.stat('mnt/file').gid == 0 }
+    
+    touch('mnt/newfile')
+    mkdir('mnt/newdir')
+    
+    assert { File.stat('src/newfile').uid == $nobody_uid }
+    assert { File.stat('src/newfile').gid == $nogroup_gid }
+    assert { File.stat('src/newdir').uid == $nobody_uid }
+    assert { File.stat('src/newdir').gid == $nogroup_gid }
+    
+    assert { File.stat('mnt/newfile').uid == 0 }
+    assert { File.stat('mnt/newfile').gid == 0 }
+    assert { File.stat('mnt/newdir').uid == 0 }
+    assert { File.stat('mnt/newdir').gid == 0 }
+end
+
+root_testenv("--map=@nogroup/@root") do
+    touch('src/file')
+    chown('nobody', 'nogroup', 'src/file')
+    
+    assert { File.stat('mnt/file').gid == 0 }
+end
+
+root_testenv("--map=1/2") do
+    touch('src/file1')
+    touch('src/file2')
+    chown(1, nil, 'src/file1')
+    chown(3, nil, 'src/file2')
+    
+    assert { File.stat('mnt/file1').uid == 2 }
+    assert { File.stat('mnt/file2').uid == 3 }
+end
+
+root_testenv("--map=@1/@2:@2/@1") do
+    touch('src/file1')
+    touch('src/file2')
+    chown(nil, 1, 'src/file1')
+    chown(nil, 2, 'src/file2')
+
+    assert { File.stat('mnt/file1').gid == 2 }
+    assert { File.stat('mnt/file2').gid == 1 }
+end
+
+root_testenv("-u 1 --map=1/2:3/4") do
+    touch('src/file1')
+    touch('src/file2')
+    chown(2, nil, 'src/file1')
+    
+    assert { File.stat('mnt/file1').uid == 1 }
+    assert { File.stat('mnt/file2').uid == 1 }
+end

@@ -119,6 +119,10 @@ def testenv(bindfs_args, options = {}, &block)
         fail("ERROR: failed to umount")
         testcase_ok = false
     end
+    
+    if File.exist?("bindfs.log")
+        system("cat bindfs.log")
+    end
 
     begin
         Dir.chdir '..'
