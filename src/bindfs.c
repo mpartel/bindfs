@@ -1429,6 +1429,10 @@ int main(int argc, char *argv[])
     
     /* Parse usermap */
     if (od.map) {
+        if (getuid() != 0) {
+            fprintf(stderr, "Error: You need to be root to use --map !\n", od.group);
+            return 1;
+        }
         if (!parse_user_map(settings.usermap, settings.usermap_reverse, od.map)) {
             /* parse_user_map printed an error */
             return 1;
