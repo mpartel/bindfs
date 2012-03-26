@@ -1,3 +1,7 @@
+2012-03-26  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Made --map affect chown/chgrp results.
+
 2012-03-13  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --map.

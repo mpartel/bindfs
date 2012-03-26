@@ -142,9 +142,9 @@ def testenv(bindfs_args, options = {}, &block)
 end
 
 # Like testenv but skips the test if not running as root
-def root_testenv(bindfs_args, &block)
+def root_testenv(bindfs_args, options = {}, &block)
     if Process.uid == 0
-        testenv(bindfs_args, &block)
+        testenv(bindfs_args, options, &block)
     else
         puts "--- #{bindfs_args} ---"
         puts "[  #{bindfs_args}  ]"

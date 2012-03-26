@@ -615,6 +615,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
     if (uid != -1) {
         switch (settings.chown_policy) {
         case CHOWN_NORMAL:
+            uid = usermap_get_uid(settings.usermap_reverse, uid);
             break;
         case CHOWN_IGNORE:
             uid = -1;
@@ -627,6 +628,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
     if (gid != -1) {
         switch (settings.chgrp_policy) {
         case CHGRP_NORMAL:
+            gid = usermap_get_gid(settings.usermap_reverse, gid);
             break;
         case CHGRP_IGNORE:
             gid = -1;

@@ -293,3 +293,17 @@ root_testenv("-u 1 --map=1/2:3/4") do
     assert { File.stat('mnt/file1').uid == 1 }
     assert { File.stat('mnt/file2').uid == 1 }
 end
+
+root_testenv("--map=0/1:@0/@1", :title => "--map and chown/chgrp") do
+    touch('src/file1')
+    chown(2, 2, 'src/file1')
+    assert { File.stat('mnt/file1').uid == 2 }
+    assert { File.stat('mnt/file1').gid == 2 }
+    
+    chown(1, 1, 'mnt/file1')
+    
+    assert { File.stat('src/file1').uid == 0 }
+    assert { File.stat('src/file1').gid == 0 }
+    assert { File.stat('mnt/file1').uid == 1 }
+    assert { File.stat('mnt/file1').gid == 1 }
+end

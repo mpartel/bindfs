@@ -55,13 +55,15 @@ Like \fB\-\-mirror\fP but disallows access for all other users (except root).
 .TP
 .B \-\-map=\fIuser1/user2:@group1/@group2:...\fP, \-o map=...
 Given a mapping \fIuser1/user2\fP, all files owned by user1 are shown
-as owned by user2. Additionally, when user2 creates files, they are chowned
-to user1 in the underlying directory. Works similarly for groups.
+as owned by user2. When user2 creates files, they are chowned
+to user1 in the underlying directory. When files are chowned to user2,
+they are chowned to user1 in the underlying directory. Works similarly for groups.
 
 A single user or group may appear no more than once on the left and once on the
 right of a slash in the list of mappings.
-Currently, the options \fB--user\fP, \fB--group\fP, \fB--mirror\fP and
-\fB--create-for-*\fP override the corresponding behavior of this option.
+Currently, the options \fB--user\fP, \fB--group\fP, \fB--mirror\fP,
+\fB--create-for-*\fP, \fB--chown-*\fP and \fB--chgrp-*\fP override
+the corresponding behavior of this option.
 
 Requires mounting as root.
 
