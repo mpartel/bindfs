@@ -1501,6 +1501,10 @@ int main(int argc, char *argv[])
     /* We want the kernel to do our access checks for us based on what getattr gives it. */
     fuse_opt_add_arg(&args, "-odefault_permissions");
     
+    /* We want to mirror inodes. */
+    fuse_opt_add_arg(&args, "-ouse_ino");
+    fuse_opt_add_arg(&args, "-oreaddir_ino");
+    
     /* We need to disable the attribute cache whenever two users
        can see different attributes. For now, only mirroring can do that. */
     if (is_mirroring_enabled()) {

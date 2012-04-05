@@ -29,4 +29,5 @@ Makefile
 # Products
 
 src/bindfs
+tests/readdir_inode
 

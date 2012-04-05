@@ -41,6 +41,8 @@ $only_these_tests = ARGV unless ARGV.empty?
 $nobody_uid = nobody_uid = Etc.getpwnam('nobody').uid
 $nogroup_gid = nogroup_gid = Etc.getgrnam('nogroup').gid
 
+$tests_dir = File.dirname(File.realpath(__FILE__))
+
 
 testenv("") do
     assert { File.basename(pwd) == TESTDIR_NAME }
@@ -306,4 +308,25 @@ root_testenv("--map=0/1:@0/@1", :title => "--map and chown/chgrp") do
     assert { File.stat('src/file1').gid == 0 }
     assert { File.stat('mnt/file1').uid == 1 }
     assert { File.stat('mnt/file1').gid == 1 }
+end
+
+testenv("", :title => "preserves inode numbers") do
+    touch('src/file')
+    mkdir('src/dir')
+    assert { File.stat('mnt/file').ino == File.stat('src/file').ino }
+    assert { File.stat('mnt/dir').ino == File.stat('src/dir').ino }
+end
+
+testenv("", :title => "has readdir inode numbers") do
+    touch('src/file')
+    mkdir('src/dir')
+    
+    inodes = {}
+    for line in `#{$tests_dir}/readdir_inode mnt`.split("\n").reject(&:empty?)
+        inode, name = line.split(" ")
+        inodes[name] = inode.to_i
+    end
+    
+    assert { inodes['file'] == File.stat('src/file').ino }
+    assert { inodes['dir'] == File.stat('src/dir').ino }
 end

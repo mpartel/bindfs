@@ -1,3 +1,8 @@
+2012-04-05  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Made -ouse_ino and -oreaddir_ino the default to
+	  mirror inodes.
+
 2012-03-26  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Made --map affect chown/chgrp results.
