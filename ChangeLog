@@ -2,6 +2,7 @@
 
 	* Made -ouse_ino and -oreaddir_ino the default to
 	  mirror inodes.
+	* Released 1.10.2
 
 2012-03-26  Martin Pärtel <martin dot partel at gmail dot com>
 
