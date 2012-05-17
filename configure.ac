@@ -15,7 +15,7 @@ AC_ARG_WITH([core-foundation],
 
 
 if test x"$enable_debug" == "xyes" ; then
-	CFLAGS="${CFLAGS} -g -O0 -DMALLOC_CHECK_=2"
+	CFLAGS="${CFLAGS} -g -O0"
 	AC_DEFINE([BINDFS_DEBUG], [1], [Define to 1 to enable debugging messages])
 else
 	CFLAGS="${CFLAGS} -O2"
