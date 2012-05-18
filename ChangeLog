@@ -1,6 +1,7 @@
 2012-05-18  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed regression of --create-as-user. Added test case.
+	* Use the reentrant readdir_r().
 
 2012-04-05  Martin Pärtel <martin dot partel at gmail dot com>
 

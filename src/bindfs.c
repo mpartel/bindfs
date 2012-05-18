@@ -31,7 +31,7 @@
 
 #include <config.h>
 
-/* For pread/pwrite */
+/* For pread/pwrite and readdir_r */
 #define _XOPEN_SOURCE 500
 
 #include <stdlib.h>
@@ -395,12 +395,25 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi)
 {
     DIR *dp = get_dirp(fi);
+    struct dirent *de_buf;
     struct dirent *de;
+    struct stat st;
+    int result = 0;
     (void) path;
     
+    de_buf = malloc(offsetof(struct dirent, d_name) + pathconf(path, _PC_NAME_MAX) + 1);
+    
     seekdir(dp, offset);
-    while ((de = readdir(dp)) != NULL) {
-        struct stat st;
+    while (1) {
+        result = readdir_r(dp, de_buf, &de);
+        if (result != 0) {
+            result = -result;
+            break;
+        }
+        if (de == NULL) {
+            break;
+        }
+        
         memset(&st, 0, sizeof(st));
         st.st_ino = de->d_ino;
         st.st_mode = de->d_type << 12;
@@ -408,7 +421,8 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             break;
     }
 
-    return 0;
+    free(de_buf);
+    return result;
 }
 
 static int bindfs_releasedir(const char *path, struct fuse_file_info *fi)
