@@ -30,4 +30,5 @@ Makefile
 
 src/bindfs
 tests/readdir_inode
+tests/*.log
 
