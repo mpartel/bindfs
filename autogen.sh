@@ -41,7 +41,7 @@ echo "Running $AUTOMAKE..."
 $AUTOMAKE -a -c || exit 1
 
 if [ "$1" == "-d" ]; then
-	echo "Running configure --enable-debug"
+	echo "Running configure --enable-debug (but not --enable-debug-output)"
 	echo
 	sleep 1s
 	./configure --enable-debug

@@ -9,16 +9,21 @@ AC_PROG_LIBTOOL
 
 # --enable and --with options
 AC_ARG_ENABLE([debug],
-	[AS_HELP_STRING([--enable-debug], [enable extra debug output])])
+	[AS_HELP_STRING([--enable-debug], [enable debug symbols])])
+	AC_ARG_ENABLE([debug-output],
+	[AS_HELP_STRING([--enable-debug-output], [enable debug output])])
 AC_ARG_WITH([core-foundation],
 	AS_HELP_STRING([--with-core-foundation], [link against Core Foundation (OS X only) @<:@default=no@:>@]))
 
 
 if test x"$enable_debug" == "xyes" ; then
 	CFLAGS="${CFLAGS} -g -O0"
-	AC_DEFINE([BINDFS_DEBUG], [1], [Define to 1 to enable debugging messages])
 else
 	CFLAGS="${CFLAGS} -O2"
+fi
+
+if test x"$enable_debug_output" == "xyes" ; then
+	AC_DEFINE([BINDFS_DEBUG], [1], [Define to 1 to enable debugging messages])
 fi
 
 if test x"$with_core_foundation" == "xyes" ; then
