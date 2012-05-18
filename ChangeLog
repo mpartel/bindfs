@@ -2,6 +2,7 @@
 
 	* Fixed regression of --create-as-user. Added test case.
 	* Use the reentrant readdir_r().
+	* Released 1.10.3
 
 2012-04-05  Martin Pärtel <martin dot partel at gmail dot com>
 
