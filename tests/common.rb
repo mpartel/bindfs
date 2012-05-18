@@ -18,7 +18,7 @@
 #   along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-require 'fileutils.rb'
+require 'fileutils'
 include FileUtils
 
 # Set the default umask for all tests

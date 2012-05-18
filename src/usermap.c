@@ -48,7 +48,7 @@ UsermapStatus usermap_add_uid(UserMap *map, uid_t from, uid_t to)
         map->user_from = (uid_t*)realloc(map->user_from, map->user_capacity * sizeof(uid_t));
         map->user_to = (uid_t*)realloc(map->user_to, map->user_capacity * sizeof(uid_t));
     }
-    if (usermap_get_uid(map, from) != from) {
+    if (usermap_get_uid_or_default(map, from, -1) != -1) {
         return usermap_status_duplicate_key;
     }
     i = map->user_size;
@@ -69,7 +69,7 @@ UsermapStatus usermap_add_gid(UserMap *map, gid_t from, gid_t to)
         map->group_from = (gid_t*)realloc(map->group_from, map->group_capacity * sizeof(gid_t));
         map->group_to = (gid_t*)realloc(map->group_to, map->group_capacity * sizeof(gid_t));
     }
-    if (usermap_get_gid(map, from) != from) {
+    if (usermap_get_gid_or_default(map, from, -1) != -1) {
         return usermap_status_duplicate_key;
     }
     i = map->group_size;
@@ -88,19 +88,7 @@ const char* usermap_errorstr(UsermapStatus status)
     }
 }
 
-uid_t usermap_get_uid(UserMap *map, uid_t u)
-{
-    uid_t result = usermap_get_uid_or_none(map, u);
-    return (result != -1 ? result : u);
-}
-
-gid_t usermap_get_gid(UserMap *map, gid_t g)
-{
-    gid_t result = usermap_get_gid_or_none(map, g);
-    return (result != -1 ? result : g);
-}
-
-uid_t usermap_get_uid_or_none(UserMap *map, uid_t u)
+uid_t usermap_get_uid_or_default(UserMap *map, uid_t u, uid_t deflt)
 {
     int i;
     for (i = 0; i < map->user_size; ++i) {
@@ -108,10 +96,10 @@ uid_t usermap_get_uid_or_none(UserMap *map, uid_t u)
             return map->user_to[i];
         }
     }
-    return -1;
+    return deflt;
 }
 
-gid_t usermap_get_gid_or_none(UserMap *map, gid_t g)
+gid_t usermap_get_gid_or_default(UserMap *map, gid_t g, gid_t deflt)
 {
     int i;
     for (i = 0; i < map->group_size; ++i) {
@@ -119,5 +107,5 @@ gid_t usermap_get_gid_or_none(UserMap *map, gid_t g)
             return map->group_to[i];
         }
     }
-    return -1;
+    return deflt;
 }

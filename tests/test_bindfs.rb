@@ -74,6 +74,28 @@ testenv("-u nobody -m #{Process.uid} -p 0600,u+D") do
     assert { File.stat('mnt/file').uid == Process.uid }
 end
 
+root_testenv("", :title => "--create-as-user should be default for root") do
+  chmod(0777, 'src')
+  `su -c 'touch mnt/file' nobody`
+  `su -c 'mkdir mnt/dir' nobody`
+  `su -c 'ln -sf /tmp/foo mnt/lnk' nobody`
+  
+  assert { File.stat('mnt/file').uid == nobody_uid }
+  assert { File.stat('mnt/file').gid == nogroup_gid }
+  assert { File.stat('src/file').uid == nobody_uid }
+  assert { File.stat('src/file').gid == nogroup_gid }
+  
+  assert { File.stat('mnt/dir').uid == nobody_uid }
+  assert { File.stat('mnt/dir').gid == nogroup_gid }
+  assert { File.stat('src/dir').uid == nobody_uid }
+  assert { File.stat('src/dir').gid == nogroup_gid }
+  
+  assert { File.lstat('mnt/lnk').uid == nobody_uid }
+  assert { File.lstat('mnt/lnk').gid == nogroup_gid }
+  assert { File.lstat('src/lnk').uid == nobody_uid }
+  assert { File.lstat('src/lnk').gid == nogroup_gid }
+end
+
 testenv("--create-with-perms=og=r:ogd+x") do
     touch('src/file')
     mkdir('src/dir')

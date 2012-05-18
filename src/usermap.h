@@ -45,16 +45,10 @@ UsermapStatus usermap_add_gid(UserMap *map, gid_t from, gid_t to);
 
 const char* usermap_errorstr(UsermapStatus status);
 
-/* Returns the uid that u is mapped to, or u if none. */
-uid_t usermap_get_uid(UserMap *map, uid_t u);
+/* Returns the uid that u is mapped to, or deflt if none. */
+uid_t usermap_get_uid_or_default(UserMap *map, uid_t u, uid_t deflt);
 
-/* Returns the gid that g is mapped to, or g if none. */
-gid_t usermap_get_gid(UserMap *map, gid_t g);
-
-/* Returns the uid that u is mapped to, or -1 if none. */
-uid_t usermap_get_uid_or_none(UserMap *map, uid_t u);
-
-/* Returns the gid that g is mapped to, or -1 if none. */
-gid_t usermap_get_gid_or_none(UserMap *map, gid_t g);
+/* Returns the gid that g is mapped to, or deflt if none. */
+gid_t usermap_get_gid_or_default(UserMap *map, gid_t g, gid_t deflt);
 
 #endif
