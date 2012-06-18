@@ -2,6 +2,7 @@
 
 	* Added --valgrind support to tests/test_bindfs.rb.
 	* Fixed a memory error.
+	* Released 1.10.4
 
 2012-05-18  Martin Pärtel <martin dot partel at gmail dot com>
 
