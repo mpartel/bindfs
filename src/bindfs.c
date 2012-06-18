@@ -399,7 +399,6 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     struct dirent *de;
     struct stat st;
     int result = 0;
-    (void) path;
     
     de_buf = malloc(offsetof(struct dirent, d_name) + pathconf(path, _PC_NAME_MAX) + 1);
     

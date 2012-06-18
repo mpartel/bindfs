@@ -1,3 +1,8 @@
+2012-06-18  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added --valgrind support to tests/test_bindfs.rb.
+	* Fixed a memory error.
+
 2012-05-18  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed regression of --create-as-user. Added test case.

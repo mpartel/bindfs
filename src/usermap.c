@@ -44,7 +44,11 @@ UsermapStatus usermap_add_uid(UserMap *map, uid_t from, uid_t to)
         return usermap_status_ok;
     }
     if (map->user_size == map->user_capacity) {
-        map->user_capacity *= 2;
+        if (map->user_capacity == 0) {
+            map->user_capacity = 8;
+        } else {
+            map->user_capacity *= 2;
+        }
         map->user_from = (uid_t*)realloc(map->user_from, map->user_capacity * sizeof(uid_t));
         map->user_to = (uid_t*)realloc(map->user_to, map->user_capacity * sizeof(uid_t));
     }
@@ -65,7 +69,11 @@ UsermapStatus usermap_add_gid(UserMap *map, gid_t from, gid_t to)
         return usermap_status_ok;
     }
     if (map->group_size == map->group_capacity) {
-        map->group_capacity *= 2;
+        if (map->group_capacity == 0) {
+            map->group_capacity = 8;
+        } else {
+            map->group_capacity *= 2;
+        }
         map->group_from = (gid_t*)realloc(map->group_from, map->group_capacity * sizeof(gid_t));
         map->group_to = (gid_t*)realloc(map->group_to, map->group_capacity * sizeof(gid_t));
     }
