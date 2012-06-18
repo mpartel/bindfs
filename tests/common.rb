@@ -32,9 +32,7 @@ $only_these_tests = nil
 
 def fail(msg, error = nil, options = {})
     options = {:exit => false}.merge(options)
-    if options[:msg]
-        $stderr.puts(options[:msg])
-    end
+    $stderr.puts(msg)
     if error.is_a?(Exception)
         $stderr.puts(error.message + "\n  " + error.backtrace.join("\n  "))
     elsif error != nil
@@ -48,20 +46,51 @@ def fail!(msg, error = nil, options = {})
     fail(msg, error, options)
 end
 
+def wait_for(options = {}, &condition)
+    options = {
+        :initial_sleep => 0.01,
+        :sleep_ramp_up => 2,
+        :max_sleep => 0.5,
+        :max_time => 5
+    }.merge(options)
+    
+    start_time = Time.now
+    sleep_time = options[:initial_sleep]
+    while !`mount`.include?(`pwd`.strip)
+        sleep sleep_time
+        sleep_time = [sleep_time * options[:sleep_ramp_up], options[:max_sleep]].min
+        if Time.now - start_time > options[:max_time]
+            return false
+        end
+    end
+    true
+end
+
+def valgrind_options
+    opt = ARGV.find {|s| s.start_with?('--valgrind') }
+    if opt == nil
+        nil
+    elsif opt =~ /^--valgrind=(.*)$/
+        $1
+    else
+        ''
+    end
+end
+
 # Prepares a test environment with a mounted directory
 def testenv(bindfs_args, options = {}, &block)
 
     options = {
-        :title => bindfs_args
+        :title => bindfs_args,
+        :valgrind => valgrind_options != nil,
+        :valgrind_opts => valgrind_options
     }.merge(options)
   
     # todo: less repetitive and more careful error handling and cleanup
 
-    return unless $only_these_tests == nil or $only_these_tests.member? options[:title]
-
     puts "--- #{options[:title]} ---"
     puts "[  #{bindfs_args}  ]"
-
+    
     begin
         Dir.mkdir TESTDIR_NAME
     rescue Exception => ex
@@ -78,29 +107,21 @@ def testenv(bindfs_args, options = {}, &block)
 
     bindfs_pid = nil
     begin
-        cmd = "../#{EXECUTABLE_PATH} #{bindfs_args} src mnt"
+        cmd = "../#{EXECUTABLE_PATH} #{bindfs_args} -f src mnt"
+        if options[:valgrind]
+            cmd = "valgrind #{options[:valgrind_opts]} #{cmd}"
+        end
         bindfs_pid = Process.fork do
             exec cmd
             exit! 127
         end
     rescue Exception => ex
-        system("rm -Rf #{TESTDIR_NAME}")
         fail!("ERROR running bindfs", ex)
     end
 
-    # Wait for bindfs to daemonize itself
-    Process.wait bindfs_pid
-
-    # fuse4bsd is sometimes slow to activate the mount.
-    # http://www.freebsd.org/cgi/query-pr.cgi?pr=159102
-    if `uname -a`.downcase.include? 'freebsd'
-        puts "Waiting for fuse4bsd"
-        sleep 0.5
-    end
-
-    # Check that mount appeared in `mount`
-    if !`mount`.include? TESTDIR_NAME
-        fail!("Mount point did not appear in `mount`")
+    # Wait for bindfs to be ready.
+    if !wait_for { `mount`.include?(Dir.pwd) }
+        fail!("ERROR: Mount point did not appear in `mount`")
     end
 
     testcase_ok = true
@@ -115,6 +136,7 @@ def testenv(bindfs_args, options = {}, &block)
         unless system(umount_cmd + ' mnt')
             raise Exception.new(umount_cmd + " failed with status #{$?}")
         end
+        Process.wait bindfs_pid
     rescue Exception => ex
         fail("ERROR: failed to umount")
         testcase_ok = false

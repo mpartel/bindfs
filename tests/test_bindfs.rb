@@ -34,9 +34,6 @@ def chown(user, group, list)
     end
 end
 
-# Treat parameters as test names and run only those
-$only_these_tests = ARGV unless ARGV.empty?
-
 # Some useful shorthands
 $nobody_uid = nobody_uid = Etc.getpwnam('nobody').uid
 $nogroup_gid = nogroup_gid = Etc.getgrnam('nogroup').gid
