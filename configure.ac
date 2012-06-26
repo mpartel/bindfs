@@ -17,9 +17,9 @@ AC_ARG_WITH([core-foundation],
 
 
 if test x"$enable_debug" == "xyes" ; then
-	CFLAGS="${CFLAGS} -g -O0"
+	my_CFLAGS="-g -O0"
 else
-	CFLAGS="${CFLAGS} -O2"
+	my_CFLAGS="-O2"
 fi
 
 if test x"$enable_debug_output" == "xyes" ; then
@@ -31,7 +31,10 @@ if test x"$with_core_foundation" == "xyes" ; then
 	LDFLAGS="${LDFLAGS} -framework CoreFoundation"
 fi
 
-CFLAGS="${CFLAGS} -Wall -D_REENTRANT -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=25"
+my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=25"
+my_CFLAGS="$my_CFLAGS -Wall"
+AC_SUBST([my_CPPFLAGS])
+AC_SUBST([my_CFLAGS])
 
 # Check for xattrs
 AC_CHECK_FUNCS([setxattr getxattr listxattr removexattr])
