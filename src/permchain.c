@@ -31,12 +31,12 @@
 
 struct permchain {
     mode_t mask; /* which permissions to apply to */
-    char op; /* one of '=', '+', '-', 'o' (octal) or '\0' */
     union {
-        char operands[16]; /* a subset of rwxXstugo */
+        char operands[10]; /* a subset of rwxXstugo */
         unsigned int octal;
     };
     int flags;
+    char op; /* one of '=', '+', '-', 'o' (octal) or '\0' */
     struct permchain *next;
 };
 
