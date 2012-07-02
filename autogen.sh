@@ -41,14 +41,15 @@ echo "Running $AUTOMAKE..."
 $AUTOMAKE -a -c || exit 1
 
 if [ "$1" == "-d" ]; then
+	shift;
 	echo "Running configure --enable-debug (but not --enable-debug-output)"
 	echo
 	sleep 1s
-	./configure --enable-debug
+	./configure --enable-debug "$@"
 elif [ -n "$1" ]; then
 	echo
 	echo "./configure $@"
-	./configure $@
+	./configure "$@"
 else
 	echo
 	echo "autogen.sh completed successfully."
