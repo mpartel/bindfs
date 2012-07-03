@@ -1,3 +1,11 @@
+2012-07-04  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Use NAME_MAX when pathconf fails.
+	  Thanks again to Jan Engelhardt.
+	* Fixed slow user account checks when using --mirror @group
+	  as suggested by Jan Engelhardt.
+	* Released 1.10.6
+
 2012-07-03  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Build system improvements from Jan Engelhardt.
