@@ -1,3 +1,7 @@
+# Editor backups and junk
+*~
+*.bak
+
 # Autotools stuff
 Makefile.in
 Makefile
