@@ -401,10 +401,14 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     struct stat st;
     int result = 0;
     long pc_ret;
-
+    
     pc_ret = pathconf(path, _PC_NAME_MAX);
-    if (pc_ret < 0)
-        pc_ret = NAME_MAX; /* or scream and abort()? */
+    if (pc_ret < 0) {
+        DPRINTF("pathconf failed: %s (%d)", strerror(errno), errno);
+        /* Could use NAME_MAX but it may not be safe if the underlying
+         * FS is NFS or similar. */
+        return -errno;
+    }
     de_buf = malloc(offsetof(struct dirent, d_name) + pc_ret + 1);
 
     seekdir(dp, offset);
