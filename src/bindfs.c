@@ -54,6 +54,7 @@
 #include <assert.h>
 #include <pwd.h>
 #include <grp.h>
+#include <limits.h>
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif
@@ -399,9 +400,13 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     struct dirent *de;
     struct stat st;
     int result = 0;
-    
-    de_buf = malloc(offsetof(struct dirent, d_name) + pathconf(path, _PC_NAME_MAX) + 1);
-    
+    long pc_ret;
+
+    pc_ret = pathconf(path, _PC_NAME_MAX);
+    if (pc_ret < 0)
+        pc_ret = NAME_MAX; /* or scream and abort()? */
+    de_buf = malloc(offsetof(struct dirent, d_name) + pc_ret + 1);
+
     seekdir(dp, offset);
     while (1) {
         result = readdir_r(dp, de_buf, &de);
