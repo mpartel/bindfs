@@ -30,13 +30,13 @@
 #define PC_FLAGS_DEFAULT ((PC_APPLY_FILES) | (PC_APPLY_DIRS))
 
 struct permchain {
+    char op; /* one of '=', '+', '-', 'o' (octal) or '\0' */
+    char flags; /* see 'PC_' constants above. */
     mode_t mask; /* which permissions to apply to */
     union {
-        char operands[10]; /* a subset of rwxXstugo */
+        char operands[16]; /* a subset of rwxXDstugo */
         unsigned int octal;
     };
-    int flags;
-    char op; /* one of '=', '+', '-', 'o' (octal) or '\0' */
     struct permchain *next;
 };
 
