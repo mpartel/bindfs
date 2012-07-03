@@ -55,6 +55,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <limits.h>
+#include <signal.h>
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif
@@ -150,7 +151,6 @@ static int getattr_common(const char *path, struct stat *stbuf);
 /* Chowns a new file if necessary. */
 static void chown_new_file(const char *path, struct fuse_context *fc, int (*chown_func)(const char*, uid_t, gid_t));
 
-
 /* FUSE callbacks */
 static void *bindfs_init();
 static void bindfs_destroy(void *private_data);
@@ -189,12 +189,18 @@ static int bindfs_fsync(const char *path, int isdatasync,
 
 
 static void print_usage(const char *progname);
+
 static int process_option(void *data, const char *arg, int key,
                           struct fuse_args *outargs);
 static int parse_mirrored_users(char* mirror);
 static int parse_user_map(UserMap *map, UserMap *reverse_map, char *spec);
-static char* get_working_dir();
+static char *get_working_dir();
 static void maybe_stdout_stderr_to_file();
+
+/* Sets up handling of SIGUSR1. */
+static void setup_signal_handling();
+static void signal_handler(int sig);
+
 static void atexit_func();
 
 static int is_mirroring_enabled()
@@ -311,6 +317,8 @@ static void chown_new_file(const char *path, struct fuse_context *fc, int (*chow
         }
     }
 }
+
+
 
 static void *bindfs_init()
 {
@@ -1240,7 +1248,7 @@ static void maybe_stdout_stderr_to_file()
     strcat(path, "/");
     strcat(path, filename);
     
-    fd = open(path, O_CREAT | O_WRONLY);
+    fd = open(path, O_CREAT | O_WRONLY, 0666);
     free(path);
     
     fchmod(fd, 0777 & ~settings.original_umask);
@@ -1251,7 +1259,7 @@ static void maybe_stdout_stderr_to_file()
 #endif
 }
 
-static char* get_working_dir()
+static char *get_working_dir()
 {
     size_t buf_size = 4096;
     char* buf = malloc(buf_size);
@@ -1260,6 +1268,21 @@ static char* get_working_dir()
         buf = realloc(buf, buf_size);
     }
     return buf;
+}
+
+static void setup_signal_handling()
+{
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    
+    sigaction(SIGUSR1, &sa, NULL);
+}
+
+static void signal_handler(int sig)
+{
+    invalidate_user_cache();
 }
 
 static void atexit_func()
@@ -1504,6 +1527,9 @@ int main(int argc, char *argv[])
         bindfs_oper.listxattr = NULL;
         bindfs_oper.removexattr = NULL;
     }
+
+    /* fuse_main will daemonize by fork()'ing. The signal handler will persist. */
+    setup_signal_handling();
 
     fuse_main_return = fuse_main(args.argc, args.argv, &bindfs_oper);
 

@@ -1,5 +1,5 @@
 /*
-    Copyright 2006,2007,2008 Martin Pärtel <martin.partel@gmail.com>
+    Copyright 2006,2007,2008,2012 Martin Pärtel <martin.partel@gmail.com>
 
     This file is part of bindfs.
 
@@ -20,6 +20,7 @@
 #ifndef INC_BINDFS_MISC_H
 #define INC_BINDFS_MISC_H
 
+
 /* Counts the number of times ch occurs in s. */
 int count_chars(const char *s, char ch);
 
@@ -36,5 +37,29 @@ char *strdup_until(const char *s, const char *endchars);
    string.
    Returns NULL if path is NULL. */
 const char *my_basename(const char *path);
+
+/* Reallocs `*array` (may be NULL) to be at least one larger
+   than `*capacity` (may be 0) and stores the new capacity
+   in `*capacity`. */
+#define grow_array(array, capacity, member_size) grow_array_impl((void**)(array), (capacity), (member_size))
+void grow_array_impl(void **array, int* capacity, int member_size);
+
+
+/* Simple arena allocation for when it's convenient to
+   grow multiple times and deallocate all at once. */
+struct arena {
+    char *ptr;
+    int size;
+    int capacity;
+};
+
+#define ARENA_INITIALIZER { NULL, 0, 0 }
+
+void init_arena(struct arena *a, int initial_capacity);
+void grow_arena(struct arena *a, int amount);
+int append_to_arena(struct arena *a, void *src, int src_size);
+void free_arena(struct arena *a);
+
+#define ARENA_GET(a, offset) (&(a).ptr[(offset)])
 
 #endif

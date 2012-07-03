@@ -1,5 +1,5 @@
 /*
-    Copyright 2006,2007,2008 Martin Pärtel <martin.partel@gmail.com>
+    Copyright 2006,2007,2008,2012 Martin Pärtel <martin.partel@gmail.com>
 
     This file is part of bindfs.
 
@@ -80,4 +80,59 @@ const char *my_basename(const char *path)
         return p + 1;
     else
         return path;
+}
+
+void grow_array_impl(void **array, int* capacity, int member_size)
+{
+    int new_cap = *capacity;
+    if (new_cap == 0) {
+        new_cap = 8;
+    } else {
+        new_cap *= 2;
+    }
+    
+    *array = realloc(*array, new_cap * member_size);
+    *capacity = new_cap;
+}
+
+void init_arena(struct arena *a, int initial_capacity)
+{
+    a->size = 0;
+    a->capacity = initial_capacity;
+    if (initial_capacity > 0) {
+        a->ptr = (char *)malloc(initial_capacity);
+    } else {
+        a->ptr = NULL;
+    }
+}
+
+void grow_arena(struct arena *a, int amount)
+{
+    int new_cap;
+    
+    a->size += amount;
+    if (a->size >= a->capacity) {
+        new_cap = a->capacity;
+        if (new_cap == 0) {
+            new_cap = 8;
+        } else {
+            new_cap *= 2;
+        }
+        a->ptr = (char *)realloc(a->ptr, new_cap);
+        a->capacity = new_cap;
+    }
+}
+
+int append_to_arena(struct arena *a, void *src, int src_size)
+{
+    int dest = a->size;
+    grow_arena(a, src_size);
+    memcpy(&a->ptr[dest], src, src_size);
+    return dest;
+}
+
+void free_arena(struct arena *a)
+{
+    free(a->ptr);
+    init_arena(a, 0);
 }

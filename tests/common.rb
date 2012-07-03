@@ -126,10 +126,14 @@ def testenv(bindfs_args, options = {}, &block)
 
     testcase_ok = true
     begin
-        yield
+        block.call(bindfs_pid)
     rescue Exception => ex
         fail("ERROR: testcase `#{options[:title]}' failed", ex)
         testcase_ok = false
+    end
+
+    if File.exist?("bindfs.log")
+        system("cat bindfs.log")
     end
 
     begin
@@ -140,10 +144,6 @@ def testenv(bindfs_args, options = {}, &block)
     rescue Exception => ex
         fail("ERROR: failed to umount")
         testcase_ok = false
-    end
-    
-    if File.exist?("bindfs.log")
-        system("cat bindfs.log")
     end
 
     begin

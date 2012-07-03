@@ -349,3 +349,31 @@ testenv("", :title => "has readdir inode numbers") do
     assert { inodes['file'] == File.stat('src/file').ino }
     assert { inodes['dir'] == File.stat('src/dir').ino }
 end
+
+# FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
+# the test setup ought to be refactored. It might well use MiniTest or something.
+if Process.uid == 0
+    begin
+        `groupdel bindfs_test_group 2>&1`
+        `groupadd -f bindfs_test_group`
+        raise "Failed to create test group" if !$?.success?
+        testenv("--mirror=@bindfs_test_group", :title => "SIGUSR1 rereads user database") do |bindfs_pid|
+            touch('src/file')
+            chown('nobody', nil, 'src/file')
+
+            assert { File.stat('mnt/file').uid == $nobody_uid }
+            `adduser root bindfs_test_group`
+            raise "Failed to add root to test group" if !$?.success?
+            
+            # Cache not refreshed yet
+            assert { File.stat('mnt/file').uid == $nobody_uid }
+            
+            Process.kill("SIGUSR1", bindfs_pid)
+            sleep 0.5
+            
+            assert { File.stat('mnt/file').uid == 0 }
+        end
+    ensure
+        `groupdel bindfs_test_group 2>&1`
+    end
+end

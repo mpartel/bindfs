@@ -349,6 +349,9 @@ MacFuse caches file contents by default.
 This means that changes in source files are not always immediately visible under the mount point.
 \fB\-o nolocalcaches\fP can be used to disable the cache.
 
+When using \fB\-\-mirror[-only]\fP on a group, bindfs won't see changes to the group's member list.
+Sending bindfs a \fBSIGUSR1\fP signal will make it reread the user database.
+
 .SH BUGS
 
 Please report to the issue tracker on the project home page at
