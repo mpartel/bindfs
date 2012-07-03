@@ -1,3 +1,9 @@
+2012-07-03  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Build system improvements from Jan Engelhardt.
+	* readdir_r() concurrency bugfix from Jan Engelhardt.
+	* Released 1.10.5
+
 2012-06-18  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --valgrind support to tests/test_bindfs.rb.
