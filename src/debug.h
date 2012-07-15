@@ -32,7 +32,7 @@ extern pthread_mutex_t strerror_lock;
 #include <stdio.h>
 #define DPRINTF(fmt, ...) do { \
         pthread_mutex_lock(&strerror_lock); \
-        fprintf(stderr, "DEBUG: " fmt "\n", __VA_ARGS__); \
+        fprintf(stderr, "DEBUG: " fmt "\n", ##__VA_ARGS__); \
         pthread_mutex_unlock(&strerror_lock); \
     } while (0)
 #else
