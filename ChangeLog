@@ -1,3 +1,10 @@
+2012-07-15  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fix readdir() yet again, though this only matters in
+	  exceedingly rare cases.
+	* Fix --enable-debug-output.
+	* Released 1.10.7
+
 2012-07-04  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Use NAME_MAX when pathconf fails.
