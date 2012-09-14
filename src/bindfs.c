@@ -94,6 +94,7 @@ static struct Settings {
     } create_policy;
 
     struct permchain *create_permchain; /* the --create-with-perms option */
+    int leave_root_perms;
 
     enum ChownPolicy {
         CHOWN_NORMAL,
@@ -274,6 +275,10 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
 
     /* Then permission bits. Symlink permissions don't matter, though. */
     if ((stbuf->st_mode & S_IFLNK) != S_IFLNK) {
+        /* Don't change permissions if accessing root directory and leave_root_perms is set */
+        if (settings.leave_root_perms && strncmp(".", procpath, 2) == 0)
+            return 0;
+
         /* Apply user-defined permission bit modifications */
         stbuf->st_mode = permchain_apply(settings.permchain, stbuf->st_mode);
 
@@ -940,6 +945,8 @@ static void print_usage(const char *progname)
            "Permission bits:\n"
            "  -p      --perms           Specify permissions, similar to chmod\n"
            "                            e.g. og-x,og+rD,u=rwX,g+rw  or  0644,a+X\n"
+           "  --leave-root-perms        Leave the permissions of the root directory\n"
+           "                            as they are.\n"
            "\n"
            "File creation policy:\n"
            "  --create-as-user          New files owned by creator (default for root). *\n"
@@ -1011,7 +1018,8 @@ enum OptionKey {
     OPTKEY_XATTR_READ_WRITE,
     OPTKEY_REALISTIC_PERMISSIONS,
     OPTKEY_CTIME_FROM_MTIME,
-    OPTKEY_HIDE_HARD_LINKS
+    OPTKEY_HIDE_HARD_LINKS,
+    OPTKEY_LEAVE_ROOT_PERMS
 };
 
 static int process_option(void *data, const char *arg, int key,
@@ -1026,6 +1034,10 @@ static int process_option(void *data, const char *arg, int key,
     case OPTKEY_VERSION:
         printf("%s\n", PACKAGE_STRING);
         exit(0);
+
+    case OPTKEY_LEAVE_ROOT_PERMS:
+        settings.leave_root_perms = 1;
+        return 0;
 
     case OPTKEY_CREATE_AS_USER:
         if (getuid() == 0) {
@@ -1350,6 +1362,7 @@ int main(int argc, char *argv[])
         OPT_OFFSET2(         "--owner=%s", "owner=%s", user, -1),
         OPT_OFFSET3("-g %s", "--group=%s", "group=%s", group, -1),
         OPT_OFFSET3("-p %s", "--perms=%s", "perms=%s", perms, -1),
+        OPT2("--leave-root-perms", "leave-root-perms", OPTKEY_LEAVE_ROOT_PERMS),
         OPT_OFFSET3("-m %s", "--mirror=%s", "mirror=%s", mirror, -1),
         OPT_OFFSET3("-M %s", "--mirror-only=%s", "mirror-only=%s", mirror_only, -1),
         OPT_OFFSET2("--map=%s", "map=%s", map, -1),
@@ -1395,6 +1408,7 @@ int main(int argc, char *argv[])
     settings.mntdest = NULL;
     settings.original_working_dir = get_working_dir();
     settings.create_policy = (getuid() == 0) ? CREATE_AS_USER : CREATE_AS_MOUNTER;
+    settings.leave_root_perms = 0;
     settings.create_permchain = permchain_create();
     settings.chown_policy = CHOWN_NORMAL;
     settings.chgrp_policy = CHGRP_NORMAL;

@@ -67,6 +67,13 @@ the corresponding behavior of this option.
 
 Requires mounting as root.
 
+.TP
+.B \-\-leave\-root\-perms
+Do not apply permissions specified by \fB-p\fP or \fB--perms\fP to the root
+directory.  This may be useful if you are trying to set up a number of
+directories with different group ownership enforced with the setgid bit and
+group writing enabled with bindfs, but don't want the root directory itself
+to have the group write permission set.
 
 .SH FILE CREATION POLICY
 New files and directories are created so they are owned by the mounter.
