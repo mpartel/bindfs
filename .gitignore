@@ -35,4 +35,6 @@ Makefile
 src/bindfs
 tests/readdir_inode
 tests/*.log
+tests/internals/test_internals
+tests/internals/*.log
 

@@ -38,6 +38,14 @@ char *strdup_until(const char *s, const char *endchars);
    Returns NULL if path is NULL. */
 const char *my_basename(const char *path);
 
+/* A thread-safe version of dirname, with slightly different behavior.
+   If path is ".", returns "..".
+   If path is "/", returns "/".
+   If path has an initial slash but no other slashes, returns "/".
+   If path contains a slash, replaces the last slash with a '\0' and returns path.
+   Otherwise, returns ".". */
+const char *my_dirname(char *path);
+
 /* Reallocs `*array` (may be NULL) to be at least one larger
    than `*capacity` (may be 0) and stores the new capacity
    in `*capacity`. */

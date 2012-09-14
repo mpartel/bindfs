@@ -82,6 +82,32 @@ const char *my_basename(const char *path)
         return path;
 }
 
+const char *my_dirname(char *path)
+{
+    if (strcmp(path, ".") == 0) {
+        return "..";
+    } else if (strcmp(path, "/") == 0) {
+        return "/";
+    } else {
+        int len = strlen(path);
+        char *p = path + len - 1;
+        while (p > path) {
+            if (*p == '/') {
+                break;
+            }
+            --p;
+        }
+        if (p > path) {
+            *p = '\0';
+            return path;
+        } else if (*path == '/') {
+            return "/";
+        } else {
+            return ".";
+        }
+    }
+}
+
 void grow_array_impl(void **array, int* capacity, int member_size)
 {
     int new_cap = *capacity;

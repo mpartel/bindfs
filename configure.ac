@@ -45,6 +45,7 @@ PKG_CHECK_MODULES([fuse], [fuse >= 2.5.3])
 
 AC_CONFIG_FILES([Makefile \
 	src/Makefile \
-	tests/Makefile])
+	tests/Makefile \
+	tests/internals/Makefile])
 AC_OUTPUT
 
