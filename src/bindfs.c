@@ -52,7 +52,6 @@
 #include <errno.h>
 #include <getopt.h>
 #include <assert.h>
-#include <libgen.h>
 #include <pwd.h>
 #include <grp.h>
 #include <limits.h>
@@ -297,14 +296,15 @@ static void chown_new_file(const char *path, struct fuse_context *fc, int (*chow
     gid_t file_group;
 
     if (settings.create_policy == CREATE_AS_USER) {
-        char *path_copy, *dir_path;
+        char *path_copy;
+        const char *dir_path;
         struct stat stbuf;
 
         file_owner = fc->uid;
         file_group = fc->gid;
 
         path_copy = strdup(path);
-        dir_path = dirname(path_copy);
+        dir_path = my_dirname(path_copy);
         if (lstat(dir_path, &stbuf) != -1 && stbuf.st_mode & S_ISGID)
             file_group = -1;
         free(path_copy);
