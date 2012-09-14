@@ -350,6 +350,19 @@ testenv("", :title => "has readdir inode numbers") do
     assert { inodes['dir'] == File.stat('src/dir').ino }
 end
 
+root_testenv("", :title => "setgid directories") do
+    mkdir('mnt/dir')
+    chmod("g+s", 'mnt/dir')
+    chown(nil, $nogroup_gid, 'mnt/dir')
+    
+    touch('mnt/dir/file')
+    
+    assert { File.stat('src/dir').mode & 07000 == 02000 }
+    assert { File.stat('src/dir/file').gid == $nogroup_gid }
+    assert { File.stat('mnt/dir').mode & 07000 == 02000 }
+    assert { File.stat('mnt/dir/file').gid == $nogroup_gid }
+end
+
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 if Process.uid == 0
