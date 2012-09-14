@@ -290,6 +290,8 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     return 0;
 }
 
+/* FIXME: another thread may race to see the old owner before the chown is done.
+          Is there a scenario where this compromises security? Or application correctness? */
 static void chown_new_file(const char *path, struct fuse_context *fc, int (*chown_func)(const char*, uid_t, gid_t))
 {
     uid_t file_owner;
