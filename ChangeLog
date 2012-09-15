@@ -1,3 +1,11 @@
+2012-09-15  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fix for setgid directories by Jonathan Dieter. Thanks!
+	* Run in singlethreaded mode by default.
+	* Added -multithreaded option.
+	* Documented a race condition in multithreaded mode.
+	* Released 1.11
+
 2012-07-15  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fix readdir() yet again, though this only matters in
