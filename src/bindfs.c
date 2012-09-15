@@ -977,13 +977,14 @@ static void print_usage(const char *progname)
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
            "  --hide-hard-links         Always report a hard link count of 1.\n"
+           "  --multithreaded           Enable multithreaded mode. See man page\n"
+           "                            for security issue with current implementation.\n"
            "\n"
            "FUSE options:\n"
            "  -o opt[,opt,...]          Mount options.\n"
            "  -r      -o ro             Mount strictly read-only.\n"
            "  -d      -o debug          Enable debug output (implies -f).\n"
            "  -f                        Foreground operation.\n"
-           "  -s                        Disable multithreaded operation.\n"
            "\n"
            "(*: root only)\n"
            "\n",
@@ -1013,7 +1014,8 @@ enum OptionKey {
     OPTKEY_XATTR_READ_WRITE,
     OPTKEY_REALISTIC_PERMISSIONS,
     OPTKEY_CTIME_FROM_MTIME,
-    OPTKEY_HIDE_HARD_LINKS
+    OPTKEY_HIDE_HARD_LINKS,
+    OPTKEY_MULTITHREADED
 };
 
 static int process_option(void *data, const char *arg, int key,
@@ -1333,6 +1335,7 @@ int main(int argc, char *argv[])
         char *create_for_group;
         char *create_with_perms;
         int no_allow_other;
+        int multithreaded;
     } od;
 
     #define OPT2(one, two, key) \
@@ -1377,6 +1380,7 @@ int main(int argc, char *argv[])
         OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
+        OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
         FUSE_OPT_END
     };
 
@@ -1500,6 +1504,11 @@ int main(int argc, char *argv[])
         }
     }
 
+
+    /* Single-threaded mode by default */
+    if (!od.multithreaded) {
+        fuse_opt_add_arg(&args, "-s");
+    }
 
     /* Add default fuse options */
     if (!od.no_allow_other) {

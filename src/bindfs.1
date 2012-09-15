@@ -239,6 +239,12 @@ The underlying file's ctime will still be updated normally.
 .B \-\-hide-hard-links, \-o hide-hard-links
 Shows the hard link count of all files as 1.
 
+.TP
+.B \-\-multithreaded, \-o multithreaded
+Run bindfs in multithreaded mode. While bindfs is designed to be
+otherwise thread-safe, there is currently a race condition that may pose
+a security risk for some use cases. See \fB\%BUGS\fP below.
+
 
 .SH FUSE OPTIONS
 .TP
@@ -259,10 +265,6 @@ Enable debug output (implies \-f).
 .TP
 .B \-f
 Foreground operation.
-
-.TP
-.B \-s
-Disable multithreaded operation. bindfs should be thread-safe.
 
 
 .SH PERMISSION SPECIFICATION
@@ -349,13 +351,22 @@ MacFuse caches file contents by default.
 This means that changes in source files are not always immediately visible under the mount point.
 \fB\-o nolocalcaches\fP can be used to disable the cache.
 
-When using \fB\-\-mirror[-only]\fP on a group, bindfs won't see changes to the group's member list.
+When using \fB\-\-mirror[-only] @somegroup\fP, bindfs won't see changes to the group's member list.
 Sending bindfs a \fBSIGUSR1\fP signal will make it reread the user database.
 
 .SH BUGS
 
-Please report to the issue tracker on the project home page at
-http://code.google.com/p/bindfs/
+If bindfs is run in multithreaded mode (with the
+\fB\-\-multithreaded\fP option) then it's possible for another process
+to briefly see a file with an incorrect owner, group or permissions.
+This may constitute a security risk if you rely on bindfs to reduce
+permissions on new files. For this reason, as of version 1.11
+bindfs runs in single-threaded mode by default.
+
+Please report bugs to the issue tracker on the project home page at
+\fBhttp://code.google.com/p/bindfs/\fP
+Send patches as pull requests to \fBhttps://github.com/mpartel/bindfs\fP or
+by e-mail to \fBmartin dot partel at gmail dot com\fP.
 
 
 .SH AUTHOR
