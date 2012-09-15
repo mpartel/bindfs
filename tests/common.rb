@@ -109,7 +109,7 @@ def testenv(bindfs_args, options = {}, &block)
     begin
         cmd = "../#{EXECUTABLE_PATH} #{bindfs_args} -f src mnt"
         if options[:valgrind]
-            cmd = "valgrind #{options[:valgrind_opts]} #{cmd}"
+            cmd = "valgrind --error-exitcode=100 #{options[:valgrind_opts]} #{cmd}"
         end
         bindfs_pid = Process.fork do
             exec cmd
@@ -143,6 +143,11 @@ def testenv(bindfs_args, options = {}, &block)
         Process.wait bindfs_pid
     rescue Exception => ex
         fail("ERROR: failed to umount")
+        testcase_ok = false
+    end
+    
+    if !$?.success?
+        fail("exit status: #{$?}")
         testcase_ok = false
     end
 
