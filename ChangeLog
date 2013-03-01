@@ -1,8 +1,16 @@
+2013-03-01  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Deprecated --user, --owner and --group
+	  in favor of --force-user and --force-group
+	  to avoid conflict with standard mount options
+	  (issue 25).
+	* Release 1.12
+
 2012-09-15  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fix for setgid directories by Jonathan Dieter. Thanks!
 	* Run in singlethreaded mode by default.
-	* Added -multithreaded option.
+	* Added --multithreaded option.
 	* Documented a race condition in multithreaded mode.
 	* Released 1.11
 
