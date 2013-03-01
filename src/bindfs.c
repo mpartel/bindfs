@@ -931,8 +931,8 @@ static void print_usage(const char *progname)
            "  -V      --version         Print version number and exit.\n"
            "\n"
            "File ownership:\n"
-           "  -u      --user, --owner   Set file owner.\n"
-           "  -g      --group           Set file group.\n"
+           "  -u      --force-user      Set file owner.\n"
+           "  -g      --force-group     Set file group.\n"
            "  -m      --mirror          Comma-separated list of users who will see\n"
            "                            themselves as the owners of all files.\n"
            "  -M      --mirror-only     Like --mirror but disallow access for\n"
@@ -1326,7 +1326,9 @@ int main(int argc, char *argv[])
     /* Fuse's option parser will store things here. */
     struct OptionData {
         char *user;
+        char *deprecated_user;
         char *group;
+        char *deprecated_group;
         char *perms;
         char *mirror;
         char *mirror_only;
@@ -1351,32 +1353,42 @@ int main(int argc, char *argv[])
     static const struct fuse_opt options[] = {
         OPT2("-h", "--help", OPTKEY_HELP),
         OPT2("-V", "--version", OPTKEY_VERSION),
-        OPT_OFFSET2("-u %s", "--user=%s",              user, -1),
-        OPT_OFFSET2(         "--owner=%s", "owner=%s", user, -1),
-        OPT_OFFSET3("-g %s", "--group=%s", "group=%s", group, -1),
+        
+        OPT_OFFSET3("-u %s", "--force-user=%s", "force-user=%s", user, -1),
+        OPT_OFFSET3("-g %s", "--force-group=%s", "force-group=%s", group, -1),
+        
+        OPT_OFFSET3("--user=%s", "--owner=%s", "owner=%s", deprecated_user, -1),
+        OPT_OFFSET2("--group=%s", "group=%s", deprecated_group, -1),
+        
         OPT_OFFSET3("-p %s", "--perms=%s", "perms=%s", perms, -1),
         OPT_OFFSET3("-m %s", "--mirror=%s", "mirror=%s", mirror, -1),
         OPT_OFFSET3("-M %s", "--mirror-only=%s", "mirror-only=%s", mirror_only, -1),
         OPT_OFFSET2("--map=%s", "map=%s", map, -1),
         OPT_OFFSET3("-n", "--no-allow-other", "no-allow-other", no_allow_other, -1),
+        
         OPT2("--create-as-user", "create-as-user", OPTKEY_CREATE_AS_USER),
         OPT2("--create-as-mounter", "create-as-mounter", OPTKEY_CREATE_AS_MOUNTER),
         OPT_OFFSET2("--create-for-user=%s", "create-for-user=%s", create_for_user, -1),
         OPT_OFFSET2("--create-for-group=%s", "create-for-group=%s", create_for_group, -1),
         OPT_OFFSET2("--create-with-perms=%s", "create-with-perms=%s", create_with_perms, -1),
+        
         OPT2("--chown-normal", "chown-normal", OPTKEY_CHOWN_NORMAL),
         OPT2("--chown-ignore", "chown-ignore", OPTKEY_CHOWN_IGNORE),
         OPT2("--chown-deny", "chown-deny", OPTKEY_CHOWN_DENY),
+        
         OPT2("--chgrp-normal", "chgrp-normal", OPTKEY_CHGRP_NORMAL),
         OPT2("--chgrp-ignore", "chgrp-ignore", OPTKEY_CHGRP_IGNORE),
         OPT2("--chgrp-deny", "chgrp-deny", OPTKEY_CHGRP_DENY),
+        
         OPT2("--chmod-normal", "chmod-normal", OPTKEY_CHMOD_NORMAL),
         OPT2("--chmod-ignore", "chmod-ignore", OPTKEY_CHMOD_IGNORE),
         OPT2("--chmod-deny", "chmod-deny", OPTKEY_CHMOD_DENY),
         OPT2("--chmod-allow-x", "chmod-allow-x", OPTKEY_CHMOD_ALLOW_X),
+        
         OPT2("--xattr-none", "xattr-none", OPTKEY_XATTR_NONE),
         OPT2("--xattr-ro", "xattr-ro", OPTKEY_XATTR_READ_ONLY),
         OPT2("--xattr-rw", "xattr-rw", OPTKEY_XATTR_READ_WRITE),
+        
         OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
@@ -1425,6 +1437,22 @@ int main(int argc, char *argv[])
     if (!settings.mntsrc || !settings.mntdest) {
         print_usage(my_basename(argv[0]));
         return 1;
+    }
+    
+    /* Check for deprecated options */
+    if (od.deprecated_user) {
+        fprintf(stderr, "Deprecation warning: please use --force-user instead of --user or --owner.\n");
+        fprintf(stderr, "The new option has the same effect. See the man page for details.\n");
+        if (!od.user) {
+            od.user = od.deprecated_user;
+        }
+    }
+    if (od.deprecated_group) {
+        fprintf(stderr, "Deprecation warning: please use --force-group instead of --group.\n");
+        fprintf(stderr, "The new option has the same effect. See the man page for details.\n");
+        if (!od.group) {
+            od.group = od.deprecated_group;
+        }
     }
 
     /* Parse new owner and group */
