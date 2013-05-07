@@ -7,6 +7,6 @@ bindfs_SOURCES = bindfs.c debug.c permchain.c userinfo.c misc.c usermap.c
 
 AM_CPPFLAGS = ${my_CPPFLAGS} ${fuse_CFLAGS}
 AM_CFLAGS = ${my_CFLAGS}
-bindfs_LDADD = $(fuse_LIBS)
+bindfs_LDADD = $(fuse_LIBS) ${my_LDFLAGS}
 
 man_MANS = bindfs.1

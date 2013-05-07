@@ -33,8 +33,10 @@ fi
 
 my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=25"
 my_CFLAGS="$my_CFLAGS -Wall"
+my_LDFLAGS="-pthread"
 AC_SUBST([my_CPPFLAGS])
 AC_SUBST([my_CFLAGS])
+AC_SUBST([my_LDFLAGS])
 
 # Check for xattrs
 AC_CHECK_FUNCS([setxattr getxattr listxattr removexattr])
