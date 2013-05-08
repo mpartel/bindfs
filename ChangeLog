@@ -1,10 +1,15 @@
+2013-05-08  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed building against latest FUSE e.g. on Ubuntu 13.04.
+	* Released 1.12.1
+
 2013-03-01  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Deprecated --user, --owner and --group
 	  in favor of --force-user and --force-group
 	  to avoid conflict with standard mount options
 	  (issue 25).
-	* Release 1.12
+	* Released 1.12
 
 2012-09-15  Martin Pärtel <martin dot partel at gmail dot com>
 
