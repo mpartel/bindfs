@@ -258,6 +258,14 @@ testenv("--chmod-deny --chmod-allow-x") do
     assert_exception(EPERM) { chmod(0700, 'mnt/dir') } # chmod on dir should not work
 end
 
+testenv("--chmod-perms=g-w,o-rwx") do
+    touch('src/file')
+
+    chmod(0666, 'mnt/file')
+
+    assert { File.stat('src/file').mode & 0777 == 0640 }
+end
+
 root_testenv("--map=nobody/root:@nogroup/@root") do
     touch('src/file')
     chown('nobody', 'nogroup', 'src/file')
