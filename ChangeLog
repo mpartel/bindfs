@@ -1,3 +1,7 @@
+2013-07-22  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added --chmod-filter, contributed by Anton Ageev. Thanks!
+
 2013-05-08  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed building against latest FUSE e.g. on Ubuntu 13.04.

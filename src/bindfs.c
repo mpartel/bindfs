@@ -114,7 +114,7 @@ static struct Settings {
     
     int chmod_allow_x;
 
-    struct permchain *chmod_permchain; /* the --chmod-perms option */
+    struct permchain *chmod_permchain; /* the --chmod-filter option */
 
     enum XAttrPolicy {
         XATTR_UNIMPLEMENTED,
@@ -967,8 +967,8 @@ static void print_usage(const char *progname)
            "  --chmod-normal            Try to chmod the original files (the default).\n"
            "  --chmod-ignore            Have all chmods fail silently.\n"
            "  --chmod-deny              Have all chmods fail with 'permission denied'.\n"
+           "  --chmod-filter            Change permissions of chmod requests.\n"
            "  --chmod-allow-x           Allow changing file execute bits in any case.\n"
-           "  --chmod-perms             Alter permissions when to chmod the original file.\n"
            "\n"
            "Extended attribute policy:\n"
            "  --xattr-none              Do not implement xattr operations.\n"
@@ -1013,7 +1013,6 @@ enum OptionKey {
     OPTKEY_CHMOD_IGNORE,
     OPTKEY_CHMOD_DENY,
     OPTKEY_CHMOD_ALLOW_X,
-    OPTKEY_CHMOD_PERMS,
     OPTKEY_XATTR_NONE,
     OPTKEY_XATTR_READ_ONLY,
     OPTKEY_XATTR_READ_WRITE,
@@ -1343,7 +1342,7 @@ int main(int argc, char *argv[])
         char *create_for_user;
         char *create_for_group;
         char *create_with_perms;
-        char *chmod_perms;
+        char *chmod_filter;
         int no_allow_other;
         int multithreaded;
     } od;
@@ -1391,8 +1390,8 @@ int main(int argc, char *argv[])
         OPT2("--chmod-normal", "chmod-normal", OPTKEY_CHMOD_NORMAL),
         OPT2("--chmod-ignore", "chmod-ignore", OPTKEY_CHMOD_IGNORE),
         OPT2("--chmod-deny", "chmod-deny", OPTKEY_CHMOD_DENY),
+        OPT_OFFSET2("--chmod-filter=%s", "chmod-filter=%s", chmod_filter, -1),
         OPT2("--chmod-allow-x", "chmod-allow-x", OPTKEY_CHMOD_ALLOW_X),
-        OPT_OFFSET2("--chmod-perms=%s", "chmod-perms=%s", chmod_perms, -1),
         
         OPT2("--xattr-none", "xattr-none", OPTKEY_XATTR_NONE),
         OPT2("--xattr-ro", "xattr-ro", OPTKEY_XATTR_READ_ONLY),
@@ -1541,9 +1540,9 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-    if (od.chmod_perms) {
-        if (add_chmod_rules_to_permchain(od.chmod_perms, settings.chmod_permchain) != 0) {
-            fprintf(stderr, "Invalid permission specification: '%s'\n", od.chmod_perms);
+    if (od.chmod_filter) {
+        if (add_chmod_rules_to_permchain(od.chmod_filter, settings.chmod_permchain) != 0) {
+            fprintf(stderr, "Invalid permission specification: '%s'\n", od.chmod_filter);
             return 1;
         }
     }

@@ -258,7 +258,7 @@ testenv("--chmod-deny --chmod-allow-x") do
     assert_exception(EPERM) { chmod(0700, 'mnt/dir') } # chmod on dir should not work
 end
 
-testenv("--chmod-perms=g-w,o-rwx") do
+testenv("--chmod-filter=g-w,o-rwx") do
     touch('src/file')
 
     chmod(0666, 'mnt/file')
