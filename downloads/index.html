@@ -1,0 +1,24 @@
+---
+id: downloads
+nav: downloads
+layout: default
+---
+
+<h1>Downloads</h1>
+
+<p>
+  Latest version:
+</p>
+
+<div style="font-weight: bold; font-size: 16pt; padding-bottom: 20px;">
+  <a href="{% first_file downloads %}">{% first_file downloads %}</a>
+</div>
+
+<h3>Old versions</h3>
+
+<ul>
+  {% file_list downloads %}
+    <li><a href="{{ filename }}">{{ filename }}</a></li>
+  {% endfile_list %}
+</ul>
+

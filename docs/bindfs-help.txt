@@ -1,0 +1,65 @@
+
+Usage: bindfs [options] dir mountpoint
+Information:
+  -h      --help            Print this and exit.
+  -V      --version         Print version number and exit.
+
+File ownership:
+  -u      --force-user      Set file owner.
+  -g      --force-group     Set file group.
+  -m      --mirror          Comma-separated list of users who will see
+                            themselves as the owners of all files.
+  -M      --mirror-only     Like --mirror but disallow access for
+                            all other users.
+ --map=user1/user2:...      Let user2 see files of user1 as his own.
+
+Permission bits:
+  -p      --perms           Specify permissions, similar to chmod
+                            e.g. og-x,og+rD,u=rwX,g+rw  or  0644,a+X
+
+File creation policy:
+  --create-as-user          New files owned by creator (default for root). *
+  --create-as-mounter       New files owned by fs mounter (default for users).
+  --create-for-user         New files owned by specified user. *
+  --create-for-group        New files owned by specified group. *
+  --create-with-perms       Alter permissions of new files.
+
+Chown policy:
+  --chown-normal            Try to chown the original files (the default).
+  --chown-ignore            Have all chowns fail silently.
+  --chown-deny              Have all chowns fail with 'permission denied'.
+
+Chgrp policy:
+  --chgrp-normal            Try to chgrp the original files (the default).
+  --chgrp-ignore            Have all chgrps fail silently.
+  --chgrp-deny              Have all chgrps fail with 'permission denied'.
+
+Chmod policy:
+  --chmod-normal            Try to chmod the original files (the default).
+  --chmod-ignore            Have all chmods fail silently.
+  --chmod-deny              Have all chmods fail with 'permission denied'.
+  --chmod-filter            Change permissions of chmod requests.
+  --chmod-allow-x           Allow changing file execute bits in any case.
+
+Extended attribute policy:
+  --xattr-none              Do not implement xattr operations.
+  --xattr-ro                Read-only xattr operations.
+  --xattr-rw                Read-write xattr operations (the default).
+
+Miscellaneous:
+  -n      --no-allow-other  Do not add -o allow_other to fuse options.
+  --realistic-permissions   Hide permission bits for actions mounter can't do.
+  --ctime-from-mtime        Read file properties' change time
+                            from file content modification time.
+  --hide-hard-links         Always report a hard link count of 1.
+  --multithreaded           Enable multithreaded mode. See man page
+                            for security issue with current implementation.
+
+FUSE options:
+  -o opt[,opt,...]          Mount options.
+  -r      -o ro             Mount strictly read-only.
+  -d      -o debug          Enable debug output (implies -f).
+  -f                        Foreground operation.
+
+(*: root only)
+
