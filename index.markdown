@@ -44,7 +44,9 @@ bindfs is available through the software repositories of many Linux distribution
 
 Download the latest source tarball here: [{% first_file downloads %}](downloads/{% first_file downloads %}).
 
-Developement takes place on [GitHub](https://github.com/mpartel/bindfs).
+Compile & install: `./configure && make && sudo make install`.
+
+There is an extensive [HowTo on Ubuntu Forums](http://ubuntuforums.org/showthread.php?t=1460472).
 
 ## About
 
@@ -52,7 +54,7 @@ bindfs has been tested on Linux 2.4/2.6 with fuse 2.5.3+, Mac OS X 10.5 with Mac
 
 All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. While bindfs is very flexible, it can be quite slow as [Guy Paddock's analysis and benchmark](http://www.redbottledesign.com/node/2495) demonstrates. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
-Bug reports, pull requests, comments and ideas are very welcome. Please use the [issue tracker](https://github.com/mpartel/bindfs/issues) or e-mail me directly at &lt;martin dot partel at gmail dot com&gt;.
+Bug reports, pull requests, comments and ideas are very welcome. Developement takes place on [GitHub](https://github.com/mpartel/bindfs). Please use the [issue tracker](https://github.com/mpartel/bindfs/issues) or e-mail me directly at &lt;martin dot partel at gmail dot com&gt;.
 
 bindfs was initially developed in 2006. I consider the program fairly feature-complete but I'll still gladly fix bugs and add some small features as people suggest them.
 
