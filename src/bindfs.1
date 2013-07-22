@@ -168,6 +168,12 @@ but actually does nothing.
 Makes chmod always fail with a 'permission denied' error.
 
 .TP
+.B \-\-chmod\-filter=\fIpermissions\fP,, \-o chmod\-filter=...
+Changes the permission bits of a chmod request before it is applied to the
+original file. Accepts the same permission syntax as \-\-perms.
+See \fB\%PERMISSION \%SPECIFICATION\fP below for details.
+
+.TP
 .B \-\-chmod\-allow\-x, \-o chmod\-allow\-x
 Allows setting and clearing the executable attribute on files
 (but not directories). When used with \-\-chmod\-ignore,
