@@ -2,6 +2,7 @@
 
 	* Added --chmod-filter, contributed by Anton Ageev. Thanks!
 	* Released 1.12.2
+	* Project home page is now bindfs.org
 
 2013-05-08  Martin Pärtel <martin dot partel at gmail dot com>
 
