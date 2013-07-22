@@ -1318,6 +1318,8 @@ static void atexit_func()
     settings.permchain = NULL;
     permchain_destroy(settings.create_permchain);
     settings.create_permchain = NULL;
+    permchain_destroy(settings.chmod_permchain);
+    settings.chmod_permchain = NULL;
     free(settings.mirrored_users);
     settings.mirrored_users = NULL;
     free(settings.mirrored_members);
