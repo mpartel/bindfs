@@ -36,11 +36,12 @@ popd
 tar cvzf "bindfs-${VERSION}.tar.gz" "bindfs-$VERSION"
 
 # Get the change log and man-page
-cp "bindfs-$VERSION/ChangeLog" ./bindfs-ChangeLog.txt
-cp "bindfs-$VERSION/src/bindfs.1" ./bindfs.1
+mkdir -p ./docs
+cp "bindfs-$VERSION/ChangeLog" ./docs/ChangeLog.utf8.txt
+cp "bindfs-$VERSION/src/bindfs.1" ./docs/bindfs.1
 
 # Create the HTML man page
-rman -f HTML -r "" bindfs.1 > bindfs.1.html
+rman -f HTML -r "" docs/bindfs.1 > docs/bindfs.1.html
 
 # Compile the source
 pushd "bindfs-$VERSION"
@@ -49,14 +50,11 @@ make
 popd
 
 # Get the bindfs --help text
-"bindfs-$VERSION/src/bindfs" --help > bindfs-help.txt
+"bindfs-$VERSION/src/bindfs" --help > docs/bindfs-help.txt
 
 # Copy products to original dir
 cp -r "bindfs-$VERSION.tar.gz" \
-      bindfs-ChangeLog.txt \
-      bindfs.1 \
-      bindfs.1.html \
-      bindfs-help.txt \
+      docs \
       "$OUTPUTDIR/"
 
 # Clean up and we're done
