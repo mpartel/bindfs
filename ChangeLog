@@ -1,6 +1,7 @@
 2013-07-22  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --chmod-filter, contributed by Anton Ageev. Thanks!
+	* Released 1.12.2
 
 2013-05-08  Martin Pärtel <martin dot partel at gmail dot com>
 
