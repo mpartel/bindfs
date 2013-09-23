@@ -34,6 +34,7 @@ Makefile
 
 src/bindfs
 tests/readdir_inode
+tests/utimens_nofollow
 tests/*.log
 tests/internals/test_internals
 tests/internals/*.log

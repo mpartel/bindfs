@@ -31,7 +31,7 @@ if test x"$with_core_foundation" == "xyes" ; then
 	LDFLAGS="${LDFLAGS} -framework CoreFoundation"
 fi
 
-my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=25"
+my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=26"
 my_CFLAGS="$my_CFLAGS -Wall"
 my_LDFLAGS="-pthread"
 AC_SUBST([my_CPPFLAGS])
@@ -43,7 +43,7 @@ AC_CHECK_FUNCS([setxattr getxattr listxattr removexattr])
 AC_CHECK_FUNCS([lsetxattr lgetxattr llistxattr lremovexattr])
 
 # Check for fuse
-PKG_CHECK_MODULES([fuse], [fuse >= 2.5.3])
+PKG_CHECK_MODULES([fuse], [fuse >= 2.6.0])
 
 AC_CONFIG_FILES([Makefile \
 	src/Makefile \

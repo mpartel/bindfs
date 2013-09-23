@@ -1,3 +1,13 @@
+2013-09-23  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Use `utimensat` to support settings mtime/atime on symlinks,
+	  and with nanosecond precision.
+	* Any "utime" errors when untarring with a modern version of `tar`
+	  should now be fixed.
+	* Time modifications seem to no longer get caught in FUSE's
+	  attribute cache.
+	* Now using FUSE API version 26.
+
 2013-07-22  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --chmod-filter, contributed by Anton Ageev. Thanks!

@@ -31,8 +31,8 @@
 
 #include <config.h>
 
-/* For pread/pwrite and readdir_r */
-#define _XOPEN_SOURCE 500
+/* For >= 500 for pread/pwrite and readdir_r; >= 700 for utimensat */
+#define _XOPEN_SOURCE 700
 
 #include <stdlib.h>
 #include <stddef.h>
@@ -177,7 +177,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid);
 static int bindfs_truncate(const char *path, off_t size);
 static int bindfs_ftruncate(const char *path, off_t size,
                             struct fuse_file_info *fi);
-static int bindfs_utime(const char *path, struct utimbuf *buf);
+static int bindfs_utimens(const char *path, const struct timespec tv[2]);
 static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *fi);
 static int bindfs_open(const char *path, struct fuse_file_info *fi);
 static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
@@ -690,13 +690,13 @@ static int bindfs_ftruncate(const char *path, off_t size,
     return 0;
 }
 
-static int bindfs_utime(const char *path, struct utimbuf *buf)
+static int bindfs_utimens(const char *path, const struct timespec tv[2])
 {
     int res;
 
     path = process_path(path);
 
-    res = utime(path, buf);
+    res = utimensat(settings.mntsrc_fd, path, tv, AT_SYMLINK_NOFOLLOW);
     if (res == -1)
         return -errno;
 
@@ -906,7 +906,7 @@ static struct fuse_operations bindfs_oper = {
     .chown      = bindfs_chown,
     .truncate   = bindfs_truncate,
     .ftruncate  = bindfs_ftruncate,
-    .utime      = bindfs_utime,
+    .utimens    = bindfs_utimens,
     .create     = bindfs_create,
     .open       = bindfs_open,
     .read       = bindfs_read,
@@ -1597,7 +1597,7 @@ int main(int argc, char *argv[])
     /* fuse_main will daemonize by fork()'ing. The signal handler will persist. */
     setup_signal_handling();
 
-    fuse_main_return = fuse_main(args.argc, args.argv, &bindfs_oper);
+    fuse_main_return = fuse_main(args.argc, args.argv, &bindfs_oper, NULL);
 
     fuse_opt_free_args(&args);
     close(settings.mntsrc_fd);
