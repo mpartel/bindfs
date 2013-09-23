@@ -7,6 +7,7 @@
 	* Time modifications seem to no longer get caught in FUSE's
 	  attribute cache.
 	* Now using FUSE API version 26.
+	* Released 1.12.3
 
 2013-07-22  Martin Pärtel <martin dot partel at gmail dot com>
 
