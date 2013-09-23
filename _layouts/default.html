@@ -26,15 +26,10 @@
     <div class="navbar navbar-inverse navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container">
-          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
           <a class="brand" href="/">bindfs</a>
-          <div class="nav-collapse collapse">
+          <div>
             <ul class="nav">
-              <li class="{% if page.nav == 'index' %}active{% else %}inactive{% endif %}"><a href="/">Home</a></li>
+              <li class="{% if page.nav == 'index' %}active{% else %}inactive{% endif %}"><a href="/">About</a></li>
               <li class="{% if page.nav == 'downloads' %}active{% else %}inactive{% endif %}"><a href="/downloads">Downloads</a></li>
               <li><a href="https://github.com/mpartel/bindfs">GitHub</a></li>
             </ul>
