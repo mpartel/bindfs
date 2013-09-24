@@ -20,7 +20,7 @@ use-cases need user_allow_other to be defined in /etc/fuse.conf
 
 -- Installation --
 
-Make sure fuse 2.5.3 or above is installed (http://fuse.sf.net/).
+Make sure fuse 2.6.0 or above is installed (http://fuse.sf.net/).
 Then compile and install as usual:
 ./configure
 make
