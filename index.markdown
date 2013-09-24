@@ -50,7 +50,7 @@ There is an extensive [HowTo on Ubuntu Forums](http://ubuntuforums.org/showthrea
 
 ## About
 
-bindfs has been tested on Linux 2.4/2.6 with fuse 2.5.3+, Mac OS X 10.5 with MacFUSE and FreeBSD with fuse4bsd.
+bindfs has been tested on Linux with [FUSE](http://fuse.sourceforge.net/), Mac OS X with [osxfuse](http://osxfuse.github.io/) and FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
 
 All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. While bindfs is very flexible, it can be quite slow as [Guy Paddock's analysis and benchmark](http://www.redbottledesign.com/node/2495) demonstrates. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
