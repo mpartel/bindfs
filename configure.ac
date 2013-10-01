@@ -1,7 +1,7 @@
 AC_INIT([bindfs],[1.12.3],[martin.partel@gmail.com])
 
 AM_INIT_AUTOMAKE([foreign])
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 
 AC_PROG_CC
 AC_LANG(C)
