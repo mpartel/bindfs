@@ -54,9 +54,11 @@ bindfs has been tested on Linux with [FUSE](http://fuse.sourceforge.net/), Mac O
 
 All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. While bindfs is very flexible, it can be quite slow as [Guy Paddock's analysis and benchmark](http://www.redbottledesign.com/node/2495) demonstrates. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
-Bug reports, pull requests, comments and ideas are very welcome. Developement takes place on [GitHub](https://github.com/mpartel/bindfs). Please use the [issue tracker](https://github.com/mpartel/bindfs/issues) or e-mail me directly at &lt;martin dot partel at gmail dot com&gt;.
-
 bindfs was initially developed in 2006. I consider the program fairly feature-complete but I'll still gladly fix bugs and add some small features as people suggest them.
+
+### Bug reports
+
+Bug reports, pull requests, comments and ideas are very welcome. Developement takes place on [GitHub](https://github.com/mpartel/bindfs). Please use the [issue tracker](https://github.com/mpartel/bindfs/issues) or e-mail me directly at &lt;martin dot partel at gmail dot com&gt;.
 
 ### Known issues
 
@@ -65,7 +67,7 @@ bindfs was initially developed in 2006. I consider the program fairly feature-co
 
 ### Old site
 
-bindfs used to be hosted on [Google Code](https://code.google.com/p/bindfs/). The [old issue tracker](https://code.google.com/p/bindfs/issues/list) has not been migrated.
+bindfs used to be hosted on [Google Code](https://code.google.com/p/bindfs/). The [old issue tracker](https://code.google.com/p/bindfs/issues/list) has not been migrated (please use [the new one](https://github.com/mpartel/bindfs/issues)).
 
 Google has [deprecated](http://google-opensource.blogspot.fi/2013/05/a-change-to-google-code-download-service.html) downloads on Google Code, so no more downloads will be uploaded there. I will keep the old downloads in Google Code at least until 2014.
 
