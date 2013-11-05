@@ -37,7 +37,7 @@ struct gid_cache_entry {
     int uids_offset; /* arena-allocated */
 };
 
-static pthread_rwlock_t cache_lock = PTHREAD_RWLOCK_INITIALIZER;
+static pthread_mutex_t cache_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static struct uid_cache_entry *uid_cache = NULL;
 static int uid_cache_size = 0;
@@ -345,20 +345,14 @@ int user_belongs_to_group(uid_t uid, gid_t gid)
     int i;
     uid_t *uids;
     
-    pthread_rwlock_rdlock(&cache_lock);
+    pthread_mutex_lock(&cache_lock);
     
     if (cache_rebuild_requested) {
-        pthread_rwlock_unlock(&cache_lock);
-        
-        pthread_rwlock_wrlock(&cache_lock);
         if (cache_rebuild_requested) {
             DPRINTF("Building user/group cache");
             cache_rebuild_requested = 0;
             rebuild_cache();
         }
-        pthread_rwlock_unlock(&cache_lock);
-        
-        pthread_rwlock_rdlock(&cache_lock);
     }
     
     struct uid_cache_entry *uent = uid_cache_lookup(uid);
@@ -379,7 +373,7 @@ int user_belongs_to_group(uid_t uid, gid_t gid)
     }
     
 done:
-    pthread_rwlock_unlock(&cache_lock);
+    pthread_mutex_unlock(&cache_lock);
     return ret;
 }
 
