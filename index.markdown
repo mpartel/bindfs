@@ -10,7 +10,6 @@ layout: default
   Mount a directory to another location and alter permission bits.
 </p>
 
-      
 *bindfs* is a [FUSE](http://fuse.sourceforge.net/) filesystem for mounting a directory to another location, similarly to `mount --bind`. The permissions inside the mountpoint can be altered using various rules.
 
 ## Examples
@@ -30,7 +29,7 @@ Here are some examples of what bindfs can do for you:
   `bindfs --force-user=www --perms=0000:u=rD ~/stuff/website ~/public_html`
 
 * The corresponding `/etc/fstab` entry.<br />
-  `bindfs#/home/bob/stuff/website /home/bob/public_html fuse force-user=www,perms=0000:u+rD 0 0`
+  `/home/bob/stuff/website /home/bob/public_html fuse.bindfs force-user=www,perms=0000:u+rD 0 0`
 
 ## Docs
 
