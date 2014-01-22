@@ -341,11 +341,16 @@ and adds the user execute bit for directories and executables.
 Makes a directory read\-only and accessable only by the current user.
 
 .TP
-.B bindfs#/home/bob/shared /var/www/shared/bob  fuse  perms=0000:u+rD   0   0
+.B /home/bob/shared /var/www/shared/bob  fuse.bindfs  perms=0000:u+rD   0   0
 
 An example \fI/etc/fstab\fP entry. Note that the colon must be used to
 separate arguments to perms, because the comma is an option separator in
 \fI/etc/fstab\fP.
+
+.TP
+.B bindfs#/home/bob/shared /var/www/shared/bob  fuse perms=0000:u+rD   0   0
+
+Older systems may require this deprecated fstab syntax.
 
 
 .SH NOTES
