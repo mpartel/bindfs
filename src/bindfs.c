@@ -33,6 +33,7 @@
 
 /* For >= 500 for pread/pwrite and readdir_r; >= 700 for utimensat */
 #define _XOPEN_SOURCE 700
+#define _BSD_SOURCE
 
 #include <stdlib.h>
 #include <stddef.h>
@@ -132,7 +133,14 @@ static struct Settings {
 
     int ctime_from_mtime;
     int hide_hard_links;
-    
+
+    time_t start_time;
+    time_t last_write;
+    time_t last_read;
+    long readed;
+    long writed;
+    long write_limit;
+    long read_limit;
 } settings;
 
 
@@ -734,6 +742,8 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
     if (fd == -1)
         return -errno;
 
+    settings.readed = settings.read_limit;
+
     fi->fh = fd;
     return 0;
 }
@@ -742,8 +752,56 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi)
 {
     int res;
+    time_t t;
     (void) path;
-    
+
+    /*
+       Read limit has to be more than 8192 so we can do anything
+     */
+    if( settings.read_limit > 8192 ) {
+        time(&t);
+
+        if( (t - settings.last_read) > 0 ) {
+           DPRINTF("bindfs_read: Reset a new sec started!\n");
+           settings.readed = settings.read_limit;
+        }
+
+        /*   Logic goes like this:
+             If there is limit in this second use it and read as much there is to
+             read.
+             if there is not. wait second and read as much as we can..
+        */
+
+        if( settings.readed > 0 && settings.readed > size ) {
+           settings.readed -= size;
+        } else {
+           DPRINTF("bindfs_read: Waiting want: %ld readed: %ld limit: %ld!\r", size, settings.readed, settings.read_limit);
+           while(1) {
+              time(&t);
+              if( (t - settings.last_read) > 0 ){
+                 settings.readed += settings.read_limit;
+                 break;
+              }
+              usleep(750);
+           }
+           if( size > settings.readed ) {
+              DPRINTF("[Size is more] ");
+              memset(buf, 0x00, size);
+              size = settings.readed;
+              settings.readed = 0;
+           } else {
+              DPRINTF("[Size is less] (size: %ld left: %ld) ",size, settings.readed);
+              settings.readed -= size;
+           }
+           DPRINTF("\nbindfs_read: size: %ld!\n", size);
+        }
+
+        /*
+          Set new time
+        */
+        time(&settings.last_read);
+    }
+
     res = pread(fi->fh, buf, size, offset);
     if (res == -1)
         res = -errno;
@@ -983,6 +1041,8 @@ static void print_usage(const char *progname)
            "  --hide-hard-links         Always report a hard link count of 1.\n"
            "  --multithreaded           Enable multithreaded mode. See man page\n"
            "                            for security issue with current implementation.\n"
+           "  --write-speed             Enable write speed limiter (bytes per second)\n"
+           "  --read-speed              Enable read speed limiter (bytes per second)\n"
            "\n"
            "FUSE options:\n"
            "  -o opt[,opt,...]          Mount options.\n"
@@ -1019,7 +1079,9 @@ enum OptionKey {
     OPTKEY_REALISTIC_PERMISSIONS,
     OPTKEY_CTIME_FROM_MTIME,
     OPTKEY_HIDE_HARD_LINKS,
-    OPTKEY_MULTITHREADED
+    OPTKEY_MULTITHREADED,
+    OPTKEY_WRITESPEED,
+    OPTKEY_READSPEED
 };
 
 static int process_option(void *data, const char *arg, int key,
@@ -1345,6 +1407,8 @@ int main(int argc, char *argv[])
         char *chmod_filter;
         int no_allow_other;
         int multithreaded;
+        long write_speed;
+        long read_speed;
     } od;
 
     #define OPT2(one, two, key) \
@@ -1401,11 +1465,12 @@ int main(int argc, char *argv[])
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
+        OPT_OFFSET2("--read-speed=%ld", "read-speed=%ld", read_speed, -1),
+        OPT_OFFSET2("--write-speed=%ld", "write-speed=%ld", write_speed, -1),
         FUSE_OPT_END
     };
 
     int fuse_main_return;
-
 
     /* Initialize settings */
     memset(&od, 0, sizeof(od));
@@ -1436,6 +1501,13 @@ int main(int argc, char *argv[])
     settings.realistic_permissions = 0;
     settings.ctime_from_mtime = 0;
     settings.hide_hard_links = 0;
+    settings.read_limit=-1;
+    settings.write_limit=-1;
+    settings.readed=settings.read_limit;
+    settings.writed=settings.write_limit;
+    time(&settings.start_time);
+    time(&settings.last_read);
+    time(&settings.last_write);
     atexit(&atexit_func);
     
     /* Parse options */
@@ -1447,7 +1519,17 @@ int main(int argc, char *argv[])
         print_usage(my_basename(argv[0]));
         return 1;
     }
-    
+
+    /* If user want some read speed set it */
+    if(od.read_speed) {
+          settings.read_limit=od.read_speed;
+    }
+
+    /* If user want some write speed set it */
+    if(od.write_speed) {
+          settings.read_limit=od.read_speed;
+    }
+
     /* Check for deprecated options */
     if (od.deprecated_user) {
         fprintf(stderr, "Deprecation warning: please use --force-user instead of --user or --owner.\n");
