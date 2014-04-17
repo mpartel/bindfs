@@ -782,7 +782,7 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                  settings.readed += settings.read_limit;
                  break;
               }
-              usleep(750);
+              usleep(1500);
            }
            if( size > settings.readed ) {
               DPRINTF("[Size is more] ");
@@ -790,7 +790,7 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
               size = settings.readed;
               settings.readed = 0;
            } else {
-              DPRINTF("[Size is less] (size: %ld left: %ld) ",size, settings.readed);
+              DPRINTF("[Size is less] (size: %ld left: %ld) ", size, settings.readed);
               settings.readed -= size;
            }
            DPRINTF("\nbindfs_read: size: %ld!\n", size);
@@ -813,7 +813,70 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
                         off_t offset, struct fuse_file_info *fi)
 {
     int res;
+    time_t t;
+    long throttle_write_offset = 0;
+    long original_size = size;
     (void) path;
+
+    /*
+       Read limit has to be more than 1024 so we can do anything
+     */
+    if( settings.write_limit > 1024 ) {
+        time(&t);
+
+        if( (t - settings.last_write) > 0 ) {
+           DPRINTF("bindfs_write: Reset a new sec started!\n");
+           settings.writed = settings.write_limit;
+        }
+
+        /*   Logic goes like this:
+             If we need to write less than we can we just write it and decreace writing bytes
+             If it's more we can we cut in pieces and write it down as we should
+        */
+
+        if( settings.writed > 0 && settings.writed > size ) {
+           settings.writed -= size;
+        } else {
+           DPRINTF("bindfs_write: Waiting want: %ld readed: %ld limit: %ld!\r", size, settings.writed, settings.read_limit);
+           while(1) {
+              time(&t);
+              if( (t - settings.last_write) > 0 ){
+                 settings.writed += settings.write_limit;
+                 if( size > settings.writed ) {
+                    res = pwrite(fi->fh, buf, settings.writed, (offset + throttle_write_offset));
+                    throttle_write_offset += settings.writed;
+                    size -= settings.writed;
+                    settings.writed = 0;
+                 } else {
+                    res = pwrite(fi->fh, buf, size, (offset + throttle_write_offset));
+                    settings.writed -= size;
+                    size = 0;
+                 }
+
+                 /*
+                     Set new time
+                 */
+                 time(&settings.last_write);
+
+                 if( size == 0 && res >= 0 ){
+                    DPRINTF("\n");
+                    return original_size;
+                 }
+
+                 if( res == -1 ) {
+                   DPRINTF("\n[ERROR]\n");
+                   return -errno;
+                 }
+              }
+              usleep(1500);
+           }
+        }
+
+        /*
+          Set new time
+        */
+        time(&settings.last_write);
+    }
 
     res = pwrite(fi->fh, buf, size, offset);
     if (res == -1)
@@ -1527,7 +1590,7 @@ int main(int argc, char *argv[])
 
     /* If user want some write speed set it */
     if(od.write_speed) {
-          settings.read_limit=od.read_speed;
+          settings.write_limit=od.write_speed;
     }
 
     /* Check for deprecated options */
