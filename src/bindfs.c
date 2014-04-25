@@ -33,6 +33,7 @@
 
 /* For >= 500 for pread/pwrite and readdir_r; >= 700 for utimensat */
 #define _XOPEN_SOURCE 700
+#define _BSD_SOURCE
 
 #include <stdlib.h>
 #include <stddef.h>
@@ -46,6 +47,7 @@
 #include <sys/stat.h>
 #endif
 #include <sys/statvfs.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
@@ -132,7 +134,13 @@ static struct Settings {
 
     int ctime_from_mtime;
     int hide_hard_links;
-    
+
+    struct timeval throttle_start_time_write;
+    struct timeval throttle_start_time_read;
+    long throttle_written;
+    long throttle_readed;
+    long write_limit;
+    long read_limit;
 } settings;
 
 
@@ -734,6 +742,11 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
     if (fd == -1)
         return -errno;
 
+    settings.throttle_readed = settings.read_limit;
+    settings.throttle_written = settings.write_limit;
+    gettimeofday(&settings.throttle_start_time_write, NULL);
+    gettimeofday(&settings.throttle_start_time_read, NULL);
+
     fi->fh = fd;
     return 0;
 }
@@ -742,11 +755,48 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi)
 {
     int res;
+    struct timeval throttle_cur_time;
     (void) path;
-    
+
+    /*
+       Smallest amount of reading seems to be 4096
+       So smaller than that reading is not very wise..
+     */
+    if (settings.read_limit > 4096) {
+        /* Wait until we have new slot available */
+       if (settings.throttle_readed <= 4096) {
+           while(1) {
+              gettimeofday(&throttle_cur_time, NULL);
+              if (((throttle_cur_time.tv_sec - settings.throttle_start_time_read.tv_sec) &&
+                 (throttle_cur_time.tv_usec >= settings.throttle_start_time_read.tv_usec)) ||
+                 (throttle_cur_time.tv_sec - settings.throttle_start_time_read.tv_sec) > 1) {
+                 gettimeofday(&settings.throttle_start_time_read, NULL);
+                 settings.throttle_readed = settings.read_limit;
+                 break;
+              }
+              usleep(5000);
+              }
+           }
+
+           /*
+              System seems to be happier with this way
+              If we just read one chumk kernel gets pissed
+              Stuff comes from cache anyway so we can cut it down
+              Only problem is this causes little over head but is
+              more accurate
+            */
+           if ((settings.throttle_readed <= size) && (settings.throttle_readed > 4096))
+               size = 4096;
+
+    }
+
     res = pread(fi->fh, buf, size, offset);
+
     if (res == -1)
         res = -errno;
+
+    if (settings.read_limit > 0)
+        settings.throttle_readed -= res;
 
     return res;
 }
@@ -755,11 +805,35 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
                         off_t offset, struct fuse_file_info *fi)
 {
     int res;
+    struct timeval throttle_cur_time;
     (void) path;
+
+    if (settings.write_limit > 0) {
+        /* Wait until we have new slot available */
+       if (settings.throttle_written <= 0) {
+           while(1) {
+              gettimeofday(&throttle_cur_time, NULL);
+              if (((throttle_cur_time.tv_sec - settings.throttle_start_time_write.tv_sec) &&
+                 (throttle_cur_time.tv_usec >= settings.throttle_start_time_write.tv_usec)) ||
+                 (throttle_cur_time.tv_sec - settings.throttle_start_time_write.tv_sec) > 1) {
+                 gettimeofday(&settings.throttle_start_time_write, NULL);
+                 settings.throttle_written = settings.write_limit;
+                 break;
+              }
+              usleep(12000);
+              }
+           }
+
+           if (settings.throttle_written <= size)
+               size = settings.throttle_written;
+    }
 
     res = pwrite(fi->fh, buf, size, offset);
     if (res == -1)
         res = -errno;
+
+    if (settings.write_limit > 0)
+        settings.throttle_written -= res;
 
     return res;
 }
@@ -983,6 +1057,8 @@ static void print_usage(const char *progname)
            "  --hide-hard-links         Always report a hard link count of 1.\n"
            "  --multithreaded           Enable multithreaded mode. See man page\n"
            "                            for security issue with current implementation.\n"
+           "  --write-speed             Enable write speed limiter (bytes per second)\n"
+           "  --read-speed              Enable read speed limiter (bytes per second)\n"
            "\n"
            "FUSE options:\n"
            "  -o opt[,opt,...]          Mount options.\n"
@@ -1019,7 +1095,9 @@ enum OptionKey {
     OPTKEY_REALISTIC_PERMISSIONS,
     OPTKEY_CTIME_FROM_MTIME,
     OPTKEY_HIDE_HARD_LINKS,
-    OPTKEY_MULTITHREADED
+    OPTKEY_MULTITHREADED,
+    OPTKEY_WRITESPEED,
+    OPTKEY_READSPEED
 };
 
 static int process_option(void *data, const char *arg, int key,
@@ -1345,6 +1423,8 @@ int main(int argc, char *argv[])
         char *chmod_filter;
         int no_allow_other;
         int multithreaded;
+        long write_speed;
+        long read_speed;
     } od;
 
     #define OPT2(one, two, key) \
@@ -1401,11 +1481,12 @@ int main(int argc, char *argv[])
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
+        OPT_OFFSET2("--read-speed=%ld", "read-speed=%ld", read_speed, -1),
+        OPT_OFFSET2("--write-speed=%ld", "write-speed=%ld", write_speed, -1),
         FUSE_OPT_END
     };
 
     int fuse_main_return;
-
 
     /* Initialize settings */
     memset(&od, 0, sizeof(od));
@@ -1436,6 +1517,8 @@ int main(int argc, char *argv[])
     settings.realistic_permissions = 0;
     settings.ctime_from_mtime = 0;
     settings.hide_hard_links = 0;
+    settings.read_limit=-1;
+    settings.write_limit=-1;
     atexit(&atexit_func);
     
     /* Parse options */
@@ -1447,7 +1530,17 @@ int main(int argc, char *argv[])
         print_usage(my_basename(argv[0]));
         return 1;
     }
-    
+
+    /* If user want some read speed set it */
+    if(od.read_speed) {
+          settings.read_limit=od.read_speed;
+    }
+
+    /* If user want some write speed set it */
+    if(od.write_speed) {
+          settings.write_limit=od.write_speed;
+    }
+
     /* Check for deprecated options */
     if (od.deprecated_user) {
         fprintf(stderr, "Deprecation warning: please use --force-user instead of --user or --owner.\n");
