@@ -47,6 +47,7 @@
 #include <sys/stat.h>
 #endif
 #include <sys/statvfs.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
@@ -134,11 +135,10 @@ static struct Settings {
     int ctime_from_mtime;
     int hide_hard_links;
 
-    time_t start_time;
-    time_t last_write;
+    struct timeval throttle_start_time_write;
+    long throttle_written;
     time_t last_read;
     long readed;
-    long writed;
     long write_limit;
     long read_limit;
 } settings;
@@ -743,6 +743,8 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
         return -errno;
 
     settings.readed = settings.read_limit;
+    settings.throttle_written = settings.write_limit;
+    gettimeofday(&settings.throttle_start_time_write, NULL);
 
     fi->fh = fd;
     return 0;
@@ -813,74 +815,34 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
                         off_t offset, struct fuse_file_info *fi)
 {
     int res;
-    time_t t;
-    long throttle_write_offset = 0;
-    long original_size = size;
+    struct timeval throttle_cur_time;
     (void) path;
 
-    /*
-       Read limit has to be more than 1024 so we can do anything
-     */
-    if( settings.write_limit > 1024 ) {
-        time(&t);
-
-        if( (t - settings.last_write) > 0 ) {
-           DPRINTF("bindfs_write: Reset a new sec started!\n");
-           settings.writed = settings.write_limit;
-        }
-
-        /*   Logic goes like this:
-             If we need to write less than we can we just write it and decreace writing bytes
-             If it's more we can we cut in pieces and write it down as we should
-        */
-
-        if( settings.writed > 0 && settings.writed > size ) {
-           settings.writed -= size;
-        } else {
-           DPRINTF("bindfs_write: Waiting want: %ld readed: %ld limit: %ld!\r", size, settings.writed, settings.read_limit);
+    if (settings.write_limit > 0) {
+        /* Wait until we have new slot available */
+       if (settings.throttle_written <= 0) {
            while(1) {
-              time(&t);
-              if( (t - settings.last_write) > 0 ){
-                 settings.writed += settings.write_limit;
-                 if( size > settings.writed ) {
-                    res = pwrite(fi->fh, buf, settings.writed, (offset + throttle_write_offset));
-                    throttle_write_offset += settings.writed;
-                    size -= settings.writed;
-                    settings.writed = 0;
-                 } else {
-                    res = pwrite(fi->fh, buf, size, (offset + throttle_write_offset));
-                    settings.writed -= size;
-                    size = 0;
-                 }
-
-                 /*
-                     Set new time
-                 */
-                 time(&settings.last_write);
-
-                 if( size == 0 && res >= 0 ){
-                    DPRINTF("\n");
-                    return original_size;
-                 }
-
-                 if( res == -1 ) {
-                   DPRINTF("\n[ERROR]\n");
-                   return -errno;
-                 }
+              gettimeofday(&throttle_cur_time, NULL);
+              if ((throttle_cur_time.tv_sec - settings.throttle_start_time_write.tv_sec) &&
+                 (throttle_cur_time.tv_usec >= settings.throttle_start_time_write.tv_usec)) {
+                 gettimeofday(&settings.throttle_start_time_write, NULL);
+                 settings.throttle_written = settings.write_limit;
+                 break;
               }
-              usleep(1500);
+              usleep(12000);
+              }
            }
-        }
 
-        /*
-          Set new time
-        */
-        time(&settings.last_write);
+           if (settings.throttle_written <= size)
+               size = settings.throttle_written;
     }
 
     res = pwrite(fi->fh, buf, size, offset);
     if (res == -1)
         res = -errno;
+
+    if (settings.write_limit > 0)
+        settings.throttle_written -= res;
 
     return res;
 }
@@ -1567,10 +1529,6 @@ int main(int argc, char *argv[])
     settings.read_limit=-1;
     settings.write_limit=-1;
     settings.readed=settings.read_limit;
-    settings.writed=settings.write_limit;
-    time(&settings.start_time);
-    time(&settings.last_read);
-    time(&settings.last_write);
     atexit(&atexit_func);
     
     /* Parse options */
