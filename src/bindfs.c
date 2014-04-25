@@ -136,9 +136,9 @@ static struct Settings {
     int hide_hard_links;
 
     struct timeval throttle_start_time_write;
+    struct timeval throttle_start_time_read;
     long throttle_written;
-    time_t last_read;
-    long readed;
+    long throttle_readed;
     long write_limit;
     long read_limit;
 } settings;
@@ -742,9 +742,10 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
     if (fd == -1)
         return -errno;
 
-    settings.readed = settings.read_limit;
+    settings.throttle_readed = settings.read_limit;
     settings.throttle_written = settings.write_limit;
     gettimeofday(&settings.throttle_start_time_write, NULL);
+    gettimeofday(&settings.throttle_start_time_read, NULL);
 
     fi->fh = fd;
     return 0;
@@ -754,59 +755,48 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi)
 {
     int res;
-    time_t t;
+    struct timeval throttle_cur_time;
     (void) path;
 
     /*
-       Read limit has to be more than 8192 so we can do anything
+       Smallest amount of reading seems to be 4096
+       So smaller than that reading is not very wise..
      */
-    if( settings.read_limit > 8192 ) {
-        time(&t);
-
-        if( (t - settings.last_read) > 0 ) {
-           DPRINTF("bindfs_read: Reset a new sec started!\n");
-           settings.readed = settings.read_limit;
-        }
-
-        /*   Logic goes like this:
-             If there is limit in this second use it and read as much there is to
-             read.
-             if there is not. wait second and read as much as we can..
-        */
-
-        if( settings.readed > 0 && settings.readed > size ) {
-           settings.readed -= size;
-        } else {
-           DPRINTF("bindfs_read: Waiting want: %ld readed: %ld limit: %ld!\r", size, settings.readed, settings.read_limit);
+    if (settings.read_limit > 4096) {
+        /* Wait until we have new slot available */
+       if (settings.throttle_readed <= 4096) {
            while(1) {
-              time(&t);
-              if( (t - settings.last_read) > 0 ){
-                 settings.readed += settings.read_limit;
+              gettimeofday(&throttle_cur_time, NULL);
+              if (((throttle_cur_time.tv_sec - settings.throttle_start_time_read.tv_sec) &&
+                 (throttle_cur_time.tv_usec >= settings.throttle_start_time_read.tv_usec)) ||
+                 (throttle_cur_time.tv_sec - settings.throttle_start_time_read.tv_sec) > 1) {
+                 gettimeofday(&settings.throttle_start_time_read, NULL);
+                 settings.throttle_readed = settings.read_limit;
                  break;
               }
-              usleep(1500);
+              usleep(5000);
+              }
            }
-           if( size > settings.readed ) {
-              DPRINTF("[Size is more] ");
-              memset(buf, 0x00, size);
-              size = settings.readed;
-              settings.readed = 0;
-           } else {
-              DPRINTF("[Size is less] (size: %ld left: %ld) ", size, settings.readed);
-              settings.readed -= size;
-           }
-           DPRINTF("\nbindfs_read: size: %ld!\n", size);
-        }
 
-        /*
-          Set new time
-        */
-        time(&settings.last_read);
+           /*
+              System seems to be happier with this way
+              If we just read one chumk kernel gets pissed
+              Stuff comes from cache anyway so we can cut it down
+              Only problem is this causes little over head but is
+              more accurate
+            */
+           if ((settings.throttle_readed <= size) && (settings.throttle_readed > 4096))
+               size = 4096;
+
     }
 
     res = pread(fi->fh, buf, size, offset);
+
     if (res == -1)
         res = -errno;
+
+    if (settings.read_limit > 0)
+        settings.throttle_readed -= res;
 
     return res;
 }
@@ -1528,7 +1518,6 @@ int main(int argc, char *argv[])
     settings.hide_hard_links = 0;
     settings.read_limit=-1;
     settings.write_limit=-1;
-    settings.readed=settings.read_limit;
     atexit(&atexit_func);
     
     /* Parse options */
