@@ -813,8 +813,9 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
        if (settings.throttle_written <= 0) {
            while(1) {
               gettimeofday(&throttle_cur_time, NULL);
-              if ((throttle_cur_time.tv_sec - settings.throttle_start_time_write.tv_sec) &&
-                 (throttle_cur_time.tv_usec >= settings.throttle_start_time_write.tv_usec)) {
+              if (((throttle_cur_time.tv_sec - settings.throttle_start_time_write.tv_sec) &&
+                 (throttle_cur_time.tv_usec >= settings.throttle_start_time_write.tv_usec)) ||
+                 (throttle_cur_time.tv_sec - settings.throttle_start_time_write.tv_sec) > 1) {
                  gettimeofday(&settings.throttle_start_time_write, NULL);
                  settings.throttle_written = settings.write_limit;
                  break;
