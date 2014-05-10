@@ -40,7 +40,8 @@ AC_SUBST([my_CPPFLAGS])
 AC_SUBST([my_CFLAGS])
 AC_SUBST([my_LDFLAGS])
 
-# Check for xattrs
+# Checks for platform-specific stuff
+AC_CHECK_FUNCS([lutimes utimensat])
 AC_CHECK_FUNCS([setxattr getxattr listxattr removexattr])
 AC_CHECK_FUNCS([lsetxattr lgetxattr llistxattr lremovexattr])
 
