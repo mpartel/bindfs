@@ -231,7 +231,6 @@ testenv("--chmod-allow-x --chmod-ignore") do
     chmod(00077, 'mnt/file') # should change x bits; should not unset sticky bit
     assert { File.stat('src/file').mode & 07777 == 01611 }
 
-
     mkdir('src/dir')
     chmod(0700, 'src/dir')
     chmod(0077, 'mnt/dir') # bits on dir should not change
@@ -371,19 +370,22 @@ root_testenv("", :title => "setgid directories") do
     assert { File.stat('mnt/dir/file').gid == $nogroup_gid }
 end
 
-root_testenv("", :title => "utimens on symlinks") do
-    touch('mnt/file')
-    Dir.chdir "mnt" do
-      system('ln -sf file link')
+# utimensat() unavailable on OS X
+unless RUBY_PLATFORM =~ /darwin/
+    root_testenv("", :title => "utimens on symlinks") do
+        touch('mnt/file')
+        Dir.chdir "mnt" do
+          system('ln -sf file link')
+        end
+
+        system("#{$tests_dir}/utimens_nofollow mnt/link 12 34 56 78")
+        raise "Failed to run utimens_nofollow: #{$?.inspect}" unless $?.success?
+
+        assert { File.lstat('mnt/link').atime.to_i < 100 }
+        assert { File.lstat('mnt/link').mtime.to_i < 100 }
+        assert { File.lstat('mnt/file').atime.to_i > 100 }
+        assert { File.lstat('mnt/file').mtime.to_i > 100 }
     end
-    
-    system("#{$tests_dir}/utimens_nofollow mnt/link 12 34 56 78")
-    raise "Failed to run utimens_nofollow: #{$?.inspect}" unless $?.success?
-    
-    assert { File.lstat('mnt/link').atime.to_i < 100 }
-    assert { File.lstat('mnt/link').mtime.to_i < 100 }
-    assert { File.lstat('mnt/file').atime.to_i > 100 }
-    assert { File.lstat('mnt/file').mtime.to_i > 100 }
 end
 
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.

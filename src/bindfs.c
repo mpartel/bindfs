@@ -1615,8 +1615,6 @@ int main(int argc, char *argv[])
 
     fuse_main_return = fuse_main(args.argc, args.argv, &bindfs_oper, NULL);
 
-
-
     fuse_opt_free_args(&args);
     close(settings.mntsrc_fd);
 

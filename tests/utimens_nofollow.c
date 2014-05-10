@@ -1,4 +1,6 @@
 
+#ifndef __APPLE__
+
 #define _BSD_SOURCE /* For atoll */
 
 #include <stdlib.h>
@@ -30,3 +32,14 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+
+#else   /* #ifndef __APPLE__ */
+
+#include <stdio.h>
+int main()
+{
+    fprintf("utimensat() unavailable on this platform\n");
+    return 1;
+}
+
+#endif  /* #ifndef __APPLE__ */
