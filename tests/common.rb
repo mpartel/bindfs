@@ -53,7 +53,7 @@ def wait_for(options = {}, &condition)
         :max_sleep => 0.5,
         :max_time => 5
     }.merge(options)
-    
+
     start_time = Time.now
     sleep_time = options[:initial_sleep]
     while !`mount`.include?(`pwd`.strip)
@@ -85,12 +85,12 @@ def testenv(bindfs_args, options = {}, &block)
         :valgrind => valgrind_options != nil,
         :valgrind_opts => valgrind_options
     }.merge(options)
-  
+
     # todo: less repetitive and more careful error handling and cleanup
 
     puts "--- #{options[:title]} ---"
     puts "[  #{bindfs_args}  ]"
-    
+
     begin
         Dir.mkdir TESTDIR_NAME
     rescue Exception => ex
@@ -145,7 +145,7 @@ def testenv(bindfs_args, options = {}, &block)
         fail("ERROR: failed to umount")
         testcase_ok = false
     end
-    
+
     if !$?.success?
         fail("exit status: #{$?}")
         testcase_ok = false

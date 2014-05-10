@@ -27,25 +27,25 @@ class ChildProcess
       run
     end
   end
-  
+
   attr_reader :pid
-  
+
   def run
     raise "undefined"
   end
-  
+
   def interrupt
     ensure_started
     Process.kill("INT", @pid)
   end
-  
+
   def wait
     ensure_started
     Process.waitpid @pid
     @pid = nil
     $?
   end
-  
+
   def ensure_started
     raise "Not started" if !@pid
   end
@@ -55,7 +55,7 @@ class BindfsRunner < ChildProcess
   def initialize(options = {})
     @valgrind = options[:valgrind]
     @valgrind_tool = options[:valgrind_tool] || 'memcheck'
-    
+
     if @valgrind && Process.uid != 0
       raise "This must be run as root due to valgrind's limitations"
     end
@@ -68,7 +68,7 @@ class BindfsRunner < ChildProcess
       SRC_DIR,
       MNT_DIR
     ]
-    
+
     if @valgrind
       cmd = [
         'valgrind',
@@ -78,7 +78,7 @@ class BindfsRunner < ChildProcess
         '--'
       ] + cmd
     end
-    
+
     cmd_str = Shellwords.join(cmd) + ' > stress_test.log 2>&1'
     puts "Starting #{cmd_str}"
     Process.exec(cmd_str)
@@ -93,21 +93,21 @@ class FileCopier < ChildProcess
       :size => "100M",
       :iterations => 10
     }.merge(options)
-    
+
     puts "Creating template file, size = #{@options[:size]}"
     src_dir_src_file = "#{SRC_DIR}/#{@options[:prefix]}_src"
     output = `dd if=/dev/urandom of='#{src_dir_src_file}' bs=#{@options[:size]} count=1 2>&1`
     raise "#{$?.inspect} with output:\n#{output}" unless $?.success?
   end
-  
+
   def mnt_prefix
     "#{MNT_DIR}/#{@options[:prefix]}"
   end
-  
+
   def src_file
     "#{mnt_prefix}_src"
   end
-  
+
   def run
     task_desc = "#{@options[:num_copies]} copies of #{@options[:size]} in #{@options[:iterations]} iterations"
     puts "Making #{task_desc}"
