@@ -116,7 +116,7 @@ void grow_array_impl(void **array, int* capacity, int member_size)
     } else {
         new_cap *= 2;
     }
-    
+
     *array = realloc(*array, new_cap * member_size);
     *capacity = new_cap;
 }
@@ -135,7 +135,7 @@ void init_arena(struct arena *a, int initial_capacity)
 void grow_arena(struct arena *a, int amount)
 {
     int new_cap;
-    
+
     a->size += amount;
     if (a->size >= a->capacity) {
         new_cap = a->capacity;

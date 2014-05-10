@@ -76,17 +76,17 @@ root_testenv("", :title => "--create-as-user should be default for root") do
   `su -c 'touch mnt/file' nobody`
   `su -c 'mkdir mnt/dir' nobody`
   `su -c 'ln -sf /tmp/foo mnt/lnk' nobody`
-  
+
   assert { File.stat('mnt/file').uid == nobody_uid }
   assert { File.stat('mnt/file').gid == nogroup_gid }
   assert { File.stat('src/file').uid == nobody_uid }
   assert { File.stat('src/file').gid == nogroup_gid }
-  
+
   assert { File.stat('mnt/dir').uid == nobody_uid }
   assert { File.stat('mnt/dir').gid == nogroup_gid }
   assert { File.stat('src/dir').uid == nobody_uid }
   assert { File.stat('src/dir').gid == nogroup_gid }
-  
+
   assert { File.lstat('mnt/lnk').uid == nobody_uid }
   assert { File.lstat('mnt/lnk').gid == nogroup_gid }
   assert { File.lstat('src/lnk').uid == nobody_uid }
@@ -106,7 +106,7 @@ testenv("-p 0777 --realistic-permissions", :title => '--realistic-permissions') 
     touch('src/execfile')
     chmod(0600, 'src/noexecfile')
     chmod(0700, 'src/execfile')
-    
+
     assert { File.stat('mnt/noexecfile').mode & 0777 == 0666 }
     assert { File.stat('mnt/execfile').mode & 0777 == 0777 }
 end
@@ -114,18 +114,18 @@ end
 testenv("-p 0777", :title => '--realistic-permissions not the default') do
     touch('src/noexecfile')
     chmod(0600, 'src/noexecfile')
-    
+
     assert { File.stat('mnt/noexecfile').mode & 0777 == 0777 }
 end
 
 testenv("--ctime-from-mtime") do
     sf = 'src/file'
     mf = 'mnt/file'
-    
+
     touch(sf)
     sleep(1.1)
     chmod(0777, mf)
-    
+
     # to_i gives us prceision of 1 sec
     assert { File.stat(mf).ctime.to_i == File.stat(mf).mtime.to_i }
     assert { File.stat(sf).ctime > File.stat(sf).mtime }
@@ -134,7 +134,7 @@ end
 testenv("--hide-hard-links") do
   touch('src/one')
   ln('src/one', 'src/two')
-  
+
   assert { File.stat('src/one').nlink == 2 }
   assert { File.stat('mnt/one').nlink == 1 }
 end
@@ -181,8 +181,8 @@ def run_chown_chgrp_test_case(chown_flag, chgrp_flag, expectations)
                 testcase.call
                 uid = File.stat(srcfile).uid
                 gid = File.stat(srcfile).gid
-                
-                case expect                
+
+                case expect
                 when :uid
                     assert { uid == $nobody_uid }
                     assert { gid != $nogroup_gid }
@@ -209,7 +209,7 @@ end
 
 root_testenv("--chown-deny") do
     touch('src/file')
-    
+
     assert_exception(EPERM) { chown('nobody', nil, 'mnt/file') }
     assert_exception(EPERM) { chown('nobody', 'nogroup', 'mnt/file') }
     chown(nil, 'nogroup', 'mnt/file')
@@ -223,7 +223,7 @@ root_testenv("--mirror=root") do
     assert { File.stat('mnt/file').gid == $nogroup_gid }
 end
 
-testenv("--chmod-allow-x --chmod-ignore") do 
+testenv("--chmod-allow-x --chmod-ignore") do
     touch('src/file')
 
     chmod(01700, 'src/file') # sticky bit set
@@ -238,7 +238,7 @@ testenv("--chmod-allow-x --chmod-ignore") do
     assert { File.stat('src/dir').mode & 0777 == 0700 }
 end
 
-testenv("--chmod-deny --chmod-allow-x") do 
+testenv("--chmod-deny --chmod-allow-x") do
     touch('src/file')
 
     chmod(0700, 'src/file')
@@ -269,18 +269,18 @@ end
 root_testenv("--map=nobody/root:@nogroup/@root") do
     touch('src/file')
     chown('nobody', 'nogroup', 'src/file')
-    
+
     assert { File.stat('mnt/file').uid == 0 }
     assert { File.stat('mnt/file').gid == 0 }
-    
+
     touch('mnt/newfile')
     mkdir('mnt/newdir')
-    
+
     assert { File.stat('src/newfile').uid == $nobody_uid }
     assert { File.stat('src/newfile').gid == $nogroup_gid }
     assert { File.stat('src/newdir').uid == $nobody_uid }
     assert { File.stat('src/newdir').gid == $nogroup_gid }
-    
+
     assert { File.stat('mnt/newfile').uid == 0 }
     assert { File.stat('mnt/newfile').gid == 0 }
     assert { File.stat('mnt/newdir').uid == 0 }
@@ -290,7 +290,7 @@ end
 root_testenv("--map=@nogroup/@root") do
     touch('src/file')
     chown('nobody', 'nogroup', 'src/file')
-    
+
     assert { File.stat('mnt/file').gid == 0 }
 end
 
@@ -299,7 +299,7 @@ root_testenv("--map=1/2") do
     touch('src/file2')
     chown(1, nil, 'src/file1')
     chown(3, nil, 'src/file2')
-    
+
     assert { File.stat('mnt/file1').uid == 2 }
     assert { File.stat('mnt/file2').uid == 3 }
 end
@@ -318,7 +318,7 @@ root_testenv("-u 1 --map=1/2:3/4") do
     touch('src/file1')
     touch('src/file2')
     chown(2, nil, 'src/file1')
-    
+
     assert { File.stat('mnt/file1').uid == 1 }
     assert { File.stat('mnt/file2').uid == 1 }
 end
@@ -328,9 +328,9 @@ root_testenv("--map=0/1:@0/@1", :title => "--map and chown/chgrp") do
     chown(2, 2, 'src/file1')
     assert { File.stat('mnt/file1').uid == 2 }
     assert { File.stat('mnt/file1').gid == 2 }
-    
+
     chown(1, 1, 'mnt/file1')
-    
+
     assert { File.stat('src/file1').uid == 0 }
     assert { File.stat('src/file1').gid == 0 }
     assert { File.stat('mnt/file1').uid == 1 }
@@ -347,13 +347,13 @@ end
 testenv("", :title => "has readdir inode numbers") do
     touch('src/file')
     mkdir('src/dir')
-    
+
     inodes = {}
     for line in `#{$tests_dir}/readdir_inode mnt`.split("\n").reject(&:empty?)
         inode, name = line.split(" ")
         inodes[name] = inode.to_i
     end
-    
+
     assert { inodes['file'] == File.stat('src/file').ino }
     assert { inodes['dir'] == File.stat('src/dir').ino }
 end
@@ -362,9 +362,9 @@ root_testenv("", :title => "setgid directories") do
     mkdir('mnt/dir')
     chmod("g+s", 'mnt/dir')
     chown(nil, $nogroup_gid, 'mnt/dir')
-    
+
     touch('mnt/dir/file')
-    
+
     assert { File.stat('src/dir').mode & 07000 == 02000 }
     assert { File.stat('src/dir/file').gid == $nogroup_gid }
     assert { File.stat('mnt/dir').mode & 07000 == 02000 }
@@ -400,13 +400,13 @@ if Process.uid == 0
             assert { File.stat('mnt/file').uid == $nobody_uid }
             `adduser root bindfs_test_group`
             raise "Failed to add root to test group" if !$?.success?
-            
+
             # Cache not refreshed yet
             assert { File.stat('mnt/file').uid == $nobody_uid }
-            
+
             Process.kill("SIGUSR1", bindfs_pid)
             sleep 0.5
-            
+
             assert { File.stat('mnt/file').uid == 0 }
         end
     ensure

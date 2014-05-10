@@ -103,9 +103,9 @@ static int rebuild_uid_cache()
     struct passwd *pw;
     struct uid_cache_entry *ent;
     int username_len;
-    
+
     uid_cache_size = 0;
-    
+
     while (1) {
         errno = 0;
         pw = getpwent();
@@ -116,19 +116,19 @@ static int rebuild_uid_cache()
                 goto error;
             }
         }
-        
+
         if (uid_cache_size == uid_cache_capacity) {
             grow_array(&uid_cache, &uid_cache_capacity, sizeof(struct uid_cache_entry));
         }
-        
+
         ent = &uid_cache[uid_cache_size++];
         ent->uid = pw->pw_uid;
         ent->main_gid = pw->pw_gid;
-        
+
         username_len = strlen(pw->pw_name) + 1;
         ent->username_offset = append_to_arena(&cache_arena, pw->pw_name, username_len);
     }
-    
+
     endpwent();
     return 1;
 error:
@@ -145,11 +145,11 @@ static int rebuild_gid_cache()
     struct gid_cache_entry *ent;
     int i;
     struct uid_cache_entry *uid_ent;
-    
+
     gid_cache_size = 0;
-    
+
     qsort(uid_cache, uid_cache_size, sizeof(struct uid_cache_entry), uid_cache_name_sortcmp);
-    
+
     while (1) {
         errno = 0;
         gr = getgrent();
@@ -160,16 +160,16 @@ static int rebuild_gid_cache()
                 goto error;
             }
         }
-        
+
         if (gid_cache_size == gid_cache_capacity) {
             grow_array(&gid_cache, &gid_cache_capacity, sizeof(struct gid_cache_entry));
         }
-        
+
         ent = &gid_cache[gid_cache_size++];
         ent->gid = gr->gr_gid;
         ent->uid_count = 0;
         ent->uids_offset = cache_arena.size;
-        
+
         for (i = 0; gr->gr_mem[i] != NULL; ++i) {
             uid_ent = (struct uid_cache_entry *)bsearch(
                 gr->gr_mem[i],
@@ -185,7 +185,7 @@ static int rebuild_gid_cache()
             }
         }
     }
-    
+
     endgrent();
     return 1;
 error:
@@ -344,12 +344,12 @@ int user_belongs_to_group(uid_t uid, gid_t gid)
     int ret = 0;
     int i;
     uid_t *uids;
-    
+
     pthread_rwlock_rdlock(&cache_lock);
-    
+
     if (cache_rebuild_requested) {
         pthread_rwlock_unlock(&cache_lock);
-        
+
         pthread_rwlock_wrlock(&cache_lock);
         if (cache_rebuild_requested) {
             DPRINTF("Building user/group cache");
@@ -357,16 +357,16 @@ int user_belongs_to_group(uid_t uid, gid_t gid)
             rebuild_cache();
         }
         pthread_rwlock_unlock(&cache_lock);
-        
+
         pthread_rwlock_rdlock(&cache_lock);
     }
-    
+
     struct uid_cache_entry *uent = uid_cache_lookup(uid);
     if (uent && uent->main_gid == gid) {
         ret = 1;
         goto done;
     }
-    
+
     struct gid_cache_entry *gent = gid_cache_lookup(gid);
     if (gent) {
         uids = (uid_t*)ARENA_GET(cache_arena, gent->uids_offset);
@@ -377,7 +377,7 @@ int user_belongs_to_group(uid_t uid, gid_t gid)
             }
         }
     }
-    
+
 done:
     pthread_rwlock_unlock(&cache_lock);
     return ret;
