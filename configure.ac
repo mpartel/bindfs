@@ -31,6 +31,8 @@ if test x"$with_core_foundation" == "xyes" ; then
 	LDFLAGS="${LDFLAGS} -framework CoreFoundation"
 fi
 
+AM_CONDITIONAL(BUILD_OS_IS_DARWIN, [test x"$build_os" = darwin])
+
 my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=26"
 my_CFLAGS="$my_CFLAGS -Wall"
 my_LDFLAGS="-pthread"

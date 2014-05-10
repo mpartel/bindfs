@@ -177,7 +177,11 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid);
 static int bindfs_truncate(const char *path, off_t size);
 static int bindfs_ftruncate(const char *path, off_t size,
                             struct fuse_file_info *fi);
+#ifdef __APPLE__
+static int bindfs_utime(const char *path, struct utimbuf *buf);
+#else
 static int bindfs_utimens(const char *path, const struct timespec tv[2]);
+#endif
 static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *fi);
 static int bindfs_open(const char *path, struct fuse_file_info *fi);
 static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
@@ -690,13 +694,21 @@ static int bindfs_ftruncate(const char *path, off_t size,
     return 0;
 }
 
+#ifdef __APPLE__
+static int bindfs_utime(const char *path, struct utimbuf *buf)
+#else
 static int bindfs_utimens(const char *path, const struct timespec tv[2])
+#endif
 {
     int res;
 
     path = process_path(path);
 
+    #ifdef __APPLE__
+    res = utime(path, buf);
+    #else
     res = utimensat(settings.mntsrc_fd, path, tv, AT_SYMLINK_NOFOLLOW);
+    #endif
     if (res == -1)
         return -errno;
 
@@ -906,7 +918,11 @@ static struct fuse_operations bindfs_oper = {
     .chown      = bindfs_chown,
     .truncate   = bindfs_truncate,
     .ftruncate  = bindfs_ftruncate,
+    #ifdef __APPLE__
+    .utime      = bindfs_utime,
+    #else
     .utimens    = bindfs_utimens,
+    #endif
     .create     = bindfs_create,
     .open       = bindfs_open,
     .read       = bindfs_read,
@@ -1598,6 +1614,8 @@ int main(int argc, char *argv[])
     setup_signal_handling();
 
     fuse_main_return = fuse_main(args.argc, args.argv, &bindfs_oper, NULL);
+
+
 
     fuse_opt_free_args(&args);
     close(settings.mntsrc_fd);
