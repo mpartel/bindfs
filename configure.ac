@@ -44,6 +44,20 @@ AC_SUBST([my_LDFLAGS])
 AC_CHECK_FUNCS([lutimes utimensat])
 AC_CHECK_FUNCS([setxattr getxattr listxattr removexattr])
 AC_CHECK_FUNCS([lsetxattr lgetxattr llistxattr lremovexattr])
+AC_COMPILE_IFELSE(
+  [AC_LANG_PROGRAM([[
+    #define BSD_SOURCE_
+    #include <sys/types.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
+    void foo() { struct stat st; st.st_mtim.tv_nsec = 123; }
+  ]])],
+  [AC_DEFINE(
+    [HAVE_STAT_NANOSEC],
+    [1],
+    [Define if struct stat has st_mtim.tv_nsec etc.]
+  )]
+)
 
 # Check for fuse
 PKG_CHECK_MODULES([fuse], [fuse >= 2.6.0])

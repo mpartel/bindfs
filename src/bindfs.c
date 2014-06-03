@@ -34,9 +34,8 @@
 /* For >= 500 for pread/pwrite and readdir_r; >= 700 for utimensat */
 #define _XOPEN_SOURCE 700
 
-#if !HAVE_UTIMENSAT && HAVE_LUTIMES
+/* For stat() nanosecond precision and lutimes() */
 #define _BSD_SOURCE
-#endif
 
 #include <stdlib.h>
 #include <stddef.h>
@@ -253,8 +252,13 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     /* Copy mtime (file content modification time)
        to ctime (inode/status change time)
        if the user asked for that */
-    if (settings.ctime_from_mtime)
+    if (settings.ctime_from_mtime) {
+#ifdef HAVE_STAT_NANOSEC
+        stbuf->st_ctim = stbuf->st_mtim;
+#else
         stbuf->st_ctime = stbuf->st_mtime;
+#endif
+    }
 
     /* Possibly map user/group */
     stbuf->st_uid = usermap_get_uid_or_default(settings.usermap, stbuf->st_uid, stbuf->st_uid);
