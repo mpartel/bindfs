@@ -254,6 +254,7 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
        if the user asked for that */
     if (settings.ctime_from_mtime) {
 #ifdef HAVE_STAT_NANOSEC
+        // TODO: does this work on OS X?
         stbuf->st_ctim = stbuf->st_mtim;
 #else
         stbuf->st_ctime = stbuf->st_mtime;

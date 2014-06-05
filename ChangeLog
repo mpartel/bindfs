@@ -1,3 +1,10 @@
+2014-06-05  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Use `lutimes` when `utimensat` is unavailable, as it is on OS X (#6).
+	* Copy nanoseconds with --ctime-from-mtime if struct stat.st_mtim etc. are
+	  present (#16).
+	* Released 1.12.4
+
 2013-09-23  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Use `utimensat` to support settings mtime/atime on symlinks,
