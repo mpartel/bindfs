@@ -408,38 +408,45 @@ somedir</b> </dt>
 user. 
 <p> </dd>
 
-<dt><b>bindfs#/home/bob/shared /var/www/shared/bob  fuse  perms=0000:u+rD
+<dt><b>/home/bob/shared /var/www/shared/bob  fuse.bindfs  perms=0000:u+rD
   0   0</b> </dt>
 <dd>
 <p> An example <i>/etc/fstab</i> entry. Note that the colon must be used to
 separate arguments to perms, because the comma is an option separator in
 <i>/etc/fstab</i>. 
+<p> </dd>
+
+<dt><b>bindfs#/home/bob/shared /var/www/shared/bob  fuse perms=0000:u+rD
+  0   0</b> </dt>
+<dd>
+<p> Older systems may require this deprecated fstab syntax. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect12' href='#toc12'>Notes</a></h2>
 
-<p> Setuid and setgid bits have no effect inside the mount.
-This is a necessary security feature of FUSE. 
-<p> MacFuse caches file contents
-by default. This means that changes in source files are not always immediately
-visible under the mount point. <b>-o nolocalcaches</b> can be used to disable the
-cache. 
-<p> When using <b>--mirror[-only] @somegroup</b>, bindfs won&rsquo;t see changes to the
-group&rsquo;s member list. Sending bindfs a <b>SIGUSR1</b> signal will make it reread
-the user database. 
+<p>
+Setuid and setgid bits have no effect inside the mount. This is a necessary
+security feature of FUSE. 
+<p> MacFuse caches file contents by default. This
+means that changes in source files are not always immediately visible under
+the mount point. <b>-o nolocalcaches</b> can be used to disable the cache. 
+<p> When
+using <b>--mirror[-only] @somegroup</b>, bindfs won&rsquo;t see changes to the group&rsquo;s member
+list. Sending bindfs a <b>SIGUSR1</b> signal will make it reread the user database.
+
 <p> 
 <p> 
 <h2><a name='sect13' href='#toc13'>Bugs</a></h2>
 
-<p> If bindfs is run in multithreaded mode (with the
-<b>--multithreaded</b> option) then it&rsquo;s possible for another process to briefly
-see a file with an incorrect owner, group or permissions. This may constitute
-a security risk if you rely on bindfs to reduce permissions on new files.
-For this reason, as of version 1.11 bindfs runs in single-threaded mode by
-default. 
-<p> Please report bugs and/or send pull requests to <i><b>https://github.com/mpartel/bindfs/issues</b>.</i>
+<p> If bindfs is run in multithreaded mode (with the <b>--multithreaded</b> option)
+then it&rsquo;s possible for another process to briefly see a file with an incorrect
+owner, group or permissions. This may constitute a security risk if you
+rely on bindfs to reduce permissions on new files. For this reason, as of
+version 1.11 bindfs runs in single-threaded mode by default. 
+<p> Please report
+bugs and/or send pull requests to <i><b>https://github.com/mpartel/bindfs/issues</b>.</i>
 
 <p> 
 <p> 
