@@ -36,12 +36,12 @@ end
 
 # nobody/nogroup is problematic on OS X
 def find_nonroot_user
-    u = Etc.getpwnam('travis') rescue Etc.getpwnam('nobody')
+    u = Etc.getpwnam('bindfs-test') rescue Etc.getpwnam('nobody')
     [u.name, u.uid]
 end
 
 def find_nonroot_group
-    g = Etc.getgrnam('travis') rescue Etc.getgrnam('nogroup')
+    g = Etc.getgrnam('bindfs-test') rescue Etc.getgrnam('nogroup')
     [g.name, g.gid]
 end
 

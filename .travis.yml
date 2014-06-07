@@ -12,5 +12,7 @@ before_install:
   - brew install osxfuse
   - sudo /bin/cp -RfX /usr/local/opt/osxfuse/Library/Filesystems/osxfusefs.fs /Library/Filesystems
   - sudo chmod +s /Library/Filesystems/osxfusefs.fs/Support/load_osxfusefs
+  - sudo dscl . -create /Groups/bindfs-test gid 1234
+  - sudo dscl . -create /Users/bindfs-test UniqueID 1234 PrimaryGroupID 1234
 #after_failure:
 #  - cat tests/internals/test-suite.log
