@@ -34,9 +34,20 @@ def chown(user, group, list)
     end
 end
 
+# nobody/nogroup is problematic on OS X
+def find_nonroot_user
+    u = Etc.getpwnam('travis') rescue Etc.getpwnam('nobody')
+    [u.name, u.uid]
+end
+
+def find_nonroot_group
+    g = Etc.getgrnam('travis') rescue Etc.getgrnam('nogroup')
+    [g.name, g.gid]
+end
+
 # Some useful shorthands
-$nobody_uid = nobody_uid = Etc.getpwnam('nobody').uid
-$nogroup_gid = nogroup_gid = Etc.getgrnam('nogroup').gid
+$nonroot_user, $nonroot_uid = find_nonroot_user
+$nonroot_group, $nonroot_gid = find_nonroot_group
 
 $tests_dir = File.dirname(File.realpath(__FILE__))
 
@@ -45,11 +56,11 @@ testenv("") do
     assert { File.basename(pwd) == TESTDIR_NAME }
 end
 
-testenv("-u nobody -g nogroup") do
+testenv("-u #{$nonroot_user} -g #{$nonroot_group}") do
     touch('src/file')
 
-    assert { File.stat('mnt/file').uid == nobody_uid }
-    assert { File.stat('mnt/file').gid == nogroup_gid }
+    assert { File.stat('mnt/file').uid == $nonroot_uid }
+    assert { File.stat('mnt/file').gid == $nonroot_gid }
 end
 
 testenv("-p 0600:u+D") do
@@ -65,7 +76,7 @@ testenv("--chmod-deny") do
     assert_exception(EPERM) { chmod(0777, 'mnt/file') }
 end
 
-testenv("-u nobody -m #{Process.uid} -p 0600,u+D") do
+testenv("-u #{$nonroot_user} -m #{Process.uid} -p 0600,u+D") do
     touch('src/file')
 
     assert { File.stat('mnt/file').uid == Process.uid }
@@ -73,24 +84,24 @@ end
 
 root_testenv("", :title => "--create-as-user should be default for root") do
   chmod(0777, 'src')
-  `su -c 'touch mnt/file' nobody`
-  `su -c 'mkdir mnt/dir' nobody`
-  `su -c 'ln -sf /tmp/foo mnt/lnk' nobody`
+  `su -c 'touch mnt/file' #{$nonroot_user}`
+  `su -c 'mkdir mnt/dir' #{$nonroot_user}`
+  `su -c 'ln -sf /tmp/foo mnt/lnk' #{$nonroot_user}`
 
-  assert { File.stat('mnt/file').uid == nobody_uid }
-  assert { File.stat('mnt/file').gid == nogroup_gid }
-  assert { File.stat('src/file').uid == nobody_uid }
-  assert { File.stat('src/file').gid == nogroup_gid }
+  assert { File.stat('mnt/file').uid == $nonroot_uid }
+  assert { File.stat('mnt/file').gid == $nonroot_gid }
+  assert { File.stat('src/file').uid == $nonroot_uid }
+  assert { File.stat('src/file').gid == $nonroot_gid }
 
-  assert { File.stat('mnt/dir').uid == nobody_uid }
-  assert { File.stat('mnt/dir').gid == nogroup_gid }
-  assert { File.stat('src/dir').uid == nobody_uid }
-  assert { File.stat('src/dir').gid == nogroup_gid }
+  assert { File.stat('mnt/dir').uid == $nonroot_uid }
+  assert { File.stat('mnt/dir').gid == $nonroot_gid }
+  assert { File.stat('src/dir').uid == $nonroot_uid }
+  assert { File.stat('src/dir').gid == $nonroot_gid }
 
-  assert { File.lstat('mnt/lnk').uid == nobody_uid }
-  assert { File.lstat('mnt/lnk').gid == nogroup_gid }
-  assert { File.lstat('src/lnk').uid == nobody_uid }
-  assert { File.lstat('src/lnk').gid == nogroup_gid }
+  assert { File.lstat('mnt/lnk').uid == $nonroot_uid }
+  assert { File.lstat('mnt/lnk').gid == $nonroot_gid }
+  assert { File.lstat('src/lnk').uid == $nonroot_uid }
+  assert { File.lstat('src/lnk').gid == $nonroot_gid }
 end
 
 testenv("--create-with-perms=og=r:ogd+x") do
@@ -167,9 +178,9 @@ def run_chown_chgrp_test_case(chown_flag, chgrp_flag, expectations)
     srcfile = 'src/file'
     mntfile = 'mnt/file'
     tests = [
-        lambda { chown('nobody', nil, mntfile) },
-        lambda { chown(nil, 'nogroup', mntfile) },
-        lambda { chown('nobody', 'nogroup', mntfile) }
+        lambda { chown($nonroot_user, nil, mntfile) },
+        lambda { chown(nil, $nonroot_group, mntfile) },
+        lambda { chown($nonroot_user, $nonroot_group, mntfile) }
     ]
 
     for testcase, expect in tests.zip expectations
@@ -184,17 +195,17 @@ def run_chown_chgrp_test_case(chown_flag, chgrp_flag, expectations)
 
                 case expect
                 when :uid
-                    assert { uid == $nobody_uid }
-                    assert { gid != $nogroup_gid }
+                    assert { uid == $nonroot_uid }
+                    assert { gid != $nonroot_gid }
                 when :gid
-                    assert { uid != $nobody_uid }
-                    assert { gid == $nogroup_gid }
+                    assert { uid != $nonroot_uid }
+                    assert { gid == $nonroot_gid }
                 when :both
-                    assert { uid == $nobody_uid }
-                    assert { gid == $nogroup_gid }
+                    assert { uid == $nonroot_uid }
+                    assert { gid == $nonroot_gid }
                 when nil
-                    assert { uid != $nobody_uid }
-                    assert { gid != $nogroup_gid }
+                    assert { uid != $nonroot_uid }
+                    assert { gid != $nonroot_gid }
                 end
             end
         end
@@ -210,17 +221,17 @@ end
 root_testenv("--chown-deny") do
     touch('src/file')
 
-    assert_exception(EPERM) { chown('nobody', nil, 'mnt/file') }
-    assert_exception(EPERM) { chown('nobody', 'nogroup', 'mnt/file') }
-    chown(nil, 'nogroup', 'mnt/file')
+    assert_exception(EPERM) { chown($nonroot_user, nil, 'mnt/file') }
+    assert_exception(EPERM) { chown($nonroot_user, $nonroot_group, 'mnt/file') }
+    chown(nil, $nonroot_group, 'mnt/file')
 end
 
 root_testenv("--mirror=root") do
     touch('src/file')
-    chown('nobody', 'nogroup', 'src/file')
+    chown($nonroot_user, $nonroot_group, 'src/file')
 
     assert { File.stat('mnt/file').uid == 0 }
-    assert { File.stat('mnt/file').gid == $nogroup_gid }
+    assert { File.stat('mnt/file').gid == $nonroot_gid }
 end
 
 testenv("--chmod-allow-x --chmod-ignore") do
@@ -265,9 +276,9 @@ testenv("--chmod-filter=g-w,o-rwx") do
     assert { File.stat('src/file').mode & 0777 == 0640 }
 end
 
-root_testenv("--map=nobody/root:@nogroup/@root") do
+root_testenv("--map=#{$nonroot_user}/root:@#{$nonroot_group}/@root") do
     touch('src/file')
-    chown('nobody', 'nogroup', 'src/file')
+    chown($nonroot_user, $nonroot_group, 'src/file')
 
     assert { File.stat('mnt/file').uid == 0 }
     assert { File.stat('mnt/file').gid == 0 }
@@ -275,10 +286,10 @@ root_testenv("--map=nobody/root:@nogroup/@root") do
     touch('mnt/newfile')
     mkdir('mnt/newdir')
 
-    assert { File.stat('src/newfile').uid == $nobody_uid }
-    assert { File.stat('src/newfile').gid == $nogroup_gid }
-    assert { File.stat('src/newdir').uid == $nobody_uid }
-    assert { File.stat('src/newdir').gid == $nogroup_gid }
+    assert { File.stat('src/newfile').uid == $nonroot_uid }
+    assert { File.stat('src/newfile').gid == $nonroot_gid }
+    assert { File.stat('src/newdir').uid == $nonroot_uid }
+    assert { File.stat('src/newdir').gid == $nonroot_gid }
 
     assert { File.stat('mnt/newfile').uid == 0 }
     assert { File.stat('mnt/newfile').gid == 0 }
@@ -286,9 +297,9 @@ root_testenv("--map=nobody/root:@nogroup/@root") do
     assert { File.stat('mnt/newdir').gid == 0 }
 end
 
-root_testenv("--map=@nogroup/@root") do
+root_testenv("--map=@#{$nonroot_group}/@root") do
     touch('src/file')
-    chown('nobody', 'nogroup', 'src/file')
+    chown($nonroot_user, $nonroot_group, 'src/file')
 
     assert { File.stat('mnt/file').gid == 0 }
 end
@@ -360,14 +371,14 @@ end
 root_testenv("", :title => "setgid directories") do
     mkdir('mnt/dir')
     chmod("g+s", 'mnt/dir')
-    chown(nil, $nogroup_gid, 'mnt/dir')
+    chown(nil, $nonroot_gid, 'mnt/dir')
 
     touch('mnt/dir/file')
 
     assert { File.stat('src/dir').mode & 07000 == 02000 }
-    assert { File.stat('src/dir/file').gid == $nogroup_gid }
+    assert { File.stat('src/dir/file').gid == $nonroot_gid }
     assert { File.stat('mnt/dir').mode & 07000 == 02000 }
-    assert { File.stat('mnt/dir/file').gid == $nogroup_gid }
+    assert { File.stat('mnt/dir/file').gid == $nonroot_gid }
 end
 
 testenv("", :title => "utimens on symlinks") do
@@ -394,14 +405,14 @@ if Process.uid == 0
         raise "Failed to create test group" if !$?.success?
         testenv("--mirror=@bindfs_test_group", :title => "SIGUSR1 rereads user database") do |bindfs_pid|
             touch('src/file')
-            chown('nobody', nil, 'src/file')
+            chown($nonroot_user, nil, 'src/file')
 
-            assert { File.stat('mnt/file').uid == $nobody_uid }
+            assert { File.stat('mnt/file').uid == $nonroot_uid }
             `adduser root bindfs_test_group`
             raise "Failed to add root to test group" if !$?.success?
 
             # Cache not refreshed yet
-            assert { File.stat('mnt/file').uid == $nobody_uid }
+            assert { File.stat('mnt/file').uid == $nonroot_uid }
 
             Process.kill("SIGUSR1", bindfs_pid)
             sleep 0.5
