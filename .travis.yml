@@ -1,0 +1,16 @@
+#language: c
+language: objective-c
+compiler:
+  - clang
+#  - gcc
+#os: osx  # Sadly, Travis doesn't support FUSE under Linux (https://github.com/travis-ci/travis-ci/issues/1100)
+#script: ./autogen.sh -d && make && sudo make check
+script: ./autogen.sh -d && make && cd tests && sudo ./test_bindfs.rb
+before_install:
+  - brew update
+#  - brew install osxfuse valgrind
+  - brew install osxfuse
+  - sudo /bin/cp -RfX /usr/local/opt/osxfuse/Library/Filesystems/osxfusefs.fs /Library/Filesystems
+  - sudo chmod +s /Library/Filesystems/osxfusefs.fs/Support/load_osxfusefs
+#after_failure:
+#  - cat tests/internals/test-suite.log
