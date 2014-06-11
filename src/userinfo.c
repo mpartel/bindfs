@@ -181,7 +181,6 @@ static int rebuild_gid_cache()
             if (uid_ent != NULL) {
                 grow_arena(&cache_arena, sizeof(uid_t));
                 ((uid_t *)ARENA_GET(cache_arena, ent->uids_offset))[ent->uid_count++] = uid_ent->uid;
-                ++ent->uid_count;
             }
         }
     }
