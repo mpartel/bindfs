@@ -1,6 +1,7 @@
 2014-06-30  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Implemented rate limiter, an idea by @illuusio (#12).
+	* Released 1.12.6
 
 2014-06-11  Martin Pärtel <martin dot partel at gmail dot com>
 
