@@ -108,7 +108,7 @@ const char *my_dirname(char *path)
     }
 }
 
-void grow_array_impl(void **array, int* capacity, int member_size)
+void grow_array_impl(void **array, int *capacity, int member_size)
 {
     int new_cap = *capacity;
     if (new_cap == 0) {
@@ -119,6 +119,28 @@ void grow_array_impl(void **array, int* capacity, int member_size)
 
     *array = realloc(*array, new_cap * member_size);
     *capacity = new_cap;
+}
+
+int parse_byte_count(const char *str, double *result)
+{
+    char* end;
+    double base = strtod(str, &end);
+    long mul = 1;
+    if (*end == '\0') {
+        mul = 1L;
+    } else if (strcmp(end, "k") == 0) {
+        mul = 1024L;
+    } else if (strcmp(end, "M") == 0) {
+        mul = 1024L * 1024L;
+    } else if (strcmp(end, "G") == 0) {
+        mul = 1024L * 1024L * 1024L;
+    } else if (strcmp(end, "T") == 0) {
+        mul = 1024L * 1024L * 1024L * 1024L;
+    } else {
+        return 0;
+    }
+    *result = base * mul;
+    return 1;
 }
 
 void init_arena(struct arena *a, int initial_capacity)

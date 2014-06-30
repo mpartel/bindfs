@@ -2,8 +2,8 @@
 
 bin_PROGRAMS = bindfs
 
-noinst_HEADERS = debug.h permchain.h userinfo.h misc.h usermap.h
-bindfs_SOURCES = bindfs.c debug.c permchain.c userinfo.c misc.c usermap.c
+noinst_HEADERS = debug.h permchain.h userinfo.h misc.h usermap.h rate_limiter.h
+bindfs_SOURCES = bindfs.c debug.c permchain.c userinfo.c misc.c usermap.c rate_limiter.c
 
 AM_CPPFLAGS = ${my_CPPFLAGS} ${fuse_CFLAGS}
 AM_CFLAGS = ${my_CFLAGS}

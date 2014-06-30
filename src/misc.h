@@ -50,8 +50,10 @@ const char *my_dirname(char *path);
    than `*capacity` (may be 0) and stores the new capacity
    in `*capacity`. */
 #define grow_array(array, capacity, member_size) grow_array_impl((void**)(array), (capacity), (member_size))
-void grow_array_impl(void **array, int* capacity, int member_size);
+void grow_array_impl(void **array, int *capacity, int member_size);
 
+/* Returns 1 on success, 0 on syntax error. */
+int parse_byte_count(const char *str, double *result);
 
 /* Simple arena allocation for when it's convenient to
    grow multiple times and deallocate all at once. */

@@ -1,3 +1,7 @@
+2014-06-30  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Implemented rate limiter, an idea by @illuusio (#12).
+
 2014-06-11  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Merged patch to fix GID cache by @alajovic. Thanks! This fixes a problem

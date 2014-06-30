@@ -68,10 +68,11 @@
 #include <fuse_opt.h>
 
 #include "debug.h"
+#include "misc.h"
 #include "permchain.h"
+#include "rate_limiter.h"
 #include "userinfo.h"
 #include "usermap.h"
-#include "misc.h"
 
 /* SETTINGS */
 static struct Settings {
@@ -90,6 +91,9 @@ static struct Settings {
 
     UserMap* usermap; /* From the --map option. */
     UserMap* usermap_reverse;
+
+    RateLimiter* read_limiter;
+    RateLimiter* write_limiter;
 
     enum CreatePolicy {
         CREATE_AS_USER,
@@ -766,6 +770,10 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
     int res;
     (void) path;
 
+    if (settings.read_limiter) {
+        rate_limiter_wait(settings.read_limiter, size);
+    }
+
     res = pread(fi->fh, buf, size, offset);
     if (res == -1)
         res = -errno;
@@ -778,6 +786,10 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 {
     int res;
     (void) path;
+
+    if (settings.write_limiter) {
+        rate_limiter_wait(settings.write_limiter, size);
+    }
 
     res = pwrite(fi->fh, buf, size, offset);
     if (res == -1)
@@ -956,24 +968,24 @@ static void print_usage(const char *progname)
            "  -V      --version         Print version number and exit.\n"
            "\n"
            "File ownership:\n"
-           "  -u      --force-user      Set file owner.\n"
-           "  -g      --force-group     Set file group.\n"
-           "  -m      --mirror          Comma-separated list of users who will see\n"
+           "  -u      --force-user=...  Set file owner.\n"
+           "  -g      --force-group=... Set file group.\n"
+           "  -m      --mirror=...      Comma-separated list of users who will see\n"
            "                            themselves as the owners of all files.\n"
-           "  -M      --mirror-only     Like --mirror but disallow access for\n"
+           "  -M      --mirror-only=... Like --mirror but disallow access for\n"
            "                            all other users.\n"
            " --map=user1/user2:...      Let user2 see files of user1 as his own.\n"
            "\n"
            "Permission bits:\n"
-           "  -p      --perms           Specify permissions, similar to chmod\n"
+           "  -p      --perms=...       Specify permissions, similar to chmod\n"
            "                            e.g. og-x,og+rD,u=rwX,g+rw  or  0644,a+X\n"
            "\n"
            "File creation policy:\n"
            "  --create-as-user          New files owned by creator (default for root). *\n"
            "  --create-as-mounter       New files owned by fs mounter (default for users).\n"
-           "  --create-for-user         New files owned by specified user. *\n"
-           "  --create-for-group        New files owned by specified group. *\n"
-           "  --create-with-perms       Alter permissions of new files.\n"
+           "  --create-for-user=...     New files owned by specified user. *\n"
+           "  --create-for-group=...    New files owned by specified group. *\n"
+           "  --create-with-perms=...   Alter permissions of new files.\n"
            "\n"
            "Chown policy:\n"
            "  --chown-normal            Try to chown the original files (the default).\n"
@@ -989,13 +1001,17 @@ static void print_usage(const char *progname)
            "  --chmod-normal            Try to chmod the original files (the default).\n"
            "  --chmod-ignore            Have all chmods fail silently.\n"
            "  --chmod-deny              Have all chmods fail with 'permission denied'.\n"
-           "  --chmod-filter            Change permissions of chmod requests.\n"
+           "  --chmod-filter=...        Change permissions of chmod requests.\n"
            "  --chmod-allow-x           Allow changing file execute bits in any case.\n"
            "\n"
            "Extended attribute policy:\n"
            "  --xattr-none              Do not implement xattr operations.\n"
            "  --xattr-ro                Read-only xattr operations.\n"
            "  --xattr-rw                Read-write xattr operations (the default).\n"
+           "\n"
+           "Rate limits:\n"
+           "  --read-rate=...           Limit to bytes/sec that can be read.\n"
+           "  --write-rate=...          Limit to bytes/sec that can be written.\n"
            "\n"
            "Miscellaneous:\n"
            "  -n      --no-allow-other  Do not add -o allow_other to fuse options.\n"
@@ -1331,6 +1347,16 @@ static void atexit_func()
 {
     free(settings.original_working_dir);
     settings.original_working_dir = NULL;
+    if (settings.read_limiter) {
+        rate_limiter_destroy(settings.read_limiter);
+        free(settings.read_limiter);
+        settings.read_limiter = NULL;
+    }
+    if (settings.write_limiter) {
+        rate_limiter_destroy(settings.write_limiter);
+        free(settings.write_limiter);
+        settings.write_limiter = NULL;
+    }
     usermap_destroy(settings.usermap);
     settings.usermap = NULL;
     usermap_destroy(settings.usermap_reverse);
@@ -1361,6 +1387,8 @@ int main(int argc, char *argv[])
         char *mirror;
         char *mirror_only;
         char *map;
+        char *read_rate;
+        char *write_rate;
         char *create_for_user;
         char *create_for_group;
         char *create_with_perms;
@@ -1394,6 +1422,9 @@ int main(int argc, char *argv[])
         OPT_OFFSET3("-M %s", "--mirror-only=%s", "mirror-only=%s", mirror_only, -1),
         OPT_OFFSET2("--map=%s", "map=%s", map, -1),
         OPT_OFFSET3("-n", "--no-allow-other", "no-allow-other", no_allow_other, -1),
+
+        OPT_OFFSET2("--read-rate=%s", "read-rate=%s", read_rate, -1),
+        OPT_OFFSET2("--write-rate=%s", "write-rate=%s", write_rate, -1),
 
         OPT2("--create-as-user", "create-as-user", OPTKEY_CREATE_AS_USER),
         OPT2("--create-as-mounter", "create-as-mounter", OPTKEY_CREATE_AS_MOUNTER),
@@ -1435,6 +1466,8 @@ int main(int argc, char *argv[])
     settings.permchain = permchain_create();
     settings.usermap = usermap_create();
     settings.usermap_reverse = usermap_create();
+    settings.read_limiter = NULL;
+    settings.write_limiter = NULL;
     settings.new_uid = -1;
     settings.new_gid = -1;
     settings.create_for_uid = -1;
@@ -1496,6 +1529,28 @@ int main(int argc, char *argv[])
     if (od.group) {
         if (!group_gid(od.group, &settings.new_gid)) {
             fprintf(stderr, "Not a valid group ID: %s\n", od.group);
+            return 1;
+        }
+    }
+
+    /* Parse rate limits */
+    if (od.read_rate) {
+        double rate;
+        if (parse_byte_count(od.read_rate, &rate) && rate > 0) {
+            settings.read_limiter = malloc(sizeof(RateLimiter));
+            rate_limiter_init(settings.read_limiter, rate, &gettimeofday_clock);
+        } else {
+            fprintf(stderr, "Error: Invalid --read-rate.\n");
+            return 1;
+        }
+    }
+    if (od.write_rate) {
+        double rate;
+        if (parse_byte_count(od.write_rate, &rate) && rate > 0) {
+            settings.write_limiter = malloc(sizeof(RateLimiter));
+            rate_limiter_init(settings.write_limiter, rate, &gettimeofday_clock);
+        } else {
+            fprintf(stderr, "Error: Invalid --write-rate.\n");
             return 1;
         }
     }

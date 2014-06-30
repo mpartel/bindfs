@@ -37,5 +37,6 @@ tests/readdir_inode
 tests/utimens_nofollow
 tests/*.log
 tests/internals/test_internals
+tests/internals/test_rate_limiter
 tests/internals/*.log
 

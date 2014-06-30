@@ -204,6 +204,23 @@ The read/write permissions are checked against the (possibly modified)
 file permissions inside the mount.
 
 
+.SH RATE LIMITS
+Reads and writes through the mount point can be throttled. Throttling works
+by sleeping the required amount of time on each read or write request.
+Throttling imposes one global limit on all readers/writers as opposed to a
+per-process or per-user limit.
+
+Currently, the implementation is not entirely fair. See \fB\%BUGS\fP below.
+
+.TP
+.B \-\-read\-rate=\fIN\fP, \-o read\-rate=\fIN\fP
+Allow at most \fIN\fP bytes per second to be read. \fIN\fP may have one of the
+following (1024-based) suffixes: \fBk\fP, \fBM\fP, \fBG\fP, \fBT\fP.
+
+.TP
+.B \-\-write\-rate=\fIN\fP, \-o write\-rate=\fIN\fP
+Same as above, but for writes.
+
 .SH MISCELLANEOUS OPTIONS
 
 .TP
@@ -374,6 +391,13 @@ to briefly see a file with an incorrect owner, group or permissions.
 This may constitute a security risk if you rely on bindfs to reduce
 permissions on new files. For this reason, as of version 1.11
 bindfs runs in single-threaded mode by default.
+
+Rate limiting favors the process with the larger block size.
+If two processes compete for read/write access, the one whose read()/write()
+calls specify the larger block size gets to read/write faster.
+The total rate limit is maintained though, and clients with equal block sizes
+and a similar rate of requests are treated fairly as long as the kernel orders
+their requests fairly.
 
 Please report bugs and/or send pull requests to
 \fBhttps://github.com/mpartel/bindfs/issues\fP.

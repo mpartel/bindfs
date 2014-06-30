@@ -1,12 +1,8 @@
 
+#include "test_common.h"
 #include "misc.h"
 #include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
-
-int failures = 0;
-
-#define TEST_ASSERT(expr) do { if (!(expr)) { printf("Assertion failed: `%s'\n", #expr); failures++; } } while (0);
 
 void test_my_dirname(char *arg, const char *expected)
 {
@@ -56,10 +52,4 @@ void my_dirname_suite()
     test_my_dirname(buf, "..");
 }
 
-int main()
-{
-    my_dirname_suite();
-
-    return (failures > 0) ? 1 : 0;
-}
-
+TEST_MAIN(my_dirname_suite);
