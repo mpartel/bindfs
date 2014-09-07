@@ -23,6 +23,7 @@ Makefile
 /libtool
 /ltmain.sh
 /stamp-h1
+/test-driver
 
 # C stuff
 
@@ -36,7 +37,9 @@ src/bindfs
 tests/readdir_inode
 tests/utimens_nofollow
 tests/*.log
+tests/*.trs
 tests/internals/test_internals
 tests/internals/test_rate_limiter
 tests/internals/*.log
+tests/internals/*.trs
 
