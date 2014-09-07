@@ -73,9 +73,9 @@ end
 
 root_testenv("", :title => "--create-as-user should be default for root") do
   chmod(0777, 'src')
-  `su -c 'touch mnt/file' nobody`
-  `su -c 'mkdir mnt/dir' nobody`
-  `su -c 'ln -sf /tmp/foo mnt/lnk' nobody`
+  `sudo -u nobody -g nogroup touch mnt/file`
+  `sudo -u nobody -g nogroup mkdir mnt/dir`
+  `sudo -u nobody -g nogroup ln -sf /tmp/foo mnt/lnk`
 
   assert { File.stat('mnt/file').uid == nobody_uid }
   assert { File.stat('mnt/file').gid == nogroup_gid }
