@@ -841,37 +841,75 @@ static int bindfs_fsync(const char *path, int isdatasync,
 }
 
 #ifdef HAVE_SETXATTR
-/* If HAVE_L*XATTR is not defined, we assume Mac/BSD -style *xattr() */
+/* The disgusting __APPLE__ sections below were copied without much
+   understanding from the osxfuse example file:
+   https://github.com/osxfuse/fuse/blob/master/example/fusexmp_fh.c */
 
+#ifdef __APPLE__
+static int bindfs_setxattr(const char *path, const char *name, const char *value,
+                           size_t size, int flags, uint32_t position)
+#else
 static int bindfs_setxattr(const char *path, const char *name, const char *value,
                            size_t size, int flags)
+#endif
 {
+    int res;
+
     DPRINTF("setxattr %s %s=%s", path, name, value);
 
     if (settings.xattr_policy == XATTR_READ_ONLY)
         return -EACCES;
 
-    /* fuse checks permissions for us */
     path = process_path(path);
-#ifdef HAVE_LSETXATTR
-    if (lsetxattr(path, name, value, size, flags) == -1)
+
+#if defined(__APPLE__)
+    if (!strncmp(name, XATTR_APPLE_PREFIX, sizeof(XATTR_APPLE_PREFIX) - 1)) {
+        flags &= ~(XATTR_NOSECURITY);
+    }
+    flags |= XATTR_NOFOLLOW;  // TODO: check if this is actually correct and necessary
+    if (!strcmp(name, A_KAUTH_FILESEC_XATTR)) {
+        char new_name[MAXPATHLEN];
+        memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
+        memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
+        res = setxattr(path, new_name, value, size, position, flags);
+    } else {
+        res = setxattr(path, name, value, size, position, flags);
+    }
+#elif defined(HAVE_LSETXATTR)
+    res = lsetxattr(path, name, value, size, flags);
 #else
-    if (setxattr(path, name, value, size, 0, flags | XATTR_NOFOLLOW) == -1)
+    res = setxattr(path, name, value, size, 0, flags | XATTR_NOFOLLOW);
 #endif
+
+    if (res == -1)
         return -errno;
     return 0;
 }
 
+#ifdef __APPLE__
+static int bindfs_getxattr(const char *path, const char *name, char *value,
+                           size_t size, uint32_t position)
+#else
 static int bindfs_getxattr(const char *path, const char *name, char *value,
                            size_t size)
+#endif
 {
     int res;
 
     DPRINTF("getxattr %s %s", path, name);
 
     path = process_path(path);
-    /* fuse checks permissions for us */
-#ifdef HAVE_LGETXATTR
+
+#if defined(__APPLE__)
+    if (strcmp(name, A_KAUTH_FILESEC_XATTR) == 0) {
+        char new_name[MAXPATHLEN];
+        memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
+        memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
+        res = getxattr(path, new_name, value, size, position, XATTR_NOFOLLOW);
+    } else {
+        res = getxattr(path, name, value, size, position, XATTR_NOFOLLOW);
+    }
+#elif defined(HAVE_LGETXATTR)
     res = lgetxattr(path, name, value, size);
 #else
     res = getxattr(path, name, value, size, 0, XATTR_NOFOLLOW);
@@ -881,18 +919,44 @@ static int bindfs_getxattr(const char *path, const char *name, char *value,
     return res;
 }
 
-static int bindfs_listxattr(const char *path, char *list, size_t size)
+static int bindfs_listxattr(const char *path, char* list, size_t size)
 {
-    int res;
-
     DPRINTF("listxattr %s", path);
 
     path = process_path(path);
-    /* fuse checks permissions for us */
-#ifdef HAVE_LLISTXATTR
-    res = llistxattr(path, list, size);
+
+#if defined(__APPLE__)
+    ssize_t res = listxattr(path, list, size, XATTR_NOFOLLOW);
+    if (res > 0) {
+        if (list) {
+            size_t len = 0;
+            char* curr = list;
+            do {
+                size_t thislen = strlen(curr) + 1;
+                if (strcmp(curr, G_KAUTH_FILESEC_XATTR) == 0) {
+                    memmove(curr, curr + thislen, res - len - thislen);
+                    res -= thislen;
+                    break;
+                }
+                curr += thislen;
+                len += thislen;
+            } while (len < res);
+        } else {
+            // TODO: https://github.com/osxfuse/fuse/blob/master/example/fusexmp_fh.c
+            // had this commented out bit here o_O
+            /*
+            ssize_t res2 = getxattr(path, G_KAUTH_FILESEC_XATTR, NULL, 0, 0,
+                                    XATTR_NOFOLLOW);
+            if (res2 >= 0) {
+                res -= sizeof(G_KAUTH_FILESEC_XATTR);
+            }
+            */
+        }
+    }
+#elif defined(HAVE_LLISTXATTR)
+    int res = llistxattr(path, list, size);
 #else
-    res = listxattr(path, list, size, XATTR_NOFOLLOW);
+    int res = listxattr(path, list, size, XATTR_NOFOLLOW);
 #endif
     if (res == -1)
         return -errno;
@@ -901,18 +965,31 @@ static int bindfs_listxattr(const char *path, char *list, size_t size)
 
 static int bindfs_removexattr(const char *path, const char *name)
 {
+    int res;
+
     DPRINTF("removexattr %s %s", path, name);
 
     if (settings.xattr_policy == XATTR_READ_ONLY)
         return -EACCES;
 
     path = process_path(path);
-    /* fuse checks permissions for us */
-#ifdef HAVE_LREMOVEXATTR
-    if (lremovexattr(path, name) == -1)
+
+#if defined(__APPLE__)
+    if (strcmp(name, A_KAUTH_FILESEC_XATTR) == 0) {
+        char new_name[MAXPATHLEN];
+        memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
+        memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
+        res = removexattr(path, new_name, XATTR_NOFOLLOW);
+    } else {
+        res = removexattr(path, name, XATTR_NOFOLLOW);
+    }
+#elif defined(HAVE_LREMOVEXATTR)
+    res = lremovexattr(path, name);
 #else
-    if (removexattr(path, name, XATTR_NOFOLLOW) == -1)
+    res = removexattr(path, name, XATTR_NOFOLLOW);
 #endif
+
+    if (res == -1)
         return -errno;
     return 0;
 }
