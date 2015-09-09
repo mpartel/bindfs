@@ -34,6 +34,12 @@ you may have to add the line user_allow_other to /etc/fuse.conf.
 
 See the bindfs --help or the man-page for instructions and examples.
 
+-- OS X note --
+
+The following extra options may be useful under osxfuse:
+-o local,allow_other,extended_security,noappledouble
+
+See https://github.com/osxfuse/osxfuse/wiki/Mount-options for details.
 
 -- License --
 

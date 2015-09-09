@@ -382,6 +382,9 @@ This means that changes in source files are not always immediately visible under
 When using \fB\-\-mirror[-only] @somegroup\fP, bindfs won't see changes to the group's member list.
 Sending bindfs a \fBSIGUSR1\fP signal will make it reread the user database.
 
+The following extra options may be useful under osxfuse:
+\fB-o local,allow_other,extended_security,noappledouble\fP
+See \fBhttps://github.com/osxfuse/osxfuse/wiki/Mount-options\fP for details.
 
 .SH BUGS
 
