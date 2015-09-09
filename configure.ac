@@ -1,4 +1,4 @@
-AC_INIT([bindfs],[1.12.6],[martin.partel@gmail.com])
+AC_INIT([bindfs],[1.12.7],[martin.partel@gmail.com])
 
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_HEADERS([config.h])

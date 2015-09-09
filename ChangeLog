@@ -1,3 +1,8 @@
+2015-09-09  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* OS X xattr fixes prompted, assisted and tested by @retrography (#21).
+	* Released 1.12.7
+
 2014-06-30  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Implemented rate limiter, an idea by @illuusio (#12).
