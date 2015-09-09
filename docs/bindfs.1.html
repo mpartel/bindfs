@@ -250,14 +250,36 @@ inside the mount.
 <p> </dd>
 </dl>
 
-<h2><a name='sect8' href='#toc8'>Miscellaneous Options</a></h2>
+<h2><a name='sect8' href='#toc8'>Rate Limits</a></h2>
+Reads and writes through the mount point
+can be throttled. Throttling works by sleeping the required amount of time
+on each read or write request. Throttling imposes one global limit on all
+readers/writers as opposed to a per-process or per-user limit. 
+<p> Currently,
+the implementation is not entirely fair. See <b>BUGS</b> below. 
+<p> 
+<dl>
+
+<dt><b>--read-rate=<i>N</i>, -o read-rate=<i>N</i></b>
+</dt>
+<dd>Allow at most <i>N</i> bytes per second to be read. <i>N</i> may have one of the following
+(1024-based) suffixes: <b>k</b>, <b>M</b>, <b>G</b>, <b>T</b>. 
+<p> </dd>
+
+<dt><b>--write-rate=<i>N</i>, -o write-rate=<i>N</i></b> </dt>
+<dd>Same as above,
+but for writes. 
+<p> </dd>
+</dl>
+
+<h2><a name='sect9' href='#toc9'>Miscellaneous Options</a></h2>
 
 <p> 
 <dl>
 
 <dt><b>-h, --help</b> </dt>
-<dd>Displays a help message
-and exits. 
+<dd>Displays a help message and
+exits. 
 <p> </dd>
 
 <dt><b>-V, --version</b> </dt>
@@ -306,7 +328,7 @@ risk for some use cases. See <b>BUGS</b> below.
 <p> </dd>
 </dl>
 
-<h2><a name='sect9' href='#toc9'>Fuse Options</a></h2>
+<h2><a name='sect10' href='#toc10'>Fuse Options</a></h2>
 
 <dl>
 
@@ -332,7 +354,7 @@ get a more efficent mount with <b>mount --bind</b> and then <b>mount -o remount,
 <p> </dd>
 </dl>
 
-<h2><a name='sect10' href='#toc10'>Permission
+<h2><a name='sect11' href='#toc11'>Permission
 Specification</a></h2>
 The <b>-p</b> option takes a comma- or colon-separated list of either
 octal numeric permission bits or symbolic representations of permission
@@ -381,7 +403,7 @@ adds read and write for group.
 <p> </dd>
 </dl>
 
-<h2><a name='sect11' href='#toc11'>Examples</a></h2>
+<h2><a name='sect12' href='#toc12'>Examples</a></h2>
  
 <dl>
 
@@ -424,7 +446,7 @@ separate arguments to perms, because the comma is an option separator in
 <p> </dd>
 </dl>
 
-<h2><a name='sect12' href='#toc12'>Notes</a></h2>
+<h2><a name='sect13' href='#toc13'>Notes</a></h2>
 
 <p>
 Setuid and setgid bits have no effect inside the mount. This is a necessary
@@ -436,21 +458,29 @@ the mount point. <b>-o nolocalcaches</b> can be used to disable the cache.
 using <b>--mirror[-only] @somegroup</b>, bindfs won&rsquo;t see changes to the group&rsquo;s member
 list. Sending bindfs a <b>SIGUSR1</b> signal will make it reread the user database.
 
+<p> The following extra options may be useful under osxfuse: <b>-o local,allow_other,extended_security,noappledouble</b>
+See <i><b>https://github.com/osxfuse/osxfuse/wiki/Mount-options</b></i> for details. 
 <p> 
-<p> 
-<h2><a name='sect13' href='#toc13'>Bugs</a></h2>
+<h2><a name='sect14' href='#toc14'>Bugs</a></h2>
 
-<p> If bindfs is run in multithreaded mode (with the <b>--multithreaded</b> option)
+<p>
+If bindfs is run in multithreaded mode (with the <b>--multithreaded</b> option)
 then it&rsquo;s possible for another process to briefly see a file with an incorrect
 owner, group or permissions. This may constitute a security risk if you
 rely on bindfs to reduce permissions on new files. For this reason, as of
 version 1.11 bindfs runs in single-threaded mode by default. 
-<p> Please report
-bugs and/or send pull requests to <i><b>https://github.com/mpartel/bindfs/issues</b>.</i>
+<p> Rate limiting
+favors the process with the larger block size. If two processes compete
+for read/write access, the one whose read()/write() calls specify the larger
+block size gets to read/write faster. The total rate limit is maintained
+though, and clients with equal block sizes and a similar rate of requests
+are treated fairly as long as the kernel orders their requests fairly. 
+<p>
+Please report bugs and/or send pull requests to <i><b>https://github.com/mpartel/bindfs/issues</b>.</i>
 
 <p> 
 <p> 
-<h2><a name='sect14' href='#toc14'>Deprecations</a></h2>
+<h2><a name='sect15' href='#toc15'>Deprecations</a></h2>
 
 <p> The option names <b>--user</b> and <b>--group</b> were deprecated and replaced
 with <b>--force-user</b> and <b>--force-group</b> in version 1.12. The former names clashed with
@@ -459,11 +489,11 @@ and prints a warning. The synonym <b>--owner</b> is also deprecated for consiste
 
 <p> 
 <p> 
-<h2><a name='sect15' href='#toc15'>Author</a></h2>
+<h2><a name='sect16' href='#toc16'>Author</a></h2>
 Martin P[:a]rtel &lt;martin dot partel at gmail dot com&gt; 
 <p> 
 <p> 
-<h2><a name='sect16' href='#toc16'>See Also</a></h2>
+<h2><a name='sect17' href='#toc17'>See Also</a></h2>
 <i><b>chmod</b>(1)</i>,
 <i><b>fusermount</b>(1)</i>, <i><b>http://bindfs.org/</b></i> 
 <p> <p>
@@ -479,15 +509,16 @@ Martin P[:a]rtel &lt;martin dot partel at gmail dot com&gt;
 <li><a name='toc5' href='#sect5'>Chown/Chgrp Policy</a></li>
 <li><a name='toc6' href='#sect6'>Chmod Policy</a></li>
 <li><a name='toc7' href='#sect7'>Xattr Policy</a></li>
-<li><a name='toc8' href='#sect8'>Miscellaneous Options</a></li>
-<li><a name='toc9' href='#sect9'>Fuse Options</a></li>
-<li><a name='toc10' href='#sect10'>Permission Specification</a></li>
-<li><a name='toc11' href='#sect11'>Examples</a></li>
-<li><a name='toc12' href='#sect12'>Notes</a></li>
-<li><a name='toc13' href='#sect13'>Bugs</a></li>
-<li><a name='toc14' href='#sect14'>Deprecations</a></li>
-<li><a name='toc15' href='#sect15'>Author</a></li>
-<li><a name='toc16' href='#sect16'>See Also</a></li>
+<li><a name='toc8' href='#sect8'>Rate Limits</a></li>
+<li><a name='toc9' href='#sect9'>Miscellaneous Options</a></li>
+<li><a name='toc10' href='#sect10'>Fuse Options</a></li>
+<li><a name='toc11' href='#sect11'>Permission Specification</a></li>
+<li><a name='toc12' href='#sect12'>Examples</a></li>
+<li><a name='toc13' href='#sect13'>Notes</a></li>
+<li><a name='toc14' href='#sect14'>Bugs</a></li>
+<li><a name='toc15' href='#sect15'>Deprecations</a></li>
+<li><a name='toc16' href='#sect16'>Author</a></li>
+<li><a name='toc17' href='#sect17'>See Also</a></li>
 </ul>
 </body>
 </html>

@@ -5,24 +5,24 @@ Information:
   -V      --version         Print version number and exit.
 
 File ownership:
-  -u      --force-user      Set file owner.
-  -g      --force-group     Set file group.
-  -m      --mirror          Comma-separated list of users who will see
+  -u      --force-user=...  Set file owner.
+  -g      --force-group=... Set file group.
+  -m      --mirror=...      Comma-separated list of users who will see
                             themselves as the owners of all files.
-  -M      --mirror-only     Like --mirror but disallow access for
+  -M      --mirror-only=... Like --mirror but disallow access for
                             all other users.
  --map=user1/user2:...      Let user2 see files of user1 as his own.
 
 Permission bits:
-  -p      --perms           Specify permissions, similar to chmod
+  -p      --perms=...       Specify permissions, similar to chmod
                             e.g. og-x,og+rD,u=rwX,g+rw  or  0644,a+X
 
 File creation policy:
   --create-as-user          New files owned by creator (default for root). *
   --create-as-mounter       New files owned by fs mounter (default for users).
-  --create-for-user         New files owned by specified user. *
-  --create-for-group        New files owned by specified group. *
-  --create-with-perms       Alter permissions of new files.
+  --create-for-user=...     New files owned by specified user. *
+  --create-for-group=...    New files owned by specified group. *
+  --create-with-perms=...   Alter permissions of new files.
 
 Chown policy:
   --chown-normal            Try to chown the original files (the default).
@@ -38,13 +38,17 @@ Chmod policy:
   --chmod-normal            Try to chmod the original files (the default).
   --chmod-ignore            Have all chmods fail silently.
   --chmod-deny              Have all chmods fail with 'permission denied'.
-  --chmod-filter            Change permissions of chmod requests.
+  --chmod-filter=...        Change permissions of chmod requests.
   --chmod-allow-x           Allow changing file execute bits in any case.
 
 Extended attribute policy:
   --xattr-none              Do not implement xattr operations.
   --xattr-ro                Read-only xattr operations.
   --xattr-rw                Read-write xattr operations (the default).
+
+Rate limits:
+  --read-rate=...           Limit to bytes/sec that can be read.
+  --write-rate=...          Limit to bytes/sec that can be written.
 
 Miscellaneous:
   -n      --no-allow-other  Do not add -o allow_other to fuse options.
