@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
 #ifdef HAVE_SYS_TYPES_H
@@ -164,7 +165,7 @@ static int is_mirroring_enabled();
 static int is_mirrored_user(uid_t uid);
 
 /* Processes the virtual path to a real path. Always free() the result. */
-static char *process_path(const char *path);
+static char *process_path(const char *path, bool resolve_symlinks);
 
 /* The common parts of getattr and fgetattr. */
 static int getattr_common(const char *path, struct stat *stbuf);
@@ -246,7 +247,7 @@ static int is_mirrored_user(uid_t uid)
 }
 
 
-static char * process_path(const char *path)
+static char * process_path(const char *path, bool resolve_symlinks)
 {
     char * res;
 
@@ -261,7 +262,7 @@ static char * process_path(const char *path)
     if (*path == '\0')
         path = ".";
 
-    if (settings.resolve_symlinks) {
+    if (resolve_symlinks && settings.resolve_symlinks) {
         res = realpath(path, NULL);
         if (res)
             return res;
@@ -398,7 +399,7 @@ static int bindfs_getattr(const char *path, struct stat *stbuf)
     int res;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -418,7 +419,7 @@ static int bindfs_fgetattr(const char *path, struct stat *stbuf,
     int res;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -436,7 +437,7 @@ static int bindfs_readlink(const char *path, char *buf, size_t size)
     int res;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -458,7 +459,7 @@ static int bindfs_opendir(const char *path, struct fuse_file_info *fi)
     DIR *dp;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -487,7 +488,7 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     long pc_ret;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -535,7 +536,7 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
     struct fuse_context *fc;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -563,7 +564,7 @@ static int bindfs_mkdir(const char *path, mode_t mode)
     struct fuse_context *fc;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -588,7 +589,7 @@ static int bindfs_unlink(const char *path)
     int res;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, false);
     if (real_path == NULL)
         return -errno;
 
@@ -604,10 +605,22 @@ static int bindfs_rmdir(const char *path)
 {
     int res;
     char *real_path;
+    struct stat st;
 
-    real_path = process_path(path);
+    real_path = process_path(path, false);
     if (real_path == NULL)
         return -errno;
+
+    if (lstat(real_path, &st) == -1)
+        return -errno;
+
+    if (S_ISLNK(st.st_mode)) {
+        res = unlink(real_path);
+        free(real_path);
+        if (res == -1)
+            return -errno;
+        return 0;
+    }
 
     res = rmdir(real_path);
     free(real_path);
@@ -626,11 +639,11 @@ static int bindfs_symlink(const char *from, const char *to)
     if (settings.resolve_symlinks)
             return -EPERM;
 
-    real_from = process_path(from);
+    real_from = process_path(from, false);
     if (real_from == NULL)
         return -errno;
 
-    real_to = process_path(to);
+    real_to = process_path(to, false);
     if (real_to == NULL) {
         free(real_from);
         return -errno;
@@ -656,11 +669,11 @@ static int bindfs_rename(const char *from, const char *to)
     int res;
     char *real_from, *real_to;
 
-    real_from = process_path(from);
+    real_from = process_path(from, false);
     if (real_from == NULL)
         return -errno;
 
-    real_to = process_path(to);
+    real_to = process_path(to, true);
     if (real_to == NULL) {
         free(real_from);
         return -errno;
@@ -680,11 +693,11 @@ static int bindfs_link(const char *from, const char *to)
     int res;
     char *real_from, *real_to;
 
-    real_from = process_path(from);
+    real_from = process_path(from, true);
     if (real_from == NULL)
         return -errno;
 
-    real_to = process_path(to);
+    real_to = process_path(to, true);
     if (real_to == NULL) {
         free(real_from);
         return -errno;
@@ -706,7 +719,7 @@ static int bindfs_chmod(const char *path, mode_t mode)
     mode_t diff = 0;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -794,7 +807,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
     }
 
     if (uid != -1 || gid != -1) {
-        real_path = process_path(path);
+        real_path = process_path(path, true);
         if (real_path == NULL)
             return -errno;
 
@@ -812,7 +825,7 @@ static int bindfs_truncate(const char *path, off_t size)
     int res;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -842,7 +855,7 @@ static int bindfs_utimens(const char *path, const struct timespec ts[2])
     int res;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL )
         return -errno;
 
@@ -872,7 +885,7 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
     struct fuse_context *fc;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -898,7 +911,7 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
     int fd;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -950,7 +963,7 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
     int res;
     char *real_path;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -1012,7 +1025,7 @@ static int bindfs_setxattr(const char *path, const char *name, const char *value
     if (settings.xattr_policy == XATTR_READ_ONLY)
         return -EACCES;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -1054,7 +1067,7 @@ static int bindfs_getxattr(const char *path, const char *name, char *value,
 
     DPRINTF("getxattr %s %s", path, name);
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -1084,7 +1097,7 @@ static int bindfs_listxattr(const char *path, char* list, size_t size)
 
     DPRINTF("listxattr %s", path);
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
@@ -1137,7 +1150,7 @@ static int bindfs_removexattr(const char *path, const char *name)
     if (settings.xattr_policy == XATTR_READ_ONLY)
         return -EACCES;
 
-    real_path = process_path(path);
+    real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
 
