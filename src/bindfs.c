@@ -150,6 +150,7 @@ static struct Settings {
 
     int ctime_from_mtime;
     int hide_hard_links;
+    int resolve_symlinks;
 
 } settings;
 
@@ -162,8 +163,8 @@ static int is_mirroring_enabled();
 /* Checks whether the uid is to be the mirrored owner of all files. */
 static int is_mirrored_user(uid_t uid);
 
-/* Processes the virtual path to a real path. Don't free() the result. */
-static const char *process_path(const char *path);
+/* Processes the virtual path to a real path. Always free() the result. */
+static char *process_path(const char *path);
 
 /* The common parts of getattr and fgetattr. */
 static int getattr_common(const char *path, struct stat *stbuf);
@@ -245,18 +246,23 @@ static int is_mirrored_user(uid_t uid)
 }
 
 
-static const char *process_path(const char *path)
+static char * process_path(const char *path)
 {
-    if (path == NULL) /* possible? */
+    if (path == NULL) { /* possible? */
+        errno = EINVAL;
         return NULL;
+    }
 
     while (*path == '/')
         ++path;
 
     if (*path == '\0')
-        return ".";
+        path = ".";
+
+    if (settings.resolve_symlinks)
+        return realpath(path, NULL);
     else
-        return path;
+        return strdup(path);
 }
 
 static int getattr_common(const char *procpath, struct stat *stbuf)
@@ -384,34 +390,57 @@ static void bindfs_destroy(void *private_data)
 
 static int bindfs_getattr(const char *path, struct stat *stbuf)
 {
-    path = process_path(path);
+    int res;
+    char *real_path;
 
-    if (lstat(path, stbuf) == -1)
+    real_path = process_path(path);
+    if (real_path == NULL)
         return -errno;
-    return getattr_common(path, stbuf);
+
+    if (lstat(real_path, stbuf) == -1) {
+        free (real_path);
+        return -errno;
+    }
+
+    res = getattr_common(real_path, stbuf);
+    free(real_path);
+    return res;
 }
 
 static int bindfs_fgetattr(const char *path, struct stat *stbuf,
                            struct fuse_file_info *fi)
 {
-    path = process_path(path);
+    int res;
+    char *real_path;
 
-    if (fstat(fi->fh, stbuf) == -1)
+    real_path = process_path(path);
+    if (real_path == NULL)
         return -errno;
-    return getattr_common(path, stbuf);
+
+    if (fstat(fi->fh, stbuf) == -1) {
+        free(real_path);
+        return -errno;
+    }
+    res = getattr_common(real_path, stbuf);
+    free(real_path);
+    return res;
 }
 
 static int bindfs_readlink(const char *path, char *buf, size_t size)
 {
     int res;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
     /* No need to check for access to the link itself, since symlink
        permissions don't matter. Access to the path components of the symlink
        are automatically queried by FUSE. */
 
-    res = readlink(path, buf, size - 1);
+    res = readlink(real_path, buf, size - 1);
+    free(real_path);
     if (res == -1)
         return -errno;
 
@@ -422,10 +451,14 @@ static int bindfs_readlink(const char *path, char *buf, size_t size)
 static int bindfs_opendir(const char *path, struct fuse_file_info *fi)
 {
     DIR *dp;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
-    dp = opendir(path);
+    dp = opendir(real_path);
+    free(real_path);
     if (dp == NULL)
         return -errno;
 
@@ -447,10 +480,14 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     struct stat st;
     int result = 0;
     long pc_ret;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
-    pc_ret = pathconf(path, _PC_NAME_MAX);
+    pc_ret = pathconf(real_path, _PC_NAME_MAX);
+    free(real_path);
     if (pc_ret < 0) {
         DPRINTF("pathconf failed: %s (%d)", strerror(errno), errno);
         pc_ret = NAME_MAX;
@@ -491,20 +528,26 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
     int res;
     struct fuse_context *fc;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
     mode = permchain_apply(settings.create_permchain, mode);
 
     if (S_ISFIFO(mode))
-        res = mkfifo(path, mode);
+        res = mkfifo(real_path, mode);
     else
-        res = mknod(path, mode, rdev);
-    if (res == -1)
+        res = mknod(real_path, mode, rdev);
+    if (res == -1) {
+        free(real_path);
         return -errno;
+    }
 
     fc = fuse_get_context();
-    chown_new_file(path, fc, &chown);
+    chown_new_file(real_path, fc, &chown);
+    free(real_path);
 
     return 0;
 }
@@ -513,18 +556,24 @@ static int bindfs_mkdir(const char *path, mode_t mode)
 {
     int res;
     struct fuse_context *fc;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
     mode |= S_IFDIR; /* tell permchain_apply this is a directory */
     mode = permchain_apply(settings.create_permchain, mode);
 
-    res = mkdir(path, mode & 0777);
-    if (res == -1)
+    res = mkdir(real_path, mode & 0777);
+    if (res == -1) {
+        free(real_path);
         return -errno;
+    }
 
     fc = fuse_get_context();
-    chown_new_file(path, fc, &chown);
+    chown_new_file(real_path, fc, &chown);
+    free(real_path);
 
     return 0;
 }
@@ -532,10 +581,14 @@ static int bindfs_mkdir(const char *path, mode_t mode)
 static int bindfs_unlink(const char *path)
 {
     int res;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
-    res = unlink(path);
+    res = unlink(real_path);
+    free(real_path);
     if (res == -1)
         return -errno;
 
@@ -545,10 +598,14 @@ static int bindfs_unlink(const char *path)
 static int bindfs_rmdir(const char *path)
 {
     int res;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
-    res = rmdir(path);
+    res = rmdir(real_path);
+    free(real_path);
     if (res == -1)
         return -errno;
 
@@ -559,15 +616,32 @@ static int bindfs_symlink(const char *from, const char *to)
 {
     int res;
     struct fuse_context *fc;
+    char *real_from, *real_to;
 
-    to = process_path(to);
+    if (settings.resolve_symlinks)
+            return -EPERM;
 
-    res = symlink(from, to);
-    if (res == -1)
+    real_from = process_path(from);
+    if (real_from == NULL)
         return -errno;
 
+    real_to = process_path(to);
+    if (real_to == NULL) {
+        free(real_from);
+        return -errno;
+    }
+
+    res = symlink(from, real_to);
+    if (res == -1) {
+        free(real_from);
+        free(real_to);
+        return -errno;
+    }
+
     fc = fuse_get_context();
-    chown_new_file(to, fc, &lchown);
+    chown_new_file(real_to, fc, &lchown);
+    free(real_from);
+    free(real_to);
 
     return 0;
 }
@@ -575,11 +649,21 @@ static int bindfs_symlink(const char *from, const char *to)
 static int bindfs_rename(const char *from, const char *to)
 {
     int res;
+    char *real_from, *real_to;
 
-    from = process_path(from);
-    to = process_path(to);
+    real_from = process_path(from);
+    if (real_from == NULL)
+        return -errno;
 
-    res = rename(from, to);
+    real_to = process_path(to);
+    if (real_to == NULL) {
+        free(real_from);
+        return -errno;
+    }
+
+    res = rename(real_from, real_to);
+    free(real_from);
+    free(real_to);
     if (res == -1)
         return -errno;
 
@@ -589,11 +673,21 @@ static int bindfs_rename(const char *from, const char *to)
 static int bindfs_link(const char *from, const char *to)
 {
     int res;
+    char *real_from, *real_to;
 
-    from = process_path(from);
-    to = process_path(to);
+    real_from = process_path(from);
+    if (real_from == NULL)
+        return -errno;
 
-    res = link(from, to);
+    real_to = process_path(to);
+    if (real_to == NULL) {
+        free(real_from);
+        return -errno;
+    }
+
+    res = link(real_from, real_to);
+    free(real_from);
+    free(real_to);
     if (res == -1)
         return -errno;
 
@@ -605,13 +699,18 @@ static int bindfs_chmod(const char *path, mode_t mode)
     int file_execute_only = 0;
     struct stat st;
     mode_t diff = 0;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
     if (settings.chmod_allow_x) {
         /* Get the old permission bits and see which bits would change. */
-        if (lstat(path, &st) == -1)
+        if (lstat(real_path, &st) == -1) {
+            free(real_path);
             return -errno;
+        }
 
         if (S_ISREG(st.st_mode)) {
             diff = (st.st_mode & 07777) ^ (mode & 07777);
@@ -622,26 +721,36 @@ static int bindfs_chmod(const char *path, mode_t mode)
     switch (settings.chmod_policy) {
     case CHMOD_NORMAL:
         mode = permchain_apply(settings.chmod_permchain, mode);
-        if (chmod(path, mode) == -1)
+        if (chmod(real_path, mode) == -1) {
+            free(real_path);
             return -errno;
+        }
+        free(real_path);
         return 0;
     case CHMOD_IGNORE:
         if (file_execute_only) {
             diff &= 00111; /* See which execute bits were flipped.
                               Forget about other differences. */
-            if (chmod(path, st.st_mode ^ diff) == -1)
+            if (chmod(real_path, st.st_mode ^ diff) == -1) {
+                free(real_path);
                 return -errno;
+            }
         }
+        free(real_path);
         return 0;
     case CHMOD_DENY:
         if (file_execute_only) {
             if ((diff & 07666) == 0) {
                 /* Only execute bits have changed, so we can allow this. */
-                if (chmod(path, mode) == -1)
+                if (chmod(real_path, mode) == -1) {
+                    free(real_path);
                     return -errno;
+                }
+                free(real_path);
                 return 0;
             }
         }
+        free(real_path);
         return -EPERM;
     default:
         assert(0);
@@ -651,6 +760,7 @@ static int bindfs_chmod(const char *path, mode_t mode)
 static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
 {
     int res;
+    char *real_path;
 
     if (uid != -1) {
         switch (settings.chown_policy) {
@@ -679,8 +789,12 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
     }
 
     if (uid != -1 || gid != -1) {
-        path = process_path(path);
-        res = lchown(path, uid, gid);
+        real_path = process_path(path);
+        if (real_path == NULL)
+            return -errno;
+
+        res = lchown(real_path, uid, gid);
+        free(real_path);
         if (res == -1)
             return -errno;
     }
@@ -691,10 +805,14 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
 static int bindfs_truncate(const char *path, off_t size)
 {
     int res;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
-    res = truncate(path, size);
+    res = truncate(real_path, size);
+    free(real_path);
     if (res == -1)
         return -errno;
 
@@ -717,22 +835,26 @@ static int bindfs_ftruncate(const char *path, off_t size,
 static int bindfs_utimens(const char *path, const struct timespec ts[2])
 {
     int res;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL )
+        return -errno;
 
 #ifdef HAVE_UTIMENSAT
-    res = utimensat(settings.mntsrc_fd, path, ts, AT_SYMLINK_NOFOLLOW);
+    res = utimensat(settings.mntsrc_fd, real_path, ts, AT_SYMLINK_NOFOLLOW);
 #elif HAVE_LUTIMES
     struct timeval tv[2];
     tv[0].tv_sec = ts[0].tv_sec;
     tv[0].tv_usec = ts[0].tv_nsec / 1000;
     tv[1].tv_sec = ts[1].tv_sec;
     tv[1].tv_usec = ts[1].tv_nsec / 1000;
-    res = lutimes(path, tv);
+    res = lutimes(real_path, tv);
 #else
 #error "No symlink-compatible utime* function available."
 #endif
-
+ 
+    free(real_path);
     if (res == -1)
         return -errno;
 
@@ -743,18 +865,24 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
 {
     int fd;
     struct fuse_context *fc;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
     mode |= S_IFREG; /* tell permchain_apply this is a regular file */
     mode = permchain_apply(settings.create_permchain, mode);
 
-    fd = open(path, fi->flags, mode & 0777);
-    if (fd == -1)
+    fd = open(real_path, fi->flags, mode & 0777);
+    if (fd == -1) {
+        free(real_path);
         return -errno;
+    }
 
     fc = fuse_get_context();
-    chown_new_file(path, fc, &chown);
+    chown_new_file(real_path, fc, &chown);
+    free(real_path);
 
     fi->fh = fd;
     return 0;
@@ -763,10 +891,14 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
 static int bindfs_open(const char *path, struct fuse_file_info *fi)
 {
     int fd;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
-    fd = open(path, fi->flags);
+    fd = open(real_path, fi->flags);
+    free(real_path);
     if (fd == -1)
         return -errno;
 
@@ -811,10 +943,14 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 static int bindfs_statfs(const char *path, struct statvfs *stbuf)
 {
     int res;
+    char *real_path;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
-    res = statvfs(path, stbuf);
+    res = statvfs(real_path, stbuf);
+    free(real_path);
     if (res == -1)
         return -errno;
 
@@ -864,13 +1000,16 @@ static int bindfs_setxattr(const char *path, const char *name, const char *value
 #endif
 {
     int res;
+    char *real_path;
 
     DPRINTF("setxattr %s %s=%s", path, name, value);
 
     if (settings.xattr_policy == XATTR_READ_ONLY)
         return -EACCES;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
 #if defined(__APPLE__)
     if (!strncmp(name, XATTR_APPLE_PREFIX, sizeof(XATTR_APPLE_PREFIX) - 1)) {
@@ -881,16 +1020,17 @@ static int bindfs_setxattr(const char *path, const char *name, const char *value
         char new_name[MAXPATHLEN];
         memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
         memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
-        res = setxattr(path, new_name, value, size, position, flags);
+        res = setxattr(real_path, new_name, value, size, position, flags);
     } else {
-        res = setxattr(path, name, value, size, position, flags);
+        res = setxattr(real_path, name, value, size, position, flags);
     }
 #elif defined(HAVE_LSETXATTR)
-    res = lsetxattr(path, name, value, size, flags);
+    res = lsetxattr(real_path, name, value, size, flags);
 #else
-    res = setxattr(path, name, value, size, 0, flags | XATTR_NOFOLLOW);
+    res = setxattr(real_path, name, value, size, 0, flags | XATTR_NOFOLLOW);
 #endif
 
+    free(real_path);
     if (res == -1)
         return -errno;
     return 0;
@@ -905,25 +1045,29 @@ static int bindfs_getxattr(const char *path, const char *name, char *value,
 #endif
 {
     int res;
+    char *real_path;
 
     DPRINTF("getxattr %s %s", path, name);
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
 #if defined(__APPLE__)
     if (strcmp(name, A_KAUTH_FILESEC_XATTR) == 0) {
         char new_name[MAXPATHLEN];
         memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
         memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
-        res = getxattr(path, new_name, value, size, position, XATTR_NOFOLLOW);
+        res = getxattr(real_path, new_name, value, size, position, XATTR_NOFOLLOW);
     } else {
-        res = getxattr(path, name, value, size, position, XATTR_NOFOLLOW);
+        res = getxattr(real_path, name, value, size, position, XATTR_NOFOLLOW);
     }
 #elif defined(HAVE_LGETXATTR)
-    res = lgetxattr(path, name, value, size);
+    res = lgetxattr(real_path, name, value, size);
 #else
-    res = getxattr(path, name, value, size, 0, XATTR_NOFOLLOW);
+    res = getxattr(real_path, name, value, size, 0, XATTR_NOFOLLOW);
 #endif
+    free(real_path);
     if (res == -1)
         return -errno;
     return res;
@@ -931,12 +1075,16 @@ static int bindfs_getxattr(const char *path, const char *name, char *value,
 
 static int bindfs_listxattr(const char *path, char* list, size_t size)
 {
+    char *real_path;
+
     DPRINTF("listxattr %s", path);
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
 #if defined(__APPLE__)
-    ssize_t res = listxattr(path, list, size, XATTR_NOFOLLOW);
+    ssize_t res = listxattr(real_path, list, size, XATTR_NOFOLLOW);
     if (res > 0) {
         if (list) {
             size_t len = 0;
@@ -955,7 +1103,7 @@ static int bindfs_listxattr(const char *path, char* list, size_t size)
             // TODO: https://github.com/osxfuse/fuse/blob/master/example/fusexmp_fh.c
             // had this commented out bit here o_O
             /*
-            ssize_t res2 = getxattr(path, G_KAUTH_FILESEC_XATTR, NULL, 0, 0,
+            ssize_t res2 = getxattr(real_path, G_KAUTH_FILESEC_XATTR, NULL, 0, 0,
                                     XATTR_NOFOLLOW);
             if (res2 >= 0) {
                 res -= sizeof(G_KAUTH_FILESEC_XATTR);
@@ -964,10 +1112,11 @@ static int bindfs_listxattr(const char *path, char* list, size_t size)
         }
     }
 #elif defined(HAVE_LLISTXATTR)
-    int res = llistxattr(path, list, size);
+    int res = llistxattr(real_path, list, size);
 #else
-    int res = listxattr(path, list, size, XATTR_NOFOLLOW);
+    int res = listxattr(real_path, list, size, XATTR_NOFOLLOW);
 #endif
+    free(real_path);
     if (res == -1)
         return -errno;
     return res;
@@ -976,29 +1125,33 @@ static int bindfs_listxattr(const char *path, char* list, size_t size)
 static int bindfs_removexattr(const char *path, const char *name)
 {
     int res;
+    char *real_path;
 
     DPRINTF("removexattr %s %s", path, name);
 
     if (settings.xattr_policy == XATTR_READ_ONLY)
         return -EACCES;
 
-    path = process_path(path);
+    real_path = process_path(path);
+    if (real_path == NULL)
+        return -errno;
 
 #if defined(__APPLE__)
     if (strcmp(name, A_KAUTH_FILESEC_XATTR) == 0) {
         char new_name[MAXPATHLEN];
         memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
         memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
-        res = removexattr(path, new_name, XATTR_NOFOLLOW);
+        res = removexattr(real_path, new_name, XATTR_NOFOLLOW);
     } else {
-        res = removexattr(path, name, XATTR_NOFOLLOW);
+        res = removexattr(real_path, name, XATTR_NOFOLLOW);
     }
 #elif defined(HAVE_LREMOVEXATTR)
-    res = lremovexattr(path, name);
+    res = lremovexattr(real_path, name);
 #else
-    res = removexattr(path, name, XATTR_NOFOLLOW);
+    res = removexattr(real_path, name, XATTR_NOFOLLOW);
 #endif
 
+    free(real_path);
     if (res == -1)
         return -errno;
     return 0;
@@ -1106,6 +1259,7 @@ static void print_usage(const char *progname)
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
            "  --hide-hard-links         Always report a hard link count of 1.\n"
+           "  --resolve-symlinks        Resolve symbolic links.\n"
            "  --multithreaded           Enable multithreaded mode. See man page\n"
            "                            for security issue with current implementation.\n"
            "\n"
@@ -1144,6 +1298,7 @@ enum OptionKey {
     OPTKEY_REALISTIC_PERMISSIONS,
     OPTKEY_CTIME_FROM_MTIME,
     OPTKEY_HIDE_HARD_LINKS,
+    OPTKEY_RESOLVE_SYMLINKS,
     OPTKEY_MULTITHREADED
 };
 
@@ -1224,6 +1379,9 @@ static int process_option(void *data, const char *arg, int key,
         return 0;
     case OPTKEY_HIDE_HARD_LINKS:
         settings.hide_hard_links = 1;
+        return 0;
+    case OPTKEY_RESOLVE_SYMLINKS:
+        settings.resolve_symlinks = 1;
         return 0;
 
     case OPTKEY_NONOPTION:
@@ -1540,6 +1698,7 @@ int main(int argc, char *argv[])
         OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
+        OPT2("--resolve-symlinks", "resolve-symlinks", OPTKEY_RESOLVE_SYMLINKS),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
         FUSE_OPT_END
     };
@@ -1578,6 +1737,7 @@ int main(int argc, char *argv[])
     settings.realistic_permissions = 0;
     settings.ctime_from_mtime = 0;
     settings.hide_hard_links = 0;
+    settings.resolve_symlinks = 0;
     atexit(&atexit_func);
 
     /* Parse options */
