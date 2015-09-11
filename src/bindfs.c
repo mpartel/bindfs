@@ -248,6 +248,8 @@ static int is_mirrored_user(uid_t uid)
 
 static char * process_path(const char *path)
 {
+    char * res;
+
     if (path == NULL) { /* possible? */
         errno = EINVAL;
         return NULL;
@@ -259,10 +261,13 @@ static char * process_path(const char *path)
     if (*path == '\0')
         path = ".";
 
-    if (settings.resolve_symlinks)
-        return realpath(path, NULL);
-    else
-        return strdup(path);
+    if (settings.resolve_symlinks) {
+        res = realpath(path, NULL);
+        if (res)
+            return res;
+    }
+
+    return strdup(path);
 }
 
 static int getattr_common(const char *procpath, struct stat *stbuf)
