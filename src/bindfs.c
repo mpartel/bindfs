@@ -611,15 +611,19 @@ static int bindfs_rmdir(const char *path)
     if (real_path == NULL)
         return -errno;
 
-    if (lstat(real_path, &st) == -1)
-        return -errno;
-
-    if (S_ISLNK(st.st_mode)) {
-        res = unlink(real_path);
-        free(real_path);
-        if (res == -1)
+    if (settings.resolve_symlinks) {
+        if (lstat(real_path, &st) == -1) {
+            free(real_path);
             return -errno;
-        return 0;
+        }
+
+        if (S_ISLNK(st.st_mode)) {
+            res = unlink(real_path);
+            free(real_path);
+            if (res == -1)
+                return -errno;
+            return 0;
+        }
     }
 
     res = rmdir(real_path);
