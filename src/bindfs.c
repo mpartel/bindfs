@@ -247,9 +247,9 @@ static int is_mirrored_user(uid_t uid)
 }
 
 
-static char * process_path(const char *path, bool resolve_symlinks)
+static char *process_path(const char *path, bool resolve_symlinks)
 {
-    char * res;
+    char *res;
 
     if (path == NULL) { /* possible? */
         errno = EINVAL;
@@ -404,7 +404,7 @@ static int bindfs_getattr(const char *path, struct stat *stbuf)
         return -errno;
 
     if (lstat(real_path, stbuf) == -1) {
-        free (real_path);
+        free(real_path);
         return -errno;
     }
 
@@ -491,9 +491,9 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
-
     pc_ret = pathconf(real_path, _PC_NAME_MAX);
     free(real_path);
+
     if (pc_ret < 0) {
         DPRINTF("pathconf failed: %s (%d)", strerror(errno), errno);
         pc_ret = NAME_MAX;
@@ -852,7 +852,7 @@ static int bindfs_utimens(const char *path, const struct timespec ts[2])
     char *real_path;
 
     real_path = process_path(path, true);
-    if (real_path == NULL )
+    if (real_path == NULL)
         return -errno;
 
 #ifdef HAVE_UTIMENSAT
