@@ -638,31 +638,23 @@ static int bindfs_symlink(const char *from, const char *to)
 {
     int res;
     struct fuse_context *fc;
-    char *real_from, *real_to;
+    char *real_to;
 
     if (settings.resolve_symlinks)
-            return -EPERM;
-
-    real_from = process_path(from, false);
-    if (real_from == NULL)
-        return -errno;
+        return -EPERM;
 
     real_to = process_path(to, false);
-    if (real_to == NULL) {
-        free(real_from);
+    if (real_to == NULL)
         return -errno;
-    }
 
     res = symlink(from, real_to);
     if (res == -1) {
-        free(real_from);
         free(real_to);
         return -errno;
     }
 
     fc = fuse_get_context();
     chown_new_file(real_to, fc, &lchown);
-    free(real_from);
     free(real_to);
 
     return 0;
