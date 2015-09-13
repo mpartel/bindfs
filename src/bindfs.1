@@ -263,6 +263,11 @@ The underlying file's ctime will still be updated normally.
 Shows the hard link count of all files as 1.
 
 .TP
+.B \-\-resolve\-symlinks, \-o resolve-symlinks
+Transparently resolves symbolic links.  Disables creation of new symbolic
+links.
+
+.TP
 .B \-\-multithreaded, \-o multithreaded
 Run bindfs in multithreaded mode. While bindfs is designed to be
 otherwise thread-safe, there is currently a race condition that may pose
