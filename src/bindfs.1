@@ -402,6 +402,10 @@ The total rate limit is maintained though, and clients with equal block sizes
 and a similar rate of requests are treated fairly as long as the kernel orders
 their requests fairly.
 
+Some features relying on xattrs might not work properly on OS X
+(\fBhttps://github.com/mpartel/bindfs/issues/21\fP).
+For instance, Finder tags seem to work but comments might not.
+
 Please report bugs and/or send pull requests to
 \fBhttps://github.com/mpartel/bindfs/issues\fP.
 
