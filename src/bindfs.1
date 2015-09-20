@@ -221,6 +221,35 @@ following (1024-based) suffixes: \fBk\fP, \fBM\fP, \fBG\fP, \fBT\fP.
 .B \-\-write\-rate=\fIN\fP, \-o write\-rate=\fIN\fP
 Same as above, but for writes.
 
+.SH LINK HANDLING
+
+.TP
+.B \-\-hide\-hard\-links, \-o hide\-hard\-links
+Shows the hard link count of all files as 1.
+
+.TP
+.B \-\-resolve\-symlinks, \-o resolve-symlinks
+Transparently resolves symbolic links.  Disables creation of new symbolic
+links.
+
+With the following exceptions, operations will operate directly on the target
+file instead of the symlink. Renaming/moving a resolved symlink (inside the same
+mount point) will move the symlink instead of the underlying file. Deleting a
+resolved symlink will delete the underlying symlink but not the destination
+file. This can be configured with \fB\-\-resolved-symlink-deletion\fP.
+
+Note that when some programs, such as \fBvim\fP, save files, they actually move
+the old file out of the way, create a new file in its place, and finally delete
+the old file. Doing these operations on a resolved symlink will replace it with
+a regular file.
+
+Symlinks pointing outside the source directory are supported with the following
+exception: accessing the mountpoint recursively through a resolved symlink is
+not supported and will return an error. This is because a FUSE filesystem cannot
+reliably call itself recursively without deadlocking, especially in
+single-threaded mode.
+
+
 .SH MISCELLANEOUS OPTIONS
 
 .TP
@@ -257,15 +286,6 @@ With this option, the ctime of each file and directory is read from its mtime.
 In other words, only content modifications (as opposed to metadata changes)
 will be reflected in a mirrored file's ctime.
 The underlying file's ctime will still be updated normally.
-
-.TP
-.B \-\-hide-hard-links, \-o hide-hard-links
-Shows the hard link count of all files as 1.
-
-.TP
-.B \-\-resolve\-symlinks, \-o resolve-symlinks
-Transparently resolves symbolic links.  Disables creation of new symbolic
-links.
 
 .TP
 .B \-\-multithreaded, \-o multithreaded

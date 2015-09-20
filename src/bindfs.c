@@ -93,18 +93,19 @@ static struct Settings {
     gid_t new_gid; /* user-specified gid */
     uid_t create_for_uid;
     gid_t create_for_gid;
-    const char *mntsrc;
-    const char *mntdest;
+    char *mntsrc;
+    char *mntdest;
+    int mntdest_len; /* caches strlen(mntdest) */
     int mntsrc_fd;
 
-    char* original_working_dir;
+    char *original_working_dir;
     mode_t original_umask;
 
-    UserMap* usermap; /* From the --map option. */
-    UserMap* usermap_reverse;
+    UserMap *usermap; /* From the --map option. */
+    UserMap *usermap_reverse;
 
-    RateLimiter* read_limiter;
-    RateLimiter* write_limiter;
+    RateLimiter *read_limiter;
+    RateLimiter *write_limiter;
 
     enum CreatePolicy {
         CREATE_AS_USER,
@@ -142,7 +143,7 @@ static struct Settings {
     } xattr_policy;
 
     int mirrored_users_only;
-    uid_t* mirrored_users;
+    uid_t *mirrored_users;
     int num_mirrored_users;
     gid_t *mirrored_members;
     int num_mirrored_members;
@@ -260,10 +261,26 @@ static char *process_path(const char *path, bool resolve_symlinks)
     if (*path == '\0')
         path = ".";
 
-    if (resolve_symlinks && settings.resolve_symlinks)
-        return realpath(path, NULL);
-    else
+    if (resolve_symlinks && settings.resolve_symlinks) {
+        char* result = realpath(path, NULL);
+        if (result == NULL) {
+            if (errno == ENOENT) {
+                /* Broken symlink (or missing file). Don't return null because
+                   we want to be able to operate on broken symlinks. */
+                return strdup(path);
+            }
+        } else if (strncmp(result, settings.mntdest, settings.mntdest_len) == 0) {
+            /* Recursive call. We cannot handle this without deadlocking,
+               especially in single-threaded mode. */
+            DPRINTF("Denying recursive access to mountpoint `%s'", result);
+            free(result);
+            errno = EPERM;
+            return NULL;
+        }
+        return result;
+    } else {
         return strdup(path);
+    }
 }
 
 static int getattr_common(const char *procpath, struct stat *stbuf)
@@ -1395,10 +1412,21 @@ static int process_option(void *data, const char *arg, int key,
 
     case OPTKEY_NONOPTION:
         if (!settings.mntsrc) {
-            settings.mntsrc = arg;
+            settings.mntsrc = realpath(arg, NULL);
+            if (settings.mntsrc == NULL) {
+                fprintf(stderr, "Failed to resolve source directory `%s': ", arg);
+                perror(NULL);
+                return -1;
+            }
             return 0;
         } else if (!settings.mntdest) {
-            settings.mntdest = arg;
+            settings.mntdest = realpath(arg, NULL);
+            if (settings.mntdest == NULL) {
+                fprintf(stderr, "Failed to resolve mount point `%s': ", arg);
+                perror(NULL);
+                return -1;
+            }
+            settings.mntdest_len = strlen(settings.mntdest);
             return 1; /* leave this argument for fuse_main */
         } else {
             fprintf(stderr, "Too many arguments given\n");
@@ -1417,7 +1445,7 @@ static int parse_mirrored_users(char* mirror)
     char *p, *tmpstr;
 
     settings.num_mirrored_users = count_chars(mirror, ',') +
-                                    count_chars(mirror, ':') + 1;
+                                  count_chars(mirror, ':') + 1;
     settings.num_mirrored_members = ((*mirror == '@') ? 1 : 0) +
                                     count_substrs(mirror, ",@") +
                                     count_substrs(mirror, ":@");
@@ -1599,6 +1627,8 @@ static void signal_handler(int sig)
 
 static void atexit_func()
 {
+    free(settings.mntsrc);
+    free(settings.mntdest);
     free(settings.original_working_dir);
     settings.original_working_dir = NULL;
     if (settings.read_limiter) {
@@ -1729,6 +1759,7 @@ int main(int argc, char *argv[])
     settings.create_for_gid = -1;
     settings.mntsrc = NULL;
     settings.mntdest = NULL;
+    settings.mntdest_len = 0;
     settings.original_working_dir = get_working_dir();
     settings.create_policy = (getuid() == 0) ? CREATE_AS_USER : CREATE_AS_MOUNTER;
     settings.create_permchain = permchain_create();
