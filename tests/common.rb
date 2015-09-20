@@ -179,6 +179,18 @@ def root_testenv(bindfs_args, options = {}, &block)
     end
 end
 
+# Like testenv but skips the test if not running as non-root.
+# TODO: make all tests runnable as root
+def nonroot_testenv(bindfs_args, options = {}, &block)
+    if Process.uid != 0
+        testenv(bindfs_args, options, &block)
+    else
+        puts "--- #{bindfs_args} ---"
+        puts "[  #{bindfs_args}  ]"
+        puts "SKIP (requires running as non-root)"
+    end
+end
+
 def umount_cmd
     if `which fusermount`.strip.empty?
     then 'umount'

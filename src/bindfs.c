@@ -148,11 +148,19 @@ static struct Settings {
     gid_t *mirrored_members;
     int num_mirrored_members;
 
+    int hide_hard_links;
+    int resolve_symlinks;
+
+    enum ResolvedSymlinkDeletion {
+        RESOLVED_SYMLINK_DELETION_DENY,
+        RESOLVED_SYMLINK_DELETION_SYMLINK_ONLY,
+        RESOLVED_SYMLINK_DELETION_SYMLINK_FIRST,
+        RESOLVED_SYMLINK_DELETION_TARGET_FIRST
+    } resolved_symlink_deletion_policy;
+
     int realistic_permissions;
 
     int ctime_from_mtime;
-    int hide_hard_links;
-    int resolve_symlinks;
 
 } settings;
 
@@ -173,6 +181,9 @@ static int getattr_common(const char *path, struct stat *stbuf);
 
 /* Chowns a new file if necessary. */
 static void chown_new_file(const char *path, struct fuse_context *fc, int (*chown_func)(const char*, uid_t, gid_t));
+
+/* Unified implementation of unlink and rmdir. */
+static int delete_file(const char *path, int (*target_delete_func)(const char *));
 
 /* FUSE callbacks */
 static void *bindfs_init();
@@ -380,6 +391,75 @@ static void chown_new_file(const char *path, struct fuse_context *fc, int (*chow
     }
 }
 
+static int delete_file(const char *path, int (*target_delete_func)(const char *)) {
+    int res;
+    char *real_path;
+    struct stat st;
+    char *also_try_delete = NULL;
+    char *unlink_first = NULL;
+    int (*main_delete_func)(const char*) = target_delete_func;
+
+    real_path = process_path(path, false);
+    if (real_path == NULL)
+        return -errno;
+
+    if (settings.resolve_symlinks) {
+        if (lstat(real_path, &st) == -1) {
+            free(real_path);
+            return -errno;
+        }
+
+        if (S_ISLNK(st.st_mode)) {
+            switch(settings.resolved_symlink_deletion_policy) {
+            case RESOLVED_SYMLINK_DELETION_DENY:
+                free(real_path);
+                return -EPERM;
+            case RESOLVED_SYMLINK_DELETION_SYMLINK_ONLY:
+                main_delete_func = &unlink;
+                break;
+            case RESOLVED_SYMLINK_DELETION_SYMLINK_FIRST:
+                main_delete_func = &unlink;
+
+                also_try_delete = realpath(real_path, NULL);
+                if (also_try_delete == NULL && errno != ENOENT) {
+                    free(real_path);
+                    return -errno;
+                }
+                break;
+            case RESOLVED_SYMLINK_DELETION_TARGET_FIRST:
+                unlink_first = realpath(real_path, NULL);
+                if (unlink_first == NULL && errno != ENOENT) {
+                    free(real_path);
+                    return -errno;
+                }
+
+                if (unlink_first != NULL) {
+                    res = unlink(unlink_first);
+                    free(unlink_first);
+                    if (res == -1) {
+                        free(real_path);
+                        return -errno;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    res = main_delete_func(real_path);
+    free(real_path);
+    if (res == -1) {
+        free(also_try_delete);
+        return -errno;
+    }
+
+    if (also_try_delete != NULL) {
+        (void)target_delete_func(also_try_delete);
+        free(also_try_delete);
+    }
+
+    return 0;
+}
 
 
 static void *bindfs_init()
@@ -598,52 +678,12 @@ static int bindfs_mkdir(const char *path, mode_t mode)
 
 static int bindfs_unlink(const char *path)
 {
-    int res;
-    char *real_path;
-
-    real_path = process_path(path, false);
-    if (real_path == NULL)
-        return -errno;
-
-    res = unlink(real_path);
-    free(real_path);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+    return delete_file(path, &unlink);
 }
 
 static int bindfs_rmdir(const char *path)
 {
-    int res;
-    char *real_path;
-    struct stat st;
-
-    real_path = process_path(path, false);
-    if (real_path == NULL)
-        return -errno;
-
-    if (settings.resolve_symlinks) {
-        if (lstat(real_path, &st) == -1) {
-            free(real_path);
-            return -errno;
-        }
-
-        if (S_ISLNK(st.st_mode)) {
-            res = unlink(real_path);
-            free(real_path);
-            if (res == -1)
-                return -errno;
-            return 0;
-        }
-    }
-
-    res = rmdir(real_path);
-    free(real_path);
-    if (res == -1)
-        return -errno;
-
-    return 0;
+    return delete_file(path, &rmdir);
 }
 
 static int bindfs_symlink(const char *from, const char *to)
@@ -1286,6 +1326,7 @@ static void print_usage(const char *progname)
            "                            from file content modification time.\n"
            "  --hide-hard-links         Always report a hard link count of 1.\n"
            "  --resolve-symlinks        Resolve symbolic links.\n"
+           "  --resolved-symlink-deletion=...  Decide how to delete resolved symlinks.\n"
            "  --multithreaded           Enable multithreaded mode. See man page\n"
            "                            for security issue with current implementation.\n"
            "\n"
@@ -1677,6 +1718,7 @@ int main(int argc, char *argv[])
         char *create_for_group;
         char *create_with_perms;
         char *chmod_filter;
+        char *resolved_symlink_deletion;
         int no_allow_other;
         int multithreaded;
     } od;
@@ -1734,10 +1776,12 @@ int main(int argc, char *argv[])
         OPT2("--xattr-ro", "xattr-ro", OPTKEY_XATTR_READ_ONLY),
         OPT2("--xattr-rw", "xattr-rw", OPTKEY_XATTR_READ_WRITE),
 
-        OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
-        OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
         OPT2("--resolve-symlinks", "resolve-symlinks", OPTKEY_RESOLVE_SYMLINKS),
+        OPT_OFFSET2("--resolved-symlink-deletion=%s", "resolved-symlink-deletion=%s", resolved_symlink_deletion, -1),
+
+        OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
+        OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
         FUSE_OPT_END
     };
@@ -1774,10 +1818,11 @@ int main(int argc, char *argv[])
     settings.num_mirrored_users = 0;
     settings.mirrored_members = NULL;
     settings.num_mirrored_members = 0;
-    settings.realistic_permissions = 0;
-    settings.ctime_from_mtime = 0;
     settings.hide_hard_links = 0;
     settings.resolve_symlinks = 0;
+    settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_SYMLINK_ONLY;
+    settings.realistic_permissions = 0;
+    settings.ctime_from_mtime = 0;
     atexit(&atexit_func);
 
     /* Parse options */
@@ -1907,6 +1952,23 @@ int main(int argc, char *argv[])
     if (od.chmod_filter) {
         if (add_chmod_rules_to_permchain(od.chmod_filter, settings.chmod_permchain) != 0) {
             fprintf(stderr, "Invalid permission specification: '%s'\n", od.chmod_filter);
+            return 1;
+        }
+    }
+
+
+    /* Parse resolved_symlink_deletion */
+    if (od.resolved_symlink_deletion) {
+        if (strcmp(od.resolved_symlink_deletion, "deny") == 0) {
+            settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_DENY;
+        } else if (strcmp(od.resolved_symlink_deletion, "symlink-only") == 0) {
+            settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_SYMLINK_ONLY;
+        } else if (strcmp(od.resolved_symlink_deletion, "symlink-first") == 0) {
+            settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_SYMLINK_FIRST;
+        } else if (strcmp(od.resolved_symlink_deletion, "target-first") == 0) {
+            settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_TARGET_FIRST;
+        } else {
+            fprintf(stderr, "Invalid setting for --resolved-symlink-deletion: '%s'\n", od.resolved_symlink_deletion);
             return 1;
         }
     }

@@ -168,7 +168,7 @@ but actually does nothing.
 Makes chmod always fail with a 'permission denied' error.
 
 .TP
-.B \-\-chmod\-filter=\fIpermissions\fP,, \-o chmod\-filter=...
+.B \-\-chmod\-filter=\fIpermissions\fP, \-o chmod\-filter=...
 Changes the permission bits of a chmod request before it is applied to the
 original file. Accepts the same permission syntax as \-\-perms.
 See \fB\%PERMISSION \%SPECIFICATION\fP below for details.
@@ -248,6 +248,19 @@ exception: accessing the mountpoint recursively through a resolved symlink is
 not supported and will return an error. This is because a FUSE filesystem cannot
 reliably call itself recursively without deadlocking, especially in
 single-threaded mode.
+
+.TP
+.B \-\-resolved\-symlink\-deletion=\fIpolicy\fP, \-o resolved\-symlink\-deletion=\fIpolicy\fP
+If \fB\-\-resolve\-symlinks\fP is enabled, decides what happens when a resolved
+symlink is deleted.  The options are: \fBdeny\fP (resolved symlinks cannot be
+deleted), \fBsymlink-only\fP (the underlying symlink is deleted, its target is
+not), \fBsymlink-first\fP (the symlink is deleted, and if that succeeds,
+the target is deleted but no error is reported if that fails) or
+\fBtarget-first\fP (the target is deleted first, and the symlink is deleted
+only if deleting the target succeeded).  The default is \fBsymlink-only\fP.
+
+Note that deleting files inside symlinked directories is always possible with
+all settings, including \fBdeny\fP, unless something else protects those files.
 
 
 .SH MISCELLANEOUS OPTIONS

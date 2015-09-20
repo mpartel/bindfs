@@ -373,7 +373,7 @@ end
 testenv("", :title => "utimens on symlinks") do
     touch('mnt/file')
     Dir.chdir "mnt" do
-      system('ln -sf file link')
+      symlink('file', 'link')
     end
 
     system("#{$tests_dir}/utimens_nofollow mnt/link 12 34 56 78")
@@ -383,6 +383,179 @@ testenv("", :title => "utimens on symlinks") do
     assert { File.lstat('mnt/link').mtime.to_i < 100 }
     assert { File.lstat('mnt/file').atime.to_i > 100 }
     assert { File.lstat('mnt/file').mtime.to_i > 100 }
+end
+
+testenv("--resolve-symlinks", :title => "resolving symlinks") do
+  mkdir('src/dir')
+  File.write('src/dir/file', 'hello')
+  Dir.chdir 'src' do
+    symlink('dir', 'dirlink')
+    symlink('dir/file', 'filelink')
+    symlink('dirlink/file', 'filelink2')
+  end
+
+  assert { !File.lstat('mnt/dirlink').symlink? }
+  assert { File.lstat('mnt/dirlink').directory? }
+  assert { !File.lstat('mnt/dirlink/file').symlink? }
+  assert { File.lstat('mnt/dirlink/file').file? }
+  assert { File.lstat('mnt/filelink').file? }
+  assert { File.read('mnt/filelink') == 'hello' }
+end
+
+testenv("--resolve-symlinks", :title => "attributes of resolved symlinks") do
+  Dir.chdir 'src' do
+    touch('file')
+    symlink('file', 'link')
+    chmod(0654, 'file')
+  end
+
+  assert { File.lstat('mnt/link').mode & 0777 == 0654 }
+end
+
+testenv("--resolve-symlinks", :title => "writing through resolved symlinks") do
+  Dir.chdir 'src' do
+    File.write('file', 'initial_content')
+    symlink('file', 'link')
+  end
+
+  File.write('mnt/link', 'new_content')
+  assert { File.read('src/file') == 'new_content' }
+  assert { File.read('src/link') == 'new_content' }
+  assert { File.symlink?('src/link') }
+end
+
+testenv("--resolve-symlinks", :title => "moving over resolved symlinks") do
+  Dir.chdir 'src' do
+    File.write('file', 'initial_content')
+    File.write('newfile', 'new_content')
+    symlink('file', 'link')
+  end
+
+  Dir.chdir 'mnt' do
+    system("mv newfile link")
+  end
+  assert { File.symlink?('src/link') }
+  assert { File.read('src/file') == 'new_content' }
+  assert { !File.exist?('src/newfile') }
+end
+
+testenv("--resolve-symlinks", :title => "moving resolved symlinks") do
+  Dir.chdir 'src' do
+    touch('file')
+    symlink('file', 'link')
+  end
+
+  Dir.chdir 'mnt' do
+    system("mv link lonk")
+  end
+  assert { !File.symlink?('src/link') }
+  assert { File.lstat('src/lonk').symlink? }
+  assert { File.readlink('src/lonk') == 'file' }
+end
+
+testenv("--resolve-symlinks", :title => "--resolve-symlinks disallows new symlinks") do
+  touch('mnt/file')
+  Dir.chdir "mnt" do
+    begin
+      File.symlink("file", "link")
+    rescue Errno::EPERM => exception
+    end
+    assert { exception != nil }
+  end
+end
+
+testenv("--resolve-symlinks", :title => "deleting a resolved symlink deletes the underlying symlink only by default") do
+  Dir.chdir 'src' do
+    touch('file')
+    symlink('file', 'link')
+    symlink('broken', 'broken_link')
+  end
+
+  File.unlink('mnt/link')
+  assert { !File.symlink?('src/link') }
+  assert { File.exist?('src/file') }
+
+  File.unlink('mnt/broken_link')
+  assert { !File.symlink?('src/broken_link') }
+end
+
+testenv("--resolve-symlinks --resolved-symlink-deletion=deny") do
+  Dir.chdir 'src' do
+    touch('file')
+    symlink('file', 'link')
+  end
+
+  begin
+    File.unlink('mnt/link')
+  rescue Errno::EPERM => exception
+  end
+  assert { exception != nil }
+  assert { File.symlink?('src/link') }
+  assert { File.exist?('src/file') }
+end
+
+# TODO: make all tests runnable as root. This is nonroot because we can't
+# easily prevent a bindfs running as root from deleting a file.
+nonroot_testenv("--resolve-symlinks --resolved-symlink-deletion=symlink-first") do
+  begin
+    Dir.chdir 'src' do
+      mkdir('dir')
+      touch('deletable_file')
+      touch('dir/undeletable_file')
+      chmod(0555, 'dir')
+      symlink('deletable_file', 'link1')
+      symlink('dir/undeletable_file', 'link2')
+      symlink('broken', 'link3')
+    end
+
+    File.unlink('mnt/link1')
+    assert { !File.symlink?('src/link1') }
+    assert { !File.exist?('src/dir/deletable_file') }
+
+    File.unlink('mnt/link2')
+    assert { !File.symlink?('src/link2') }
+    assert { File.exist?('src/dir/undeletable_file') }
+
+    File.unlink('mnt/link3')
+    assert { !File.symlink?('src/link3') }
+  ensure
+    chmod(0777, 'src/dir')  # So the cleanup code can delete dir/*
+  end
+end
+
+# TODO: make all tests runnable as root. This is nonroot because we can't
+# easily prevent a bindfs running as root from deleting a file.
+nonroot_testenv("--resolve-symlinks --resolved-symlink-deletion=target-first -p a+w") do
+  begin
+    Dir.chdir 'src' do
+      mkdir('dir')
+      touch('file1')
+      touch('file2')
+      symlink('file1', 'deletable_link')
+      Dir.chdir('dir') do
+        symlink('../file2', 'undeletable_link')
+      end
+      chmod(0555, 'dir')
+      symlink('broken', 'broken_link')
+    end
+
+    File.unlink('mnt/deletable_link')
+    assert { !File.symlink?('src/deletable_link') }
+    assert { !File.exist?('src/file1') }
+
+    begin
+      File.unlink('mnt/dir/undeletable_link')
+    rescue Errno::EACCES => exception
+    end
+    assert { exception != nil }
+    assert { File.symlink?('src/dir/undeletable_link') }
+    assert { !File.exist?('src/file2') }
+
+    File.unlink('mnt/broken_link')
+    assert { !File.symlink?('src/broken_link') }
+  ensure
+    chmod(0777, 'src/dir')  # So the cleanup code can delete dir/*
+  end
 end
 
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
