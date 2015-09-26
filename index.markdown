@@ -33,7 +33,7 @@ Here are some examples of what bindfs can do for you:
 
 ## Docs
 
-* [<span>bindfs --help</span>](docs/bindfs-help.txt)
+* [<span>bindfs \-\-help</span>](docs/bindfs-help.txt)
 * [man 1 bindfs](docs/bindfs.1.html)
 * [ChangeLog](docs/ChangeLog.utf8.txt)
 
