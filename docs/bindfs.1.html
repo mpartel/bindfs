@@ -206,7 +206,7 @@ mirrored permissions) but actually does nothing.
 <dd>Makes chmod always fail with a &rsquo;permission denied&rsquo; error. 
 <p> </dd>
 
-<dt><b>--chmod-filter=<i>permissions</i>,,
+<dt><b>--chmod-filter=<i>permissions</i>,
 -o chmod-filter=...</b> </dt>
 <dd>Changes the permission bits of a chmod request before it
 is applied to the original file. Accepts the same permission syntax as --perms.
@@ -272,22 +272,70 @@ but for writes.
 <p> </dd>
 </dl>
 
-<h2><a name='sect9' href='#toc9'>Miscellaneous Options</a></h2>
+<h2><a name='sect9' href='#toc9'>Link Handling</a></h2>
+
+<p> 
+<dl>
+
+<dt><b>--hide-hard-links, -o hide-hard-links</b> </dt>
+<dd>Shows the
+hard link count of all files as 1. 
+<p> </dd>
+
+<dt><b>--resolve-symlinks, -o resolve-symlinks</b> </dt>
+<dd>Transparently
+resolves symbolic links.  Disables creation of new symbolic links. 
+<p> With
+the following exceptions, operations will operate directly on the target
+file instead of the symlink. Renaming/moving a resolved symlink (inside
+the same mount point) will move the symlink instead of the underlying file.
+Deleting a resolved symlink will delete the underlying symlink but not
+the destination file. This can be configured with <b>--resolved-symlink-deletion</b>.
+
+<p> Note that when some programs, such as <b>vim</b>, save files, they actually move
+the old file out of the way, create a new file in its place, and finally
+delete the old file. Doing these operations on a resolved symlink will replace
+it with a regular file. 
+<p> Symlinks pointing outside the source directory
+are supported with the following exception: accessing the mountpoint recursively
+through a resolved symlink is not supported and will return an error. This
+is because a FUSE filesystem cannot reliably call itself recursively without
+deadlocking, especially in single-threaded mode. 
+<p> </dd>
+
+<dt><b>--resolved-symlink-deletion=<i>policy</i>,
+-o resolved-symlink-deletion=<i>policy</i></b> </dt>
+<dd>If <b>--resolve-symlinks</b> is enabled, decides
+what happens when a resolved symlink is deleted.  The options are: <b>deny</b>
+(resolved symlinks cannot be deleted), <b>symlink-only</b> (the underlying symlink
+is deleted, its target is not), <b>symlink-first</b> (the symlink is deleted, and
+if that succeeds, the target is deleted but no error is reported if that
+fails) or <b>target-first</b> (the target is deleted first, and the symlink is
+deleted only if deleting the target succeeded).  The default is <b>symlink-only</b>.
+
+<p> Note that deleting files inside symlinked directories is always possible
+with all settings, including <b>deny</b>, unless something else protects those
+files. 
+<p> 
+<p> </dd>
+</dl>
+
+<h2><a name='sect10' href='#toc10'>Miscellaneous Options</a></h2>
 
 <p> 
 <dl>
 
 <dt><b>-h, --help</b> </dt>
-<dd>Displays a help message and
-exits. 
+<dd>Displays a help message and exits.
+
 <p> </dd>
 
 <dt><b>-V, --version</b> </dt>
 <dd>Displays version information and exits. 
 <p> </dd>
 
-<dt><b>-n, --no-allow-other,
--o no-allow-other</b> </dt>
+<dt><b>-n, --no-allow-other, -o
+no-allow-other</b> </dt>
 <dd>Does not add <b>-o allow_other</b> to FUSE options. This causes the
 mount to be accessible only by the current user. 
 <p> </dd>
@@ -314,11 +362,6 @@ to metadata changes) will be reflected in a mirrored file&rsquo;s ctime. The und
 file&rsquo;s ctime will still be updated normally. 
 <p> </dd>
 
-<dt><b>--hide-hard-links, -o hide-hard-links</b>
-</dt>
-<dd>Shows the hard link count of all files as 1. 
-<p> </dd>
-
 <dt><b>--multithreaded, -o multithreaded</b>
 </dt>
 <dd>Run bindfs in multithreaded mode. While bindfs is designed to be otherwise
@@ -328,7 +371,7 @@ risk for some use cases. See <b>BUGS</b> below.
 <p> </dd>
 </dl>
 
-<h2><a name='sect10' href='#toc10'>Fuse Options</a></h2>
+<h2><a name='sect11' href='#toc11'>Fuse Options</a></h2>
 
 <dl>
 
@@ -354,7 +397,7 @@ get a more efficent mount with <b>mount --bind</b> and then <b>mount -o remount,
 <p> </dd>
 </dl>
 
-<h2><a name='sect11' href='#toc11'>Permission
+<h2><a name='sect12' href='#toc12'>Permission
 Specification</a></h2>
 The <b>-p</b> option takes a comma- or colon-separated list of either
 octal numeric permission bits or symbolic representations of permission
@@ -403,7 +446,7 @@ adds read and write for group.
 <p> </dd>
 </dl>
 
-<h2><a name='sect12' href='#toc12'>Examples</a></h2>
+<h2><a name='sect13' href='#toc13'>Examples</a></h2>
  
 <dl>
 
@@ -446,7 +489,7 @@ separate arguments to perms, because the comma is an option separator in
 <p> </dd>
 </dl>
 
-<h2><a name='sect13' href='#toc13'>Notes</a></h2>
+<h2><a name='sect14' href='#toc14'>Notes</a></h2>
 
 <p>
 Setuid and setgid bits have no effect inside the mount. This is a necessary
@@ -461,7 +504,7 @@ list. Sending bindfs a <b>SIGUSR1</b> signal will make it reread the user databa
 <p> The following extra options may be useful under osxfuse: <b>-o local,allow_other,extended_security,noappledouble</b>
 See <i><b>https://github.com/osxfuse/osxfuse/wiki/Mount-options</b></i> for details. 
 <p> 
-<h2><a name='sect14' href='#toc14'>Bugs</a></h2>
+<h2><a name='sect15' href='#toc15'>Bugs</a></h2>
 
 <p>
 If bindfs is run in multithreaded mode (with the <b>--multithreaded</b> option)
@@ -476,11 +519,14 @@ block size gets to read/write faster. The total rate limit is maintained
 though, and clients with equal block sizes and a similar rate of requests
 are treated fairly as long as the kernel orders their requests fairly. 
 <p>
-Please report bugs and/or send pull requests to <i><b>https://github.com/mpartel/bindfs/issues</b>.</i>
+Some features relying on xattrs might not work properly on OS X (<b>https://github.com/mpartel/bindfs/issues/21</b>).
+For instance, Finder tags seem to work but comments might not. 
+<p> Please report
+bugs and/or send pull requests to <i><b>https://github.com/mpartel/bindfs/issues</b>.</i>
 
 <p> 
 <p> 
-<h2><a name='sect15' href='#toc15'>Deprecations</a></h2>
+<h2><a name='sect16' href='#toc16'>Deprecations</a></h2>
 
 <p> The option names <b>--user</b> and <b>--group</b> were deprecated and replaced
 with <b>--force-user</b> and <b>--force-group</b> in version 1.12. The former names clashed with
@@ -489,11 +535,11 @@ and prints a warning. The synonym <b>--owner</b> is also deprecated for consiste
 
 <p> 
 <p> 
-<h2><a name='sect16' href='#toc16'>Author</a></h2>
+<h2><a name='sect17' href='#toc17'>Author</a></h2>
 Martin P[:a]rtel &lt;martin dot partel at gmail dot com&gt; 
 <p> 
 <p> 
-<h2><a name='sect17' href='#toc17'>See Also</a></h2>
+<h2><a name='sect18' href='#toc18'>See Also</a></h2>
 <i><b>chmod</b>(1)</i>,
 <i><b>fusermount</b>(1)</i>, <i><b>http://bindfs.org/</b></i> 
 <p> <p>
@@ -510,15 +556,16 @@ Martin P[:a]rtel &lt;martin dot partel at gmail dot com&gt;
 <li><a name='toc6' href='#sect6'>Chmod Policy</a></li>
 <li><a name='toc7' href='#sect7'>Xattr Policy</a></li>
 <li><a name='toc8' href='#sect8'>Rate Limits</a></li>
-<li><a name='toc9' href='#sect9'>Miscellaneous Options</a></li>
-<li><a name='toc10' href='#sect10'>Fuse Options</a></li>
-<li><a name='toc11' href='#sect11'>Permission Specification</a></li>
-<li><a name='toc12' href='#sect12'>Examples</a></li>
-<li><a name='toc13' href='#sect13'>Notes</a></li>
-<li><a name='toc14' href='#sect14'>Bugs</a></li>
-<li><a name='toc15' href='#sect15'>Deprecations</a></li>
-<li><a name='toc16' href='#sect16'>Author</a></li>
-<li><a name='toc17' href='#sect17'>See Also</a></li>
+<li><a name='toc9' href='#sect9'>Link Handling</a></li>
+<li><a name='toc10' href='#sect10'>Miscellaneous Options</a></li>
+<li><a name='toc11' href='#sect11'>Fuse Options</a></li>
+<li><a name='toc12' href='#sect12'>Permission Specification</a></li>
+<li><a name='toc13' href='#sect13'>Examples</a></li>
+<li><a name='toc14' href='#sect14'>Notes</a></li>
+<li><a name='toc15' href='#sect15'>Bugs</a></li>
+<li><a name='toc16' href='#sect16'>Deprecations</a></li>
+<li><a name='toc17' href='#sect17'>Author</a></li>
+<li><a name='toc18' href='#sect18'>See Also</a></li>
 </ul>
 </body>
 </html>

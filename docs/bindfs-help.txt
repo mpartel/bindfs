@@ -56,6 +56,8 @@ Miscellaneous:
   --ctime-from-mtime        Read file properties' change time
                             from file content modification time.
   --hide-hard-links         Always report a hard link count of 1.
+  --resolve-symlinks        Resolve symbolic links.
+  --resolved-symlink-deletion=...  Decide how to delete resolved symlinks.
   --multithreaded           Enable multithreaded mode. See man page
                             for security issue with current implementation.
 

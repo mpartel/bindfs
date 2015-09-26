@@ -1,3 +1,9 @@
+2015-09-26  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Merged --resolve-symlinks by hstern@ (#23). Thanks!
+	* Implemented --resolved-symlink-deletion.
+	* Released 1.13.0
+
 2015-09-09  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* OS X xattr fixes prompted, assisted and tested by @retrography (#21).
