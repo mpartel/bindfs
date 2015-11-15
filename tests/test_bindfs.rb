@@ -169,8 +169,8 @@ def run_chown_chgrp_test_case(chown_flag, chgrp_flag, expectations)
     mntfile = 'mnt/file'
     tests = [
         lambda { chown('nobody', nil, mntfile) },
-        lambda { chown(nil, nobody_group, mntfile) },
-        lambda { chown('nobody', nobody_group, mntfile) }
+        lambda { chown(nil, $nobody_group, mntfile) },
+        lambda { chown('nobody', $nobody_group, mntfile) }
     ]
 
     for testcase, expect in tests.zip expectations
@@ -266,7 +266,7 @@ testenv("--chmod-filter=g-w,o-rwx") do
     assert { File.stat('src/file').mode & 0777 == 0640 }
 end
 
-root_testenv("--map=nobody/root:@nobody/@root") do
+root_testenv("--map=nobody/root:@#{nobody_group}/@root") do
     touch('src/file')
     chown('nobody', nobody_group, 'src/file')
 
@@ -287,7 +287,7 @@ root_testenv("--map=nobody/root:@nobody/@root") do
     assert { File.stat('mnt/newdir').gid == 0 }
 end
 
-root_testenv("--map=@nobody/@root") do
+root_testenv("--map=@#{nobody_group}/@root") do
     touch('src/file')
     chown('nobody', nobody_group, 'src/file')
 
