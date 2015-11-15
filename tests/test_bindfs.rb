@@ -36,7 +36,8 @@ end
 
 # Some useful shorthands
 $nobody_uid = nobody_uid = Etc.getpwnam('nobody').uid
-$nogroup_gid = nogroup_gid = Etc.getgrnam('nogroup').gid
+$nobody_gid = nobody_gid = Etc.getpwnam('nobody').gid
+$nobody_group = nobody_group = Etc.getgrgid(nobody_gid).name
 
 $tests_dir = File.dirname(File.realpath(__FILE__))
 
@@ -45,11 +46,11 @@ testenv("") do
     assert { File.basename(pwd) == TESTDIR_NAME }
 end
 
-testenv("-u nobody -g nogroup") do
+testenv("-u nobody -g #{nobody_group}") do
     touch('src/file')
 
     assert { File.stat('mnt/file').uid == nobody_uid }
-    assert { File.stat('mnt/file').gid == nogroup_gid }
+    assert { File.stat('mnt/file').gid == nobody_gid }
 end
 
 testenv("-p 0600:u+D") do
@@ -73,24 +74,24 @@ end
 
 root_testenv("", :title => "--create-as-user should be default for root") do
   chmod(0777, 'src')
-  `sudo -u nobody -g nogroup touch mnt/file`
-  `sudo -u nobody -g nogroup mkdir mnt/dir`
-  `sudo -u nobody -g nogroup ln -sf /tmp/foo mnt/lnk`
+  `sudo -u nobody -g #{nobody_group} touch mnt/file`
+  `sudo -u nobody -g #{nobody_group} mkdir mnt/dir`
+  `sudo -u nobody -g #{nobody_group} ln -sf /tmp/foo mnt/lnk`
 
   assert { File.stat('mnt/file').uid == nobody_uid }
-  assert { File.stat('mnt/file').gid == nogroup_gid }
+  assert { File.stat('mnt/file').gid == nobody_gid }
   assert { File.stat('src/file').uid == nobody_uid }
-  assert { File.stat('src/file').gid == nogroup_gid }
+  assert { File.stat('src/file').gid == nobody_gid }
 
   assert { File.stat('mnt/dir').uid == nobody_uid }
-  assert { File.stat('mnt/dir').gid == nogroup_gid }
+  assert { File.stat('mnt/dir').gid == nobody_gid }
   assert { File.stat('src/dir').uid == nobody_uid }
-  assert { File.stat('src/dir').gid == nogroup_gid }
+  assert { File.stat('src/dir').gid == nobody_gid }
 
   assert { File.lstat('mnt/lnk').uid == nobody_uid }
-  assert { File.lstat('mnt/lnk').gid == nogroup_gid }
+  assert { File.lstat('mnt/lnk').gid == nobody_gid }
   assert { File.lstat('src/lnk').uid == nobody_uid }
-  assert { File.lstat('src/lnk').gid == nogroup_gid }
+  assert { File.lstat('src/lnk').gid == nobody_gid }
 end
 
 testenv("--create-with-perms=og=r:ogd+x") do
@@ -168,8 +169,8 @@ def run_chown_chgrp_test_case(chown_flag, chgrp_flag, expectations)
     mntfile = 'mnt/file'
     tests = [
         lambda { chown('nobody', nil, mntfile) },
-        lambda { chown(nil, 'nogroup', mntfile) },
-        lambda { chown('nobody', 'nogroup', mntfile) }
+        lambda { chown(nil, nobody_group, mntfile) },
+        lambda { chown('nobody', nobody_group, mntfile) }
     ]
 
     for testcase, expect in tests.zip expectations
@@ -185,16 +186,16 @@ def run_chown_chgrp_test_case(chown_flag, chgrp_flag, expectations)
                 case expect
                 when :uid
                     assert { uid == $nobody_uid }
-                    assert { gid != $nogroup_gid }
+                    assert { gid != $nobody_gid }
                 when :gid
                     assert { uid != $nobody_uid }
-                    assert { gid == $nogroup_gid }
+                    assert { gid == $nobody_gid }
                 when :both
                     assert { uid == $nobody_uid }
-                    assert { gid == $nogroup_gid }
+                    assert { gid == $nobody_gid }
                 when nil
                     assert { uid != $nobody_uid }
-                    assert { gid != $nogroup_gid }
+                    assert { gid != $nobody_gid }
                 end
             end
         end
@@ -211,16 +212,16 @@ root_testenv("--chown-deny") do
     touch('src/file')
 
     assert_exception(EPERM) { chown('nobody', nil, 'mnt/file') }
-    assert_exception(EPERM) { chown('nobody', 'nogroup', 'mnt/file') }
-    chown(nil, 'nogroup', 'mnt/file')
+    assert_exception(EPERM) { chown('nobody', nobody_group, 'mnt/file') }
+    chown(nil, nobody_group, 'mnt/file')
 end
 
 root_testenv("--mirror=root") do
     touch('src/file')
-    chown('nobody', 'nogroup', 'src/file')
+    chown('nobody', nobody_group, 'src/file')
 
     assert { File.stat('mnt/file').uid == 0 }
-    assert { File.stat('mnt/file').gid == $nogroup_gid }
+    assert { File.stat('mnt/file').gid == $nobody_gid }
 end
 
 testenv("--chmod-allow-x --chmod-ignore") do
@@ -265,9 +266,9 @@ testenv("--chmod-filter=g-w,o-rwx") do
     assert { File.stat('src/file').mode & 0777 == 0640 }
 end
 
-root_testenv("--map=nobody/root:@nogroup/@root") do
+root_testenv("--map=nobody/root:@nobody/@root") do
     touch('src/file')
-    chown('nobody', 'nogroup', 'src/file')
+    chown('nobody', nobody_group, 'src/file')
 
     assert { File.stat('mnt/file').uid == 0 }
     assert { File.stat('mnt/file').gid == 0 }
@@ -276,9 +277,9 @@ root_testenv("--map=nobody/root:@nogroup/@root") do
     mkdir('mnt/newdir')
 
     assert { File.stat('src/newfile').uid == $nobody_uid }
-    assert { File.stat('src/newfile').gid == $nogroup_gid }
+    assert { File.stat('src/newfile').gid == $nobody_gid }
     assert { File.stat('src/newdir').uid == $nobody_uid }
-    assert { File.stat('src/newdir').gid == $nogroup_gid }
+    assert { File.stat('src/newdir').gid == $nobody_gid }
 
     assert { File.stat('mnt/newfile').uid == 0 }
     assert { File.stat('mnt/newfile').gid == 0 }
@@ -286,9 +287,9 @@ root_testenv("--map=nobody/root:@nogroup/@root") do
     assert { File.stat('mnt/newdir').gid == 0 }
 end
 
-root_testenv("--map=@nogroup/@root") do
+root_testenv("--map=@nobody/@root") do
     touch('src/file')
-    chown('nobody', 'nogroup', 'src/file')
+    chown('nobody', nobody_group, 'src/file')
 
     assert { File.stat('mnt/file').gid == 0 }
 end
@@ -360,14 +361,14 @@ end
 root_testenv("", :title => "setgid directories") do
     mkdir('mnt/dir')
     chmod("g+s", 'mnt/dir')
-    chown(nil, $nogroup_gid, 'mnt/dir')
+    chown(nil, $nobody_gid, 'mnt/dir')
 
     touch('mnt/dir/file')
 
     assert { File.stat('src/dir').mode & 07000 == 02000 }
-    assert { File.stat('src/dir/file').gid == $nogroup_gid }
+    assert { File.stat('src/dir/file').gid == $nobody_gid }
     assert { File.stat('mnt/dir').mode & 07000 == 02000 }
-    assert { File.stat('mnt/dir/file').gid == $nogroup_gid }
+    assert { File.stat('mnt/dir/file').gid == $nobody_gid }
 end
 
 testenv("", :title => "utimens on symlinks") do
