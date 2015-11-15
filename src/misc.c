@@ -125,7 +125,7 @@ int parse_byte_count(const char *str, double *result)
 {
     char* end;
     double base = strtod(str, &end);
-    long mul = 1;
+    long long mul = 1;
     if (*end == '\0') {
         mul = 1L;
     } else if (strcmp(end, "k") == 0) {
@@ -135,7 +135,7 @@ int parse_byte_count(const char *str, double *result)
     } else if (strcmp(end, "G") == 0) {
         mul = 1024L * 1024L * 1024L;
     } else if (strcmp(end, "T") == 0) {
-        mul = 1024L * 1024L * 1024L * 1024L;
+        mul = 1024LL * 1024LL * 1024LL * 1024LL;
     } else {
         return 0;
     }
