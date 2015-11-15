@@ -34,12 +34,26 @@ you may have to add the line user_allow_other to /etc/fuse.conf.
 
 See the bindfs --help or the man-page for instructions and examples.
 
+
 -- OS X note --
 
 The following extra options may be useful under osxfuse:
 -o local,allow_other,extended_security,noappledouble
 
 See https://github.com/osxfuse/osxfuse/wiki/Mount-options for details.
+
+
+-- Test suite --
+
+Bindfs comes with a (somewhat brittle and messy) test suite.
+The test suite has two kinds of tests: those that have to be run as root and
+those that have to be run as non-root. To run all of the tests, do
+`make check` both as root and as non-root.
+
+The test suite requires Ruby 2.0+ (1.9+ might also work). If you're using RVM
+then you may need to use `rvmsudo` instead of plain `sudo` to run the root
+tests.
+
 
 -- License --
 
