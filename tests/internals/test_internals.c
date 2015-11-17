@@ -52,4 +52,21 @@ void my_dirname_suite()
     test_my_dirname(buf, "..");
 }
 
-TEST_MAIN(my_dirname_suite);
+void sprintf_new_suite() {
+    char *result;
+
+    result = sprintf_new("Hello %d %s", 123, "World");
+    TEST_ASSERT(strcmp(result, "Hello 123 World") == 0);
+    free(result);
+
+    result = sprintf_new("A %s", "loooooooooooooooooooooooooong result");
+    TEST_ASSERT(strcmp(result, "A loooooooooooooooooooooooooong result") == 0);
+    free(result);
+}
+
+void test_internal_suite() {
+    my_dirname_suite();
+    sprintf_new_suite();
+}
+
+TEST_MAIN(test_internal_suite);

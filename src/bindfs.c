@@ -1993,6 +1993,13 @@ int main(int argc, char *argv[])
     fuse_opt_add_arg(&args, "-ouse_ino");
     fuse_opt_add_arg(&args, "-oreaddir_ino");
 
+    /* Show the source dir in the first field on /etc/mtab. */
+    {
+        char *tmp = sprintf_new("-ofsname=%s", settings.mntsrc);
+        fuse_opt_add_arg(&args, tmp);
+        free(tmp);
+    }
+
     /* We need to disable the attribute cache whenever two users
        can see different attributes. For now, only mirroring can do that. */
     if (is_mirroring_enabled()) {

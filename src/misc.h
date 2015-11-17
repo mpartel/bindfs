@@ -31,6 +31,9 @@ int count_substrs(const char *s, const char *sub);
    an end character is reached. */
 char *strdup_until(const char *s, const char *endchars);
 
+/* Like sprintf but writes to an automatically malloc'ed buffer. */
+char *sprintf_new(const char *format, ...);
+
 /* Returns a pointer to the first character after the
    final slash of path, or path itself if it contains no slashes.
    If the path ends with a slash, then the result is an empty

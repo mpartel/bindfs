@@ -18,6 +18,8 @@
 */
 
 #include "misc.h"
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -65,6 +67,31 @@ char *strdup_until(const char *s, const char *endchars)
         memcpy(ret, s, (endloc - s) * sizeof(char));
         ret[(endloc - s)] = '\0';
         return ret;
+    }
+}
+
+char *sprintf_new(const char *format, ...)
+{
+    va_list ap;
+    size_t buffer_size = strlen(format) + 32;
+    char *buffer = malloc(buffer_size);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    while (1) {
+        va_start(ap, format);
+        size_t len = (size_t)vsnprintf(buffer, buffer_size, format, ap);
+        va_end(ap);
+        if (len < buffer_size) {
+            return buffer;
+        }
+        free(buffer);
+        buffer_size *= 2;
+        buffer = malloc(buffer_size);
+        if (buffer == NULL) {
+            return NULL;
+        }
     }
 }
 
