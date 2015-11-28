@@ -49,6 +49,8 @@ See https://github.com/osxfuse/osxfuse/wiki/Mount-options for details.
 
 ## Test suite ##
 
+[![Build Status](https://travis-ci.org/mpartel/bindfs.svg?branch=master)](https://travis-ci.org/mpartel/bindfs)
+
 Bindfs comes with a (somewhat brittle and messy) test suite.
 The test suite has two kinds of tests: those that have to be run as root and
 those that have to be run as non-root. To run all of the tests, do
