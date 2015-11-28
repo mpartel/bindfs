@@ -1,0 +1,11 @@
+language: c
+sudo: required
+dist: trusty
+compiler:
+  - clang
+  - gcc
+script: ./autogen.sh -d && make && sudo make check
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -qq fuse libfuse-dev valgrind
+  - sudo /bin/sh -c 'echo user_allow_other > /etc/fuse.conf'
