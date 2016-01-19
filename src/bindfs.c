@@ -608,8 +608,17 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         memset(&st, 0, sizeof(st));
         st.st_ino = de->d_ino;
         st.st_mode = de->d_type << 12;
-        if (filler(buf, de->d_name, &st, 0))
+
+        // See issue #28 for why we pass a 0 offset to `filler`.
+        // Given a 0 offset, `filler` should never return non-zero, so we
+        // consider it an error if it does. It is undocumented whether it sets
+        // errno in that case, so we zero it first and set it ourself if it
+        // doesn't.
+        errno = 0;
+        if (filler(buf, de->d_name, &st, 0) != 0) {
+            result = errno != 0 ? -errno : -EIO;
             break;
+        }
     }
 
     free(de_buf);
