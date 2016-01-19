@@ -559,6 +559,18 @@ nonroot_testenv("--resolve-symlinks --resolved-symlink-deletion=target-first -p 
   end
 end
 
+# Issue #28 reproduction attempt.
+testenv("", :title => "many files in a directory") do
+  mkdir('src/dir')
+  expected_entries = ['.', '..']
+  10000.times do |i|
+    touch("src/dir/#{i}")
+    expected_entries << i.to_s
+  end
+
+  assert { Dir.entries('mnt/dir').sort == expected_entries.sort }
+end
+
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 if Process.uid == 0
