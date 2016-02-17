@@ -1,6 +1,15 @@
+2016-02-17  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed an issue that some users had with reading large
+	  directories (#28). Thanks to reporters!
+	* Source directory now shown in /etc/mtab.
+	* Fixed some test suite compatibility issues with Fedora. Thanks @tyll!
+	* Rate limits are now expressed as 64-bit ints.
+	* Released 1.13.1
+
 2015-09-26  Martin Pärtel <martin dot partel at gmail dot com>
 
-	* Merged --resolve-symlinks by hstern@ (#23). Thanks!
+	* Merged --resolve-symlinks by @hstern (#23). Thanks!
 	* Implemented --resolved-symlink-deletion.
 	* Released 1.13.0
 
