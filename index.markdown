@@ -49,7 +49,7 @@ There is an extensive [HowTo on Ubuntu Forums](http://ubuntuforums.org/showthrea
 
 ## About
 
-bindfs has been tested on Linux with [FUSE](http://fuse.sourceforge.net/), Mac OS X with [osxfuse](http://osxfuse.github.io/) and FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
+bindfs is developed and tested primarily on Ubuntu Linux with [FUSE](http://fuse.sourceforge.net/), but it's been reported to work reasonably well on Mac OS X with [osxfuse](http://osxfuse.github.io/) and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
 
 All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. While bindfs is very flexible, it can be quite slow as [Guy Paddock's analysis and benchmark](http://www.redbottledesign.com/node/2495) demonstrates. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
@@ -57,16 +57,11 @@ bindfs was initially developed in 2006. I consider the program fairly feature-co
 
 ### Bug reports
 
-Bug reports, pull requests, comments and ideas are very welcome. Developement takes place on [GitHub](https://github.com/mpartel/bindfs). Please use the [issue tracker](https://github.com/mpartel/bindfs/issues) or e-mail me directly at &lt;martin dot partel at gmail dot com&gt;.
+Bug reports, pull requests, comments and ideas are very welcome. Developement takes place on [GitHub](https://github.com/mpartel/bindfs). Please use the [issue tracker](https://github.com/mpartel/bindfs/issues).
 
 ### Known issues
 
-* Hard-linking a domain socket does not preserve its identity ([legacy issue 27](https://code.google.com/p/bindfs/issues/detail?id=27)).
+* Hard-linking a domain socket does not preserve its identity.
+* inotify events are not triggered since FUSE doesn't provide an API for this ([#7](https://github.com/mpartel/bindfs/issues/7)).
+* Namespaces are unsupported ([#10](https://github.com/mpartel/bindfs/issues/10)).
 * Multi-threading is disabled by default because it has been seen triggering a race where one user may see attributes meant to be shown to another. If you use bindfs so that all users should see the same permissions and owners then you can enable multithreading by giving `--multithreaded`.
-
-### Old site
-
-bindfs used to be hosted on [Google Code](https://code.google.com/p/bindfs/). The [old issue tracker](https://code.google.com/p/bindfs/issues/list) has not been migrated (please use [the new one](https://github.com/mpartel/bindfs/issues)).
-
-Google has [deprecated](http://google-opensource.blogspot.fi/2013/05/a-change-to-google-code-download-service.html) downloads on Google Code, so no more downloads will be uploaded there. I will keep the old downloads in Google Code at least until 2014.
-
