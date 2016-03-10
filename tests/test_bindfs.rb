@@ -583,7 +583,7 @@ if Process.uid == 0
             chown('nobody', nil, 'src/file')
 
             assert { File.stat('mnt/file').uid == $nobody_uid }
-            `usermod root -G bindfs_test_group -a`
+            `usermod -G bindfs_test_group -a root`
             raise "Failed to add root to test group" if !$?.success?
 
             # Cache not refreshed yet
