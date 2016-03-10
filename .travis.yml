@@ -9,3 +9,5 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install -qq fuse libfuse-dev valgrind
   - sudo /bin/sh -c 'echo user_allow_other > /etc/fuse.conf'
+  - sudo chmod 0777 /dev/fuse
+  - sudo chmod 0777 /etc/fuse.conf
