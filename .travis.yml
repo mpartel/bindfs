@@ -4,7 +4,7 @@ dist: trusty
 compiler:
   - clang
   - gcc
-script: ./autogen.sh -d && make && sudo make check
+script: ./autogen.sh -d && make && make check && sudo make check
 before_install:
   - sudo apt-get update
   - sudo apt-get install -qq fuse libfuse-dev valgrind
