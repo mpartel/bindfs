@@ -95,11 +95,23 @@ root_testenv("", :title => "--create-as-user should be default for root") do
 end
 
 testenv("--create-with-perms=og=r:ogd+x") do
-    touch('src/file')
-    mkdir('src/dir')
+    with_umask(0077) do
+        touch('mnt/file')
+        mkdir('mnt/dir')
+    end
 
-    assert { File.stat('mnt/file').mode & 0077 == 0044 }
-    assert { File.stat('mnt/dir').mode & 0077 == 0055 }
+    assert { File.stat('mnt/file').mode & 0777 == 0644 }
+    assert { File.stat('mnt/dir').mode & 0777 == 0755 }
+end
+
+testenv("--create-with-perms=g+rD") do
+    with_umask(0077) do
+        touch('mnt/file')
+        mkdir('mnt/dir')
+    end
+
+    assert { File.stat('src/file').mode & 0777 == 0640 }
+    assert { File.stat('src/dir').mode & 0777 == 0750 }
 end
 
 testenv("-p 0777 --realistic-permissions", :title => '--realistic-permissions') do

@@ -66,6 +66,15 @@ def wait_for(options = {}, &condition)
     true
 end
 
+def with_umask(umask, &block)
+    old_umask = File.umask(umask)
+    begin
+        block.call
+    ensure
+        File.umask(old_umask)
+    end
+end
+
 def valgrind_options
     opt = ARGV.find {|s| s.start_with?('--valgrind') }
     if opt == nil
