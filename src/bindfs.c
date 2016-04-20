@@ -164,6 +164,9 @@ static struct Settings {
 
     int ctime_from_mtime;
 
+    uid_t uid_offset;
+    gid_t gid_offset;
+
 } settings;
 
 
@@ -315,6 +318,12 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     /* Possibly map user/group */
     stbuf->st_uid = usermap_get_uid_or_default(settings.usermap, stbuf->st_uid, stbuf->st_uid);
     stbuf->st_gid = usermap_get_gid_or_default(settings.usermap, stbuf->st_gid, stbuf->st_gid);
+
+    if (settings.uid_offset > 0)
+        stbuf->st_uid +=settings.uid_offset;
+
+    if (settings.gid_offset > 0)
+        stbuf->st_gid +=settings.gid_offset;
 
     /* Report user-defined owner/group if specified */
     if (settings.new_uid != -1)
@@ -1292,6 +1301,8 @@ static void print_usage(const char *progname)
            "  -M      --mirror-only=... Like --mirror but disallow access for\n"
            "                            all other users.\n"
            " --map=user1/user2:...      Let user2 see files of user1 as his own.\n"
+           " --uid-offset=...           Set file uid = uid + offset.\n"
+           " --gid-offset=...           Set file gid = gid + offset.\n"
            "\n"
            "Permission bits:\n"
            "  -p      --perms=...       Specify permissions, similar to chmod\n"
@@ -1732,6 +1743,8 @@ int main(int argc, char *argv[])
         char *resolved_symlink_deletion;
         int no_allow_other;
         int multithreaded;
+        char *uid_offset;
+        char *gid_offset;
     } od;
 
     #define OPT2(one, two, key) \
@@ -1794,6 +1807,9 @@ int main(int argc, char *argv[])
         OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
+
+        OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, 0),
+        OPT_OFFSET2("--gid-offset=%s", "gid-offset=%s", gid_offset, 0),
         FUSE_OPT_END
     };
 
@@ -1834,6 +1850,9 @@ int main(int argc, char *argv[])
     settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_SYMLINK_ONLY;
     settings.realistic_permissions = 0;
     settings.ctime_from_mtime = 0;
+    settings.uid_offset = 0;
+    settings.gid_offset = 0;
+
     atexit(&atexit_func);
 
     /* Parse options */
@@ -1906,6 +1925,28 @@ int main(int argc, char *argv[])
         }
         if (!parse_user_map(settings.usermap, settings.usermap_reverse, od.map)) {
             /* parse_user_map printed an error */
+            return 1;
+        }
+    }
+
+    if (od.uid_offset > 0) {
+        if (getuid() != 0) {
+            fprintf(stderr, "Error: You need to be root to use --uid-offset !\n");
+            return 1;
+        }
+        if (!user_uid(od.uid_offset, &settings.uid_offset)) {
+            fprintf(stderr, "Not a valid uid offset: %s\n", od.uid_offset);
+            return 1;
+        }
+    }
+
+    if (od.gid_offset > 0) {
+        if (getuid() != 0) {
+            fprintf(stderr, "Error: You need to be root to use --gid-offset !\n");
+            return 1;
+        }
+        if (!group_gid(od.gid_offset, &settings.gid_offset)) {
+            fprintf(stderr, "Not a valid gid offset: %s\n", od.gid_offset);
             return 1;
         }
     }
