@@ -390,6 +390,12 @@ static void chown_new_file(const char *path, struct fuse_context *fc, int (*chow
     file_owner = usermap_get_uid_or_default(settings.usermap_reverse, fc->uid, file_owner);
     file_group = usermap_get_gid_or_default(settings.usermap_reverse, fc->gid, file_group);
 
+    if (settings.uid_offset > 0)
+        file_owner -=settings.uid_offset;
+
+    if (settings.gid_offset > 0)
+        file_group -=settings.gid_offset;
+
     if (settings.create_for_uid != -1)
         file_owner = settings.create_for_uid;
     if (settings.create_for_gid != -1)
@@ -852,6 +858,8 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         switch (settings.chown_policy) {
         case CHOWN_NORMAL:
             uid = usermap_get_uid_or_default(settings.usermap_reverse, uid, uid);
+            if (settings.uid_offset > 0)
+                uid -=settings.uid_offset;
             break;
         case CHOWN_IGNORE:
             uid = -1;
@@ -865,6 +873,8 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         switch (settings.chgrp_policy) {
         case CHGRP_NORMAL:
             gid = usermap_get_gid_or_default(settings.usermap_reverse, gid, gid);
+            if (settings.gid_offset > 0)
+                gid -=settings.gid_offset;
             break;
         case CHGRP_IGNORE:
             gid = -1;
@@ -1929,26 +1939,20 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (od.uid_offset > 0) {
+    if (od.uid_offset) {
         if (getuid() != 0) {
             fprintf(stderr, "Error: You need to be root to use --uid-offset !\n");
             return 1;
         }
-        if (!user_uid(od.uid_offset, &settings.uid_offset)) {
-            fprintf(stderr, "Not a valid uid offset: %s\n", od.uid_offset);
-            return 1;
-        }
+        settings.uid_offset = strtoul(od.uid_offset, NULL, 10);
     }
 
-    if (od.gid_offset > 0) {
+    if (od.gid_offset) {
         if (getuid() != 0) {
             fprintf(stderr, "Error: You need to be root to use --gid-offset !\n");
             return 1;
         }
-        if (!group_gid(od.gid_offset, &settings.gid_offset)) {
-            fprintf(stderr, "Not a valid gid offset: %s\n", od.gid_offset);
-            return 1;
-        }
+        settings.gid_offset = strtoul(od.gid_offset, NULL, 10);
     }
 
     /* Parse user and group for new creates */
