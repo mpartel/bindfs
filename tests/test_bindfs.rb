@@ -349,6 +349,39 @@ root_testenv("--map=0/1:@0/@1", :title => "--map and chown/chgrp") do
     assert { File.stat('mnt/file1').gid == 1 }
 end
 
+root_testenv("--uid-offset=2") do
+    touch('src/file')
+    chown(1, nil, 'src/file')
+
+    assert { File.stat('mnt/file').uid == 3 }
+end
+
+root_testenv("--gid-offset=2") do
+    touch('src/file')
+    chown(nil, 1, 'src/file')
+
+    assert { File.stat('mnt/file').gid == 3 }
+end
+
+root_testenv("--uid-offset=2 --gid-offset=20", :title => "file creation with --uid-offset and --gid-offset") do
+    touch('mnt/file')
+
+    assert { File.stat('mnt/file').uid == 2 }
+    assert { File.stat('mnt/file').gid == 20 }
+    assert { File.stat('src/file').uid == 0 }
+    assert { File.stat('src/file').gid == 0 }
+end
+
+root_testenv("--uid-offset=2 --gid-offset=20", :title => "chown/chgrp with --uid-offset and --gid-offset") do
+    touch('src/file')
+    chown(6, 25, 'mnt/file')
+
+    assert { File.stat('mnt/file').uid == 6 }
+    assert { File.stat('mnt/file').gid == 25 }
+    assert { File.stat('src/file').uid == 4 }
+    assert { File.stat('src/file').gid == 5 }
+end
+
 testenv("", :title => "preserves inode numbers") do
     touch('src/file')
     mkdir('src/dir')
