@@ -67,6 +67,21 @@ the corresponding behavior of this option.
 
 Requires mounting as root.
 
+.TP
+.B \-\-uid\-offset=..., \-o uid\-offset=...
+Works like \-\-map, but adds the given number to all file owner user IDs.
+For instance, \fB--uid-offset=100000\fP causes a file owned by user \fI123\fP
+to be shown as owned by user \fI100123\fP.
+
+For now, this option cannot be used together with \-\-map. Please file an issue
+with the desired semantics if you have a case for using them together.
+
+Requires mounting as root.
+
+.TP
+.B \-\-gid\-offset=..., \-o gid\-offset=...
+Works exactly like \fB--uid-offset\fP but for groups.
+
 
 .SH FILE CREATION POLICY
 New files and directories are created so they are owned by the mounter.
