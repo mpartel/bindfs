@@ -87,6 +87,12 @@
 #define XATTR_APPLE_PREFIX   "com.apple."
 #endif
 
+/* We pessimistically assume signed uid_t and gid_t in our overflow checks,
+   mostly because supporting both cases would require a bunch more code. */
+static const uid_t UID_T_MAX = ((1LL << (sizeof(uid_t)*8-1)) - 1);
+static const gid_t GID_T_MAX = ((1LL << (sizeof(gid_t)*8-1)) - 1);
+static const int UID_GID_OVERFLOW_ERRNO = EIO;
+
 /* SETTINGS */
 static struct Settings {
     const char *progname;
@@ -185,10 +191,16 @@ static char *process_path(const char *path, bool resolve_symlinks);
 static int getattr_common(const char *path, struct stat *stbuf);
 
 /* Chowns a new file if necessary. */
-static void chown_new_file(const char *path, struct fuse_context *fc, int (*chown_func)(const char*, uid_t, gid_t));
+static int chown_new_file(const char *path, struct fuse_context *fc, int (*chown_func)(const char*, uid_t, gid_t));
 
 /* Unified implementation of unlink and rmdir. */
 static int delete_file(const char *path, int (*target_delete_func)(const char *));
+
+/* Apply offsets with overflow checking. */
+static int apply_uid_offset(uid_t *uid);
+static int apply_gid_offset(gid_t *gid);
+static int unapply_uid_offset(uid_t *uid);
+static int unapply_gid_offset(gid_t *gid);
 
 /* FUSE callbacks */
 static void *bindfs_init();
@@ -319,8 +331,12 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     stbuf->st_uid = usermap_get_uid_or_default(settings.usermap, stbuf->st_uid, stbuf->st_uid);
     stbuf->st_gid = usermap_get_gid_or_default(settings.usermap, stbuf->st_gid, stbuf->st_gid);
 
-    stbuf->st_uid += settings.uid_offset;
-    stbuf->st_gid += settings.gid_offset;
+    if (!apply_uid_offset(&stbuf->st_uid)) {
+        return -UID_GID_OVERFLOW_ERRNO;
+    }
+    if (!apply_gid_offset(&stbuf->st_gid)) {
+        return -UID_GID_OVERFLOW_ERRNO;
+    }
 
     /* Report user-defined owner/group if specified */
     if (settings.new_uid != -1)
@@ -361,7 +377,7 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
 
 /* FIXME: another thread may race to see the old owner before the chown is done.
           Is there a scenario where this compromises security? Or application correctness? */
-static void chown_new_file(const char *path, struct fuse_context *fc, int (*chown_func)(const char*, uid_t, gid_t))
+static int chown_new_file(const char *path, struct fuse_context *fc, int (*chown_func)(const char*, uid_t, gid_t))
 {
     uid_t file_owner;
     gid_t file_group;
@@ -387,8 +403,12 @@ static void chown_new_file(const char *path, struct fuse_context *fc, int (*chow
     file_owner = usermap_get_uid_or_default(settings.usermap_reverse, fc->uid, file_owner);
     file_group = usermap_get_gid_or_default(settings.usermap_reverse, fc->gid, file_group);
 
-    file_owner -= settings.uid_offset;
-    file_group -= settings.gid_offset;
+    if (!unapply_uid_offset(&file_owner)) {
+        return -UID_GID_OVERFLOW_ERRNO;
+    }
+    if (!unapply_gid_offset(&file_group)) {
+        return -UID_GID_OVERFLOW_ERRNO;
+    }
 
     if (settings.create_for_uid != -1)
         file_owner = settings.create_for_uid;
@@ -400,6 +420,8 @@ static void chown_new_file(const char *path, struct fuse_context *fc, int (*chow
             DPRINTF("Failed to chown new file or directory (%d)", errno);
         }
     }
+
+    return 0;
 }
 
 static int delete_file(const char *path, int (*target_delete_func)(const char *)) {
@@ -470,6 +492,42 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
     }
 
     return 0;
+}
+
+static int apply_uid_offset(uid_t *uid) {
+    if (*uid > UID_T_MAX - settings.uid_offset) {
+        DPRINTF("UID %lld overflowed while applying offset", (long long)*uid);
+        return 0;
+    }
+    *uid += settings.uid_offset;
+    return 1;
+}
+
+static int apply_gid_offset(gid_t *gid) {
+    if (*gid > GID_T_MAX - settings.gid_offset) {
+        DPRINTF("GID %lld overflowed while applying offset", (long long)*gid);
+        return 0;
+    }
+    *gid += settings.gid_offset;
+    return 1;
+}
+
+static int unapply_uid_offset(uid_t *uid) {
+    if (*uid < settings.uid_offset) {
+        DPRINTF("UID %lld underflowed while unapplying offset", (long long)*uid);
+        return 0;
+    }
+    *uid -= settings.uid_offset;
+    return 1;
+}
+
+static int unapply_gid_offset(gid_t *gid) {
+  if (*gid < settings.gid_offset) {
+        DPRINTF("GID %lld underflowed while unapplying offset", (long long)*gid);
+        return 0;
+    }
+    *gid -= settings.gid_offset;
+    return 1;
 }
 
 
@@ -664,10 +722,10 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
     }
 
     fc = fuse_get_context();
-    chown_new_file(real_path, fc, &chown);
+    res = chown_new_file(real_path, fc, &chown);
     free(real_path);
 
-    return 0;
+    return res;
 }
 
 static int bindfs_mkdir(const char *path, mode_t mode)
@@ -690,10 +748,10 @@ static int bindfs_mkdir(const char *path, mode_t mode)
     }
 
     fc = fuse_get_context();
-    chown_new_file(real_path, fc, &chown);
+    res = chown_new_file(real_path, fc, &chown);
     free(real_path);
 
-    return 0;
+    return res;
 }
 
 static int bindfs_unlink(const char *path)
@@ -726,10 +784,10 @@ static int bindfs_symlink(const char *from, const char *to)
     }
 
     fc = fuse_get_context();
-    chown_new_file(real_to, fc, &lchown);
+    res = chown_new_file(real_to, fc, &lchown);
     free(real_to);
 
-    return 0;
+    return res;
 }
 
 static int bindfs_rename(const char *from, const char *to)
@@ -852,7 +910,9 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         switch (settings.chown_policy) {
         case CHOWN_NORMAL:
             uid = usermap_get_uid_or_default(settings.usermap_reverse, uid, uid);
-            uid -= settings.uid_offset;
+            if (!unapply_uid_offset(&uid)) {
+                return -UID_GID_OVERFLOW_ERRNO;
+            }
             break;
         case CHOWN_IGNORE:
             uid = -1;
@@ -866,7 +926,9 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         switch (settings.chgrp_policy) {
         case CHGRP_NORMAL:
             gid = usermap_get_gid_or_default(settings.usermap_reverse, gid, gid);
-            gid -= settings.gid_offset;
+            if (!unapply_gid_offset(&gid)) {
+                return -UID_GID_OVERFLOW_ERRNO;
+            }
             break;
         case CHGRP_IGNORE:
             gid = -1;
