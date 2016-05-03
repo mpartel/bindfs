@@ -319,11 +319,8 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     stbuf->st_uid = usermap_get_uid_or_default(settings.usermap, stbuf->st_uid, stbuf->st_uid);
     stbuf->st_gid = usermap_get_gid_or_default(settings.usermap, stbuf->st_gid, stbuf->st_gid);
 
-    if (settings.uid_offset > 0)
-        stbuf->st_uid +=settings.uid_offset;
-
-    if (settings.gid_offset > 0)
-        stbuf->st_gid +=settings.gid_offset;
+    stbuf->st_uid += settings.uid_offset;
+    stbuf->st_gid += settings.gid_offset;
 
     /* Report user-defined owner/group if specified */
     if (settings.new_uid != -1)
@@ -390,11 +387,8 @@ static void chown_new_file(const char *path, struct fuse_context *fc, int (*chow
     file_owner = usermap_get_uid_or_default(settings.usermap_reverse, fc->uid, file_owner);
     file_group = usermap_get_gid_or_default(settings.usermap_reverse, fc->gid, file_group);
 
-    if (settings.uid_offset > 0)
-        file_owner -=settings.uid_offset;
-
-    if (settings.gid_offset > 0)
-        file_group -=settings.gid_offset;
+    file_owner -= settings.uid_offset;
+    file_group -= settings.gid_offset;
 
     if (settings.create_for_uid != -1)
         file_owner = settings.create_for_uid;
@@ -858,8 +852,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         switch (settings.chown_policy) {
         case CHOWN_NORMAL:
             uid = usermap_get_uid_or_default(settings.usermap_reverse, uid, uid);
-            if (settings.uid_offset > 0)
-                uid -=settings.uid_offset;
+            uid -= settings.uid_offset;
             break;
         case CHOWN_IGNORE:
             uid = -1;
@@ -873,8 +866,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         switch (settings.chgrp_policy) {
         case CHGRP_NORMAL:
             gid = usermap_get_gid_or_default(settings.usermap_reverse, gid, gid);
-            if (settings.gid_offset > 0)
-                gid -=settings.gid_offset;
+            gid -= settings.gid_offset;
             break;
         case CHGRP_IGNORE:
             gid = -1;
