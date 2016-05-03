@@ -1936,7 +1936,16 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Error: You need to be root to use --uid-offset !\n");
             return 1;
         }
-        settings.uid_offset = strtoul(od.uid_offset, NULL, 10);
+        if (od.map) {
+            fprintf(stderr, "Error: Cannot use --uid-offset and --map together!\n");
+            return 1;
+        }
+        char* endptr = od.uid_offset;
+        settings.uid_offset = strtoul(od.uid_offset, &endptr, 10);
+        if (*endptr != '\0') {
+            fprintf(stderr, "Error: Value of --uid-offset must be a positive integer.\n");
+            return 1;
+        }
     }
 
     if (od.gid_offset) {
@@ -1944,7 +1953,16 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Error: You need to be root to use --gid-offset !\n");
             return 1;
         }
-        settings.gid_offset = strtoul(od.gid_offset, NULL, 10);
+        if (od.map) {
+            fprintf(stderr, "Error: Cannot use --gid-offset and --map together!\n");
+            return 1;
+        }
+        char* endptr = od.gid_offset;
+        settings.gid_offset = strtoul(od.gid_offset, &endptr, 10);
+        if (*endptr != '\0') {
+            fprintf(stderr, "Error: Value of --gid-offset must be a positive integer.\n");
+            return 1;
+        }
     }
 
     /* Parse user and group for new creates */
