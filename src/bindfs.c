@@ -1100,14 +1100,21 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
     real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
+
     res = statvfs(real_path, stbuf);
 
     if(settings.bindfs_size >= 0) {
-        //stbuf->f_frsize //block size
+        //see: man 3 statvfs
+        //stbuf->f_frsize //block size (used for block to size conversion)
+
         stbuf->f_blocks = settings.bindfs_size/stbuf->f_frsize; //total size in blocks
+	//We cannot have more free blocks than there are blocks in total:
+        stbuf->f_bfree = stbuf->f_bfree < stbuf->f_blocks ? stbuf->f_bfree : stbuf->f_blocks ; //free blocks
+        stbuf->f_bavail = stbuf->f_bavail < stbuf->f_blocks ? stbuf->f_bavail : stbuf->f_blocks ; //free blocks for unprivileged
+
 	/*
-        stbuf->f_bfree = 0; //free blocks
-        stbuf->f_bavail = 0; //free blocks for unprivileged
+	//TODO: same for inodes in future (when size limiting will be done)
+        stbuf->f_file = 0; //total size in inodes
         stbuf->f_ffree = 0; //free inodes
         stbuf->f_favail = 0; //free inodes for unprivileged
 	*/
