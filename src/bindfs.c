@@ -173,6 +173,8 @@ static struct Settings {
     uid_t uid_offset;
     gid_t gid_offset;
 
+    long bindfs_size; //Maybe it should be unsigned in future, however right now i use -1 to signal it's not used
+
 } settings;
 
 
@@ -1098,8 +1100,19 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
     real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
-
     res = statvfs(real_path, stbuf);
+
+    if(settings.bindfs_size >= 0) {
+        //stbuf->f_frsize //block size
+        stbuf->f_blocks = settings.bindfs_size/stbuf->f_frsize; //total size in blocks
+	/*
+        stbuf->f_bfree = 0; //free blocks
+        stbuf->f_bavail = 0; //free blocks for unprivileged
+        stbuf->f_ffree = 0; //free inodes
+        stbuf->f_favail = 0; //free inodes for unprivileged
+	*/
+    }
+
     free(real_path);
     if (res == -1)
         return -errno;
@@ -1404,6 +1417,14 @@ static void print_usage(const char *progname)
            "Rate limits:\n"
            "  --read-rate=...           Limit to bytes/sec that can be read.\n"
            "  --write-rate=...          Limit to bytes/sec that can be written.\n"
+           "\n"
+           "Size limits:\n"
+           "  --size=...M               Report fake FS size of ... Megabytes\n"
+           "                            Note this does not actually limit anything\n"
+           "                            and it may cause your df go nuts.\n"
+//           "  --size-limit=...M         Limit usable FS size to ... Megabytes\n"
+//           "                            this defaults to --size, unless you want it to\n"
+//           "                            be different from value reported to df.\n"
            "\n"
            "Miscellaneous:\n"
            "  -n      --no-allow-other  Do not add -o allow_other to fuse options.\n"
@@ -1809,6 +1830,7 @@ int main(int argc, char *argv[])
         int multithreaded;
         char *uid_offset;
         char *gid_offset;
+        char *bindfs_size;
     } od;
 
     #define OPT2(one, two, key) \
@@ -1874,6 +1896,8 @@ int main(int argc, char *argv[])
 
         OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, 0),
         OPT_OFFSET2("--gid-offset=%s", "gid-offset=%s", gid_offset, 0),
+
+        OPT_OFFSET2("--size=%s", "size=%s", bindfs_size, 0),
         FUSE_OPT_END
     };
 
@@ -1916,6 +1940,7 @@ int main(int argc, char *argv[])
     settings.ctime_from_mtime = 0;
     settings.uid_offset = 0;
     settings.gid_offset = 0;
+    settings.bindfs_size = -1;
 
     atexit(&atexit_func);
 
@@ -2101,6 +2126,13 @@ int main(int argc, char *argv[])
         }
     }
 
+    /* parse size */
+    if (od.bindfs_size) {
+        char* bindfs_size_ptr = od.bindfs_size;
+        settings.bindfs_size = strtoul(od.bindfs_size, &bindfs_size_ptr, 10);
+        //fprintf(stderr, "Activated experimental fake size: %ldM\n", settings.bindfs_size); //Debug
+	settings.bindfs_size *= (1024*1024); //Currently only Megabytes are supported
+    }
 
     /* Single-threaded mode by default */
     if (!od.multithreaded) {
