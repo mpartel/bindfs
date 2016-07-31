@@ -1098,12 +1098,13 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
-                        void *data) {
-  int ret = ioctl(fi->fh, cmd, data);
-  if (ret == -1) {
-    return -errno;
-  }
-  return ret;
+                        void *data)
+{
+    int ret = ioctl(fi->fh, cmd, data);
+    if (ret == -1) {
+      return -errno;
+    }
+    return ret;
 }
 
 static int bindfs_statfs(const char *path, struct statvfs *stbuf)
