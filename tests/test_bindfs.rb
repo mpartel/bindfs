@@ -616,6 +616,27 @@ testenv("", :title => "many files in a directory") do
   assert { Dir.entries('mnt/dir').sort == expected_entries.sort }
 end
 
+# Issue #37
+root_testenv("--enable-ioctl", :title => "append-only ioctl") do
+  touch('mnt/file')
+  system('chattr +a mnt/file')
+  raise 'chattr +a failed' unless $?.success?
+  begin
+    File.open('mnt/file', 'a') do |f|
+      f.write('stuff')
+    end
+    assert { File.read('mnt/file') == 'stuff' }
+    assert_exception(EPERM) { File.write('mnt/file', 'newstuff') }
+  ensure
+    system('chattr -a mnt/file')
+  end
+end
+
+root_testenv("", :title => "ioctl not enabled by default") do
+  touch('mnt/file')
+  assert { `chattr +a mnt/file 2>&1`; !$?.success? }
+end
+
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 if Process.uid == 0

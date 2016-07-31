@@ -53,6 +53,7 @@
 #endif
 #include <sys/time.h>
 #include <sys/statvfs.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
@@ -170,6 +171,8 @@ static struct Settings {
 
     int ctime_from_mtime;
 
+    int enable_ioctl;
+
     uid_t uid_offset;
     gid_t gid_offset;
 
@@ -233,6 +236,9 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi);
 static int bindfs_write(const char *path, const char *buf, size_t size,
                         off_t offset, struct fuse_file_info *fi);
+static int bindfs_ioctl(const char *path, int cmd, void *arg,
+                        struct fuse_file_info *fi, unsigned int flags,
+                        void *data);
 static int bindfs_statfs(const char *path, struct statvfs *stbuf);
 static int bindfs_release(const char *path, struct fuse_file_info *fi);
 static int bindfs_fsync(const char *path, int isdatasync,
@@ -1090,6 +1096,16 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
     return res;
 }
 
+static int bindfs_ioctl(const char *path, int cmd, void *arg,
+                        struct fuse_file_info *fi, unsigned int flags,
+                        void *data) {
+  int ret = ioctl(fi->fh, cmd, data);
+  if (ret == -1) {
+    return -errno;
+  }
+  return ret;
+}
+
 static int bindfs_statfs(const char *path, struct statvfs *stbuf)
 {
     int res;
@@ -1335,6 +1351,7 @@ static struct fuse_operations bindfs_oper = {
     .open       = bindfs_open,
     .read       = bindfs_read,
     .write      = bindfs_write,
+    .ioctl      = bindfs_ioctl,
     .statfs     = bindfs_statfs,
     .release    = bindfs_release,
     .fsync      = bindfs_fsync,
@@ -1450,6 +1467,7 @@ enum OptionKey {
     OPTKEY_XATTR_READ_WRITE,
     OPTKEY_REALISTIC_PERMISSIONS,
     OPTKEY_CTIME_FROM_MTIME,
+    OPTKEY_ENABLE_IOCTL,
     OPTKEY_HIDE_HARD_LINKS,
     OPTKEY_RESOLVE_SYMLINKS,
     OPTKEY_MULTITHREADED
@@ -1529,6 +1547,9 @@ static int process_option(void *data, const char *arg, int key,
         return 0;
     case OPTKEY_CTIME_FROM_MTIME:
         settings.ctime_from_mtime = 1;
+        return 0;
+    case OPTKEY_ENABLE_IOCTL:
+        settings.enable_ioctl = 1;
         return 0;
     case OPTKEY_HIDE_HARD_LINKS:
         settings.hide_hard_links = 1;
@@ -1870,6 +1891,7 @@ int main(int argc, char *argv[])
 
         OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
+        OPT2("--enable-ioctl", "enable-ioctl", OPTKEY_ENABLE_IOCTL),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
 
         OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, 0),
@@ -1914,6 +1936,7 @@ int main(int argc, char *argv[])
     settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_SYMLINK_ONLY;
     settings.realistic_permissions = 0;
     settings.ctime_from_mtime = 0;
+    settings.enable_ioctl = 0;
     settings.uid_offset = 0;
     settings.gid_offset = 0;
 
@@ -2153,6 +2176,11 @@ int main(int argc, char *argv[])
         bindfs_oper.getxattr = NULL;
         bindfs_oper.listxattr = NULL;
         bindfs_oper.removexattr = NULL;
+    }
+
+    /* Remove the ioctl implementation unless the user has enabled it */
+    if (!settings.enable_ioctl) {
+        bindfs_oper.ioctl = NULL;
     }
 
     /* fuse_main will daemonize by fork()'ing. The signal handler will persist. */

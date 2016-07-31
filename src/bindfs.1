@@ -316,6 +316,14 @@ will be reflected in a mirrored file's ctime.
 The underlying file's ctime will still be updated normally.
 
 .TP
+.B \-\-enable\-ioctl, \-o enable\-ioctl
+Enables forwarding of ioctl, which is needed for some advanced features such as
+append-only files (\fBchattr +a\fP). Note that the ioctl action will be
+performed as the mounter, not the calling user. No efforts are made to check
+whether the calling user would ordinarily have the permissions to make the
+ioctl. This may be a security concern, especially when mounting as root.
+
+.TP
 .B \-\-multithreaded, \-o multithreaded
 Run bindfs in multithreaded mode. While bindfs is designed to be
 otherwise thread-safe, there is currently a race condition that may pose
