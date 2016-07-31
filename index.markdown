@@ -63,5 +63,5 @@ Bug reports, pull requests, comments and ideas are very welcome. Developement ta
 
 * Hard-linking a domain socket does not preserve its identity.
 * inotify events are not triggered since FUSE doesn't provide an API for this ([#7](https://github.com/mpartel/bindfs/issues/7)).
-* Namespaces are unsupported ([#10](https://github.com/mpartel/bindfs/issues/10)).
+* There may be issues with namespaces ([#10](https://github.com/mpartel/bindfs/issues/10)).
 * Multi-threading is disabled by default because it has been seen triggering a race where one user may see attributes meant to be shown to another. If you use bindfs so that all users should see the same permissions and owners then you can enable multithreading by giving `--multithreaded`.
