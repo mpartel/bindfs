@@ -53,6 +53,7 @@
 #endif
 #include <sys/time.h>
 #include <sys/statvfs.h>
+#include <sys/file.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -171,6 +172,8 @@ static struct Settings {
 
     int ctime_from_mtime;
 
+    int enable_lock_forwarding;
+
     int enable_ioctl;
 
     uid_t uid_offset;
@@ -236,6 +239,9 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi);
 static int bindfs_write(const char *path, const char *buf, size_t size,
                         off_t offset, struct fuse_file_info *fi);
+static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
+                       struct flock *lock);
+static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op);
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
                         void *data);
@@ -1096,15 +1102,34 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
     return res;
 }
 
+static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
+                       struct flock *lock)
+{
+  int res = fcntl(fi->fh, cmd, lock);
+  if (res == -1) {
+    return -errno;
+  }
+  return 0;
+}
+
+static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op)
+{
+    int res = flock(fi->fh, op);
+    if (res == -1) {
+        return -errno;
+    }
+    return 0;
+}
+
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
                         void *data)
 {
-    int ret = ioctl(fi->fh, cmd, data);
-    if (ret == -1) {
+    int res = ioctl(fi->fh, cmd, data);
+    if (res == -1) {
       return -errno;
     }
-    return ret;
+    return res;
 }
 
 static int bindfs_statfs(const char *path, struct statvfs *stbuf)
@@ -1352,6 +1377,8 @@ static struct fuse_operations bindfs_oper = {
     .open       = bindfs_open,
     .read       = bindfs_read,
     .write      = bindfs_write,
+    .lock       = bindfs_lock,
+    .flock      = bindfs_flock,
     .ioctl      = bindfs_ioctl,
     .statfs     = bindfs_statfs,
     .release    = bindfs_release,
@@ -1428,6 +1455,7 @@ static void print_usage(const char *progname)
            "  --realistic-permissions   Hide permission bits for actions mounter can't do.\n"
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
+           "  --enable-lock-forwarding  Forward locks to the underlying FS.\n"
            "  --enable-ioctl            Forward ioctl() calls (as the mounter).\n"
            "  --hide-hard-links         Always report a hard link count of 1.\n"
            "  --resolve-symlinks        Resolve symbolic links.\n"
@@ -1469,6 +1497,8 @@ enum OptionKey {
     OPTKEY_XATTR_READ_WRITE,
     OPTKEY_REALISTIC_PERMISSIONS,
     OPTKEY_CTIME_FROM_MTIME,
+    OPTKEY_ENABLE_LOCK_FORWARDING,
+    OPTKEY_DISABLE_LOCK_FORWARDING,
     OPTKEY_ENABLE_IOCTL,
     OPTKEY_HIDE_HARD_LINKS,
     OPTKEY_RESOLVE_SYMLINKS,
@@ -1549,6 +1579,12 @@ static int process_option(void *data, const char *arg, int key,
         return 0;
     case OPTKEY_CTIME_FROM_MTIME:
         settings.ctime_from_mtime = 1;
+        return 0;
+    case OPTKEY_ENABLE_LOCK_FORWARDING:
+        settings.enable_lock_forwarding = 1;
+        return 0;
+    case OPTKEY_DISABLE_LOCK_FORWARDING:
+        settings.enable_lock_forwarding = 0;
         return 0;
     case OPTKEY_ENABLE_IOCTL:
         settings.enable_ioctl = 1;
@@ -1893,6 +1929,8 @@ int main(int argc, char *argv[])
 
         OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
+        OPT2("--enable-lock-forwarding", "enable-lock-forwarding", OPTKEY_ENABLE_LOCK_FORWARDING),
+        OPT2("--disable-lock-forwarding", "disable-lock-forwarding", OPTKEY_DISABLE_LOCK_FORWARDING),
         OPT2("--enable-ioctl", "enable-ioctl", OPTKEY_ENABLE_IOCTL),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
 
@@ -1938,6 +1976,7 @@ int main(int argc, char *argv[])
     settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_SYMLINK_ONLY;
     settings.realistic_permissions = 0;
     settings.ctime_from_mtime = 0;
+    settings.enable_lock_forwarding = 0;
     settings.enable_ioctl = 0;
     settings.uid_offset = 0;
     settings.gid_offset = 0;
@@ -2178,6 +2217,20 @@ int main(int argc, char *argv[])
         bindfs_oper.getxattr = NULL;
         bindfs_oper.listxattr = NULL;
         bindfs_oper.removexattr = NULL;
+    }
+
+    /* Check that lock forwarding is not enabled in single-threaded mode. */
+    if (settings.enable_lock_forwarding && !od.multithreaded) {
+        fprintf(stderr, "To use --enable-lock-forwarding, you must use "
+                        "--multithreaded, but see the man page for caveats!\n");
+        return 1;
+    }
+
+    /* Remove the locking implementation unless the user has enabled lock
+       forwarding. FUSE implements locking inside the mountpoint by default. */
+    if (!settings.enable_lock_forwarding) {
+        bindfs_oper.lock = NULL;
+        bindfs_oper.flock = NULL;
     }
 
     /* Remove the ioctl implementation unless the user has enabled it */

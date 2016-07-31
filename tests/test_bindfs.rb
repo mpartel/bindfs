@@ -616,6 +616,47 @@ testenv("", :title => "many files in a directory") do
   assert { Dir.entries('mnt/dir').sort == expected_entries.sort }
 end
 
+testenv("--enable-lock-forwarding --multithreaded", :title => "lock forwarding") do
+  File.write('src/file', 'some contents for fcntl lockng')
+  # (this test passes with an empty file as well, but this way is clearer)
+
+  # flock
+  File.open('mnt/file') do |f1|
+    File.open('src/file') do |f2|
+      assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+      assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+      assert { f1.flock(File::LOCK_UN)  }
+
+      assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+      assert { !f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+    end
+    assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+  end
+
+  # fcntl locking
+  system("#{$tests_dir}/fcntl_locker src/file mnt/file")
+  raise "fcntl lock sharing test failed" unless $?.success?
+end
+
+testenv("--disable-lock-forwarding", :title => "no lock forwarding") do
+  File.write('src/file', 'some contents for fcntl lockng')
+
+  # flock
+  File.open('mnt/file') do |f1|
+    File.open('src/file') do |f2|
+      assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+      assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+    end
+    File.open('mnt/file') do |f2|
+      assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+    end
+  end
+
+  # fcntl locking
+  system("#{$tests_dir}/fcntl_locker src/file mnt/file")
+  raise "fcntl lock sharing test failed" unless $?.exitstatus == 1
+end
+
 # Issue #37
 root_testenv("--enable-ioctl", :title => "append-only ioctl") do
   touch('mnt/file')

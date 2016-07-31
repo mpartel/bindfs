@@ -316,6 +316,23 @@ will be reflected in a mirrored file's ctime.
 The underlying file's ctime will still be updated normally.
 
 .TP
+.B \-\-enable\-lock\-forwarding, \-o enable\-lock\-forwarding
+Forwards \fBflock\fP and \fBfcntl\fP locking requests to the source directory.
+This way, locking a file in the bindfs mount will also lock the file in the
+source directory.
+
+This option \fBmust\fP be used with \fB\-\-multithreaded\fP because otherwise
+bindfs will deadlock as soon as there is lock contention. However, see
+\fB\%BUGS\fP below for caveats about \fB\-\-multithreaded\fP with the current
+implementation.
+
+.TP
+.B \-\-disable\-lock\-forwarding, \-o disable\-lock\-forwarding
+Currently does nothing, but a future release may default to enabling lock
+forwarding. If you depend on this behaviour, it's recommended to set this flag
+explicitly.
+
+.TP
 .B \-\-enable\-ioctl, \-o enable\-ioctl
 Enables forwarding of ioctl, which is needed for some advanced features such as
 append-only files (\fBchattr +a\fP). Note that the ioctl action will be

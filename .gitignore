@@ -34,6 +34,7 @@ Makefile
 # Products
 
 src/bindfs
+tests/fcntl_locker
 tests/readdir_inode
 tests/utimens_nofollow
 tests/*.log
