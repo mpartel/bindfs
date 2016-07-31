@@ -1428,6 +1428,7 @@ static void print_usage(const char *progname)
            "  --realistic-permissions   Hide permission bits for actions mounter can't do.\n"
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
+           "  --enable-ioctl            Forward ioctl() calls (as the mounter).\n"
            "  --hide-hard-links         Always report a hard link count of 1.\n"
            "  --resolve-symlinks        Resolve symbolic links.\n"
            "  --resolved-symlink-deletion=...  Decide how to delete resolved symlinks.\n"
