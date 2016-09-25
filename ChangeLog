@@ -2,6 +2,7 @@
 
 	* Fix bug in readdir() introduced with 1.13.1. This fixes a bug when
 	  a bindfs mount is exported over NFS (issue #39).
+	* Released 1.13.2
 
 2016-07-31  Martin Pärtel <martin dot partel at gmail dot com>
 
