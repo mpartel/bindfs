@@ -67,6 +67,21 @@ the corresponding behavior of this option.
 
 Requires mounting as root.
 
+.TP
+.B \-\-uid\-offset=..., \-o uid\-offset=...
+Works like \-\-map, but adds the given number to all file owner user IDs.
+For instance, \fB--uid-offset=100000\fP causes a file owned by user \fI123\fP
+to be shown as owned by user \fI100123\fP.
+
+For now, this option cannot be used together with \-\-map. Please file an issue
+with the desired semantics if you have a case for using them together.
+
+Requires mounting as root.
+
+.TP
+.B \-\-gid\-offset=..., \-o gid\-offset=...
+Works exactly like \fB--uid-offset\fP but for groups.
+
 
 .SH FILE CREATION POLICY
 New files and directories are created so they are owned by the mounter.
@@ -299,6 +314,31 @@ With this option, the ctime of each file and directory is read from its mtime.
 In other words, only content modifications (as opposed to metadata changes)
 will be reflected in a mirrored file's ctime.
 The underlying file's ctime will still be updated normally.
+
+.TP
+.B \-\-enable\-lock\-forwarding, \-o enable\-lock\-forwarding
+Forwards \fBflock\fP and \fBfcntl\fP locking requests to the source directory.
+This way, locking a file in the bindfs mount will also lock the file in the
+source directory.
+
+This option \fBmust\fP be used with \fB\-\-multithreaded\fP because otherwise
+bindfs will deadlock as soon as there is lock contention. However, see
+\fB\%BUGS\fP below for caveats about \fB\-\-multithreaded\fP with the current
+implementation.
+
+.TP
+.B \-\-disable\-lock\-forwarding, \-o disable\-lock\-forwarding
+Currently does nothing, but a future release may default to enabling lock
+forwarding. If you depend on this behaviour, it's recommended to set this flag
+explicitly.
+
+.TP
+.B \-\-enable\-ioctl, \-o enable\-ioctl
+Enables forwarding of ioctl, which is needed for some advanced features such as
+append-only files (\fBchattr +a\fP). Note that the ioctl action will be
+performed as the mounter, not the calling user. No efforts are made to check
+whether the calling user would ordinarily have the permissions to make the
+ioctl. This may be a security concern, especially when mounting as root.
 
 .TP
 .B \-\-multithreaded, \-o multithreaded

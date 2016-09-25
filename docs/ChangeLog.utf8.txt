@@ -1,3 +1,18 @@
+2016-09-25  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fix bug in readdir() introduced with 1.13.1. This fixes a bug when
+	  a bindfs mount is exported over NFS (issue #39).
+	* Released 1.13.2
+
+2016-07-31  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added --enable-ioctl to address issue #37.
+	* Added --enable-lock-forwarding to address issue #36.
+
+2016-05-03  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* @chenhaiq added --uid-offset and --gid-offset (PR #31). Thanks!
+
 2016-02-17  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed an issue that some users had with reading large

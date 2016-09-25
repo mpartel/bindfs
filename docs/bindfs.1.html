@@ -82,24 +82,40 @@ Currently, the options <b>--force-user</b>, <b>--force-group</b>, <b>--mirror</b
 and <b>--chgrp-*</b> override the corresponding behavior of this option. 
 <p> Requires
 mounting as root. 
+<p> </dd>
+
+<dt><b>--uid-offset=..., -o uid-offset=...</b> </dt>
+<dd>Works like --map, but adds the
+given number to all file owner user IDs. For instance, <b>--uid-offset=100000</b>
+causes a file owned by user <i>123</i> to be shown as owned by user <i>100123</i>. 
+<p> For
+now, this option cannot be used together with --map. Please file an issue
+with the desired semantics if you have a case for using them together. 
+<p>
+Requires mounting as root. 
+<p> </dd>
+
+<dt><b>--gid-offset=..., -o gid-offset=...</b> </dt>
+<dd>Works exactly like
+<b>--uid-offset</b> but for groups. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect4' href='#toc4'>File Creation Policy</a></h2>
-New files and directories are created
-so they are owned by the mounter. bindfs can let this happen (the default
-for normal users), or it can try to change the owner to the uid/gid of
-the process that wants to create the file (the default for root).  It is
-also possible to have bindfs try to change the owner to a particular user
-or group. 
+New files and directories
+are created so they are owned by the mounter. bindfs can let this happen
+(the default for normal users), or it can try to change the owner to the
+uid/gid of the process that wants to create the file (the default for root).
+ It is also possible to have bindfs try to change the owner to a particular
+user or group. 
 <p> 
 <dl>
 
 <dt><b>--create-as-user, -o create-as-user</b> </dt>
-<dd>Tries to change the owner and group
-of new files and directories to the uid and gid of the caller. This can
-work only if the mounter is root. It is also the default behavior (mimicing
+<dd>Tries to change the owner and
+group of new files and directories to the uid and gid of the caller. This
+can work only if the mounter is root. It is also the default behavior (mimicing
 mount --bind) if the mounter is root. 
 <p> </dd>
 
@@ -362,11 +378,38 @@ to metadata changes) will be reflected in a mirrored file&rsquo;s ctime. The und
 file&rsquo;s ctime will still be updated normally. 
 <p> </dd>
 
-<dt><b>--multithreaded, -o multithreaded</b>
+<dt><b>--enable-lock-forwarding, -o enable-lock-forwarding</b>
 </dt>
-<dd>Run bindfs in multithreaded mode. While bindfs is designed to be otherwise
-thread-safe, there is currently a race condition that may pose a security
-risk for some use cases. See <b>BUGS</b> below. 
+<dd>Forwards <b>flock</b> and <b>fcntl</b> locking requests to the source directory. This
+way, locking a file in the bindfs mount will also lock the file in the
+source directory. 
+<p> This option <b>must</b> be used with <b>--multithreaded</b> because otherwise
+bindfs will deadlock as soon as there is lock contention. However, see <b>BUGS</b>
+below for caveats about <b>--multithreaded</b> with the current implementation. 
+<p>
+</dd>
+
+<dt><b>--disable-lock-forwarding, -o disable-lock-forwarding</b> </dt>
+<dd>Currently does nothing,
+but a future release may default to enabling lock forwarding. If you depend
+on this behaviour, it&rsquo;s recommended to set this flag explicitly. 
+<p> </dd>
+
+<dt><b>--enable-ioctl,
+-o enable-ioctl</b> </dt>
+<dd>Enables forwarding of ioctl, which is needed for some advanced
+features such as append-only files (<b>chattr +a</b>). Note that the ioctl action
+will be performed as the mounter, not the calling user. No efforts are made
+to check whether the calling user would ordinarily have the permissions
+to make the ioctl. This may be a security concern, especially when mounting
+as root. 
+<p> </dd>
+
+<dt><b>--multithreaded, -o multithreaded</b> </dt>
+<dd>Run bindfs in multithreaded mode.
+While bindfs is designed to be otherwise thread-safe, there is currently
+a race condition that may pose a security risk for some use cases. See <b>BUGS</b>
+below. 
 <p> 
 <p> </dd>
 </dl>
@@ -376,19 +419,19 @@ risk for some use cases. See <b>BUGS</b> below.
 <dl>
 
 <dt><b>-o <i>options</b> </i></dt>
-<dd>Fuse options.
-
+<dd>Fuse options. 
 <p> </dd>
 
 <dt><b>-r, -o ro</b> </dt>
-<dd>Make the mount strictly read-only. This even prevents root from
-writing to it. If this is all you need, then (since Linux 2.6.26) you can
-get a more efficent mount with <b>mount --bind</b> and then <b>mount -o remount,ro</b>. 
-<p>
-</dd>
+<dd>Make the mount strictly
+read-only. This even prevents root from writing to it. If this is all you
+need, then (since Linux 2.6.26) you can get a more efficent mount with <b>mount
+--bind</b> and then <b>mount -o remount,ro</b>. 
+<p> </dd>
 
 <dt><b>-d, -o debug</b> </dt>
-<dd>Enable debug output (implies -f). 
+<dd>Enable debug output (implies
+-f). 
 <p> </dd>
 
 <dt><b>-f</b> </dt>
@@ -397,16 +440,16 @@ get a more efficent mount with <b>mount --bind</b> and then <b>mount -o remount,
 <p> </dd>
 </dl>
 
-<h2><a name='sect12' href='#toc12'>Permission
-Specification</a></h2>
-The <b>-p</b> option takes a comma- or colon-separated list of either
-octal numeric permission bits or symbolic representations of permission
-bit operations. The symbolic representation is based on that of the  <i><b>chmod</b>(1)</i>
-command. setuid, setgid and sticky bits are ignored. 
-<p> This program extends
-the chmod symbolic representation with the following operands: 
-<p> &lsquo;<b>D</b>&rsquo; (right
-hand side)     Works like <b>X</b> but applies only to directories (not to executables).<br>
+<h2><a name='sect12' href='#toc12'>Permission Specification</a></h2>
+The <b>-p</b> option takes
+a comma- or colon-separated list of either octal numeric permission bits
+or symbolic representations of permission bit operations. The symbolic representation
+is based on that of the  <i><b>chmod</b>(1)</i> command. setuid, setgid and sticky bits
+are ignored. 
+<p> This program extends the chmod symbolic representation with
+the following operands: 
+<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but applies
+only to directories (not to executables).<br>
  
 <p> &lsquo;<b>d</b>&rsquo; and &lsquo;<b>f</b>&rsquo; (left hand side)     Makes this directive only apply to directories
 (d) or files (f).<br>

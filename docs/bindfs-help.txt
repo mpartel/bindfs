@@ -12,6 +12,8 @@ File ownership:
   -M      --mirror-only=... Like --mirror but disallow access for
                             all other users.
  --map=user1/user2:...      Let user2 see files of user1 as his own.
+ --uid-offset=...           Set file uid = uid + offset.
+ --gid-offset=...           Set file gid = gid + offset.
 
 Permission bits:
   -p      --perms=...       Specify permissions, similar to chmod
@@ -55,6 +57,8 @@ Miscellaneous:
   --realistic-permissions   Hide permission bits for actions mounter can't do.
   --ctime-from-mtime        Read file properties' change time
                             from file content modification time.
+  --enable-lock-forwarding  Forward locks to the underlying FS.
+  --enable-ioctl            Forward ioctl() calls (as the mounter).
   --hide-hard-links         Always report a hard link count of 1.
   --resolve-symlinks        Resolve symbolic links.
   --resolved-symlink-deletion=...  Decide how to delete resolved symlinks.
