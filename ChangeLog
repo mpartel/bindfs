@@ -1,3 +1,8 @@
+2016-07-31  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added --enable-ioctl to address issue #37.
+	* Added --enable-lock-forwarding to address issue #36.
+
 2016-05-03  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* @chenhaiq added --uid-offset and --gid-offset (PR #31). Thanks!
