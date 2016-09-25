@@ -5,7 +5,7 @@ module Production
   def self.server
     'bindfs.org'
   end
-  
+
   def self.dir
     '/srv/www/bindfs.org'
   end
@@ -21,7 +21,7 @@ module Utils
       src,
       dest
     ]
-    system(Shellwords.join(cmd))
+    system(Shellwords.join(cmd)) or raise "failed to run rsync"
   end
 end
 
@@ -30,7 +30,7 @@ task :default => :build
 desc "Builds the site under _site/"
 task :build do
   puts
-  system("jekyll build")
+  system("bundle exec jekyll build") or raise "failed to run jekyll"
   puts
 end
 
