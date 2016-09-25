@@ -673,7 +673,6 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
     de_buf = malloc(offsetof(struct dirent, d_name) + pc_ret + 1);
 
-    seekdir(dp, offset);
     while (1) {
         result = readdir_r(dp, de_buf, &de);
         if (result != 0) {
@@ -688,7 +687,9 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         st.st_ino = de->d_ino;
         st.st_mode = de->d_type << 12;
 
-        // See issue #28 for why we pass a 0 offset to `filler`.
+        // See issue #28 for why we pass a 0 offset to `filler` and ignore
+        // `offset`.
+        //
         // Given a 0 offset, `filler` should never return non-zero, so we
         // consider it an error if it does. It is undocumented whether it sets
         // errno in that case, so we zero it first and set it ourself if it
