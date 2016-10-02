@@ -60,7 +60,9 @@ AC_COMPILE_IFELSE(
 )
 
 # Check for fuse
-PKG_CHECK_MODULES([fuse], [fuse >= 2.6.0])
+PKG_CHECK_MODULES([fuse], [fuse >= 2.9.0],
+    [AC_DEFINE([HAVE_FUSE_29], [1], [Have FUSE >= 2.9.0])],
+    [PKG_CHECK_MODULES([fuse], [fuse >= 2.8.0])])
 
 AC_CONFIG_FILES([Makefile \
 	src/Makefile \

@@ -1103,6 +1103,7 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
     return res;
 }
 
+/* This callback is only installed if lock forwarding is enabled. */
 static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        struct flock *lock)
 {
@@ -1113,6 +1114,7 @@ static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
   return 0;
 }
 
+/* This callback is only installed if lock forwarding is enabled. */
 static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op)
 {
     int res = flock(fi->fh, op);
@@ -1378,8 +1380,10 @@ static struct fuse_operations bindfs_oper = {
     .open       = bindfs_open,
     .read       = bindfs_read,
     .write      = bindfs_write,
+#ifdef HAVE_FUSE_29
     .lock       = bindfs_lock,
     .flock      = bindfs_flock,
+#endif
     .ioctl      = bindfs_ioctl,
     .statfs     = bindfs_statfs,
     .release    = bindfs_release,
@@ -2220,6 +2224,7 @@ int main(int argc, char *argv[])
         bindfs_oper.removexattr = NULL;
     }
 
+#ifdef HAVE_FUSE_29
     /* Check that lock forwarding is not enabled in single-threaded mode. */
     if (settings.enable_lock_forwarding && !od.multithreaded) {
         fprintf(stderr, "To use --enable-lock-forwarding, you must use "
@@ -2233,6 +2238,13 @@ int main(int argc, char *argv[])
         bindfs_oper.lock = NULL;
         bindfs_oper.flock = NULL;
     }
+#else
+    if (settings.enable_lock_forwarding) {
+        fprintf(stderr, "To use --enable-lock-forwarding, bindfs must be "
+                        "compiled with FUSE 2.9.0 or newer.\n");
+        return 1;
+    }
+#endif
 
     /* Remove the ioctl implementation unless the user has enabled it */
     if (!settings.enable_ioctl) {

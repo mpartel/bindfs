@@ -1,3 +1,8 @@
+2016-10-02  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Require FUSE 2.9 at compile-time.
+	* Also compile with FUSE 2.8, but without support for lock forwarding.
+
 2016-09-25  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fix bug in readdir() introduced with 1.13.1. This fixes a bug when
