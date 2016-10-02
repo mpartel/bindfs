@@ -2,6 +2,7 @@
 
 	* Require FUSE 2.9 at compile-time.
 	* Also compile with FUSE 2.8, but without support for lock forwarding.
+	* Released 1.13.3
 
 2016-09-25  Martin Pärtel <martin dot partel at gmail dot com>
 
