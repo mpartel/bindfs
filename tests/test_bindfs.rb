@@ -658,7 +658,9 @@ testenv("--disable-lock-forwarding", :title => "no lock forwarding") do
 end
 
 # Issue #37
-root_testenv("--enable-ioctl", :title => "append-only ioctl") do
+# Valgrind disabled for ioctl tests since it seems to give a false negative
+# about a null parameter to ioctl.
+root_testenv("--enable-ioctl", :title => "append-only ioctl", :valgrind => false) do
   touch('mnt/file')
   system('chattr +a mnt/file')
   raise 'chattr +a failed' unless $?.success?
@@ -673,7 +675,7 @@ root_testenv("--enable-ioctl", :title => "append-only ioctl") do
   end
 end
 
-root_testenv("", :title => "ioctl not enabled by default") do
+root_testenv("", :title => "ioctl not enabled by default", :valgrind => false) do
   touch('mnt/file')
   assert { `chattr +a mnt/file 2>&1`; !$?.success? }
 end
