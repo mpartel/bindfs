@@ -215,11 +215,8 @@ static int bindfs_getattr(const char *path, struct stat *stbuf);
 static int bindfs_fgetattr(const char *path, struct stat *stbuf,
                            struct fuse_file_info *fi);
 static int bindfs_readlink(const char *path, char *buf, size_t size);
-static int bindfs_opendir(const char *path, struct fuse_file_info *fi);
-static inline DIR *get_dirp(struct fuse_file_info *fi);
 static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi);
-static int bindfs_releasedir(const char *path, struct fuse_file_info *fi);
 static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev);
 static int bindfs_mkdir(const char *path, mode_t mode);
 static int bindfs_unlink(const char *path);
@@ -627,53 +624,32 @@ static int bindfs_readlink(const char *path, char *buf, size_t size)
     return 0;
 }
 
-static int bindfs_opendir(const char *path, struct fuse_file_info *fi)
-{
-    DIR *dp;
-    char *real_path;
-
-    real_path = process_path(path, true);
-    if (real_path == NULL)
-        return -errno;
-
-    dp = opendir(real_path);
-    free(real_path);
-    if (dp == NULL)
-        return -errno;
-
-    fi->fh = (unsigned long) dp;
-    return 0;
-}
-
-static inline DIR *get_dirp(struct fuse_file_info *fi)
-{
-    return (DIR *) (uintptr_t) fi->fh;
-}
-
 static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi)
 {
-    DIR *dp = get_dirp(fi);
-    struct dirent *de_buf;
-    struct dirent *de;
-    struct stat st;
-    int result = 0;
-    long pc_ret;
-    char *real_path;
-
-    real_path = process_path(path, true);
-    if (real_path == NULL)
+    char *real_path = process_path(path, true);
+    if (real_path == NULL) {
         return -errno;
-    pc_ret = pathconf(real_path, _PC_NAME_MAX);
-    free(real_path);
+    }
 
+    DIR *dp = opendir(real_path);
+    if (dp == NULL) {
+        free(real_path);
+        return -errno;
+    }
+
+    long pc_ret = pathconf(real_path, _PC_NAME_MAX);
+    free(real_path);
     if (pc_ret < 0) {
         DPRINTF("pathconf failed: %s (%d)", strerror(errno), errno);
         pc_ret = NAME_MAX;
     }
-    de_buf = malloc(offsetof(struct dirent, d_name) + pc_ret + 1);
 
+    struct dirent *de_buf =
+        malloc(offsetof(struct dirent, d_name) + pc_ret + 1);
+    int result = 0;
     while (1) {
+        struct dirent *de;
         result = readdir_r(dp, de_buf, &de);
         if (result != 0) {
             result = -result;
@@ -683,6 +659,7 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             break;
         }
 
+        struct stat st;
         memset(&st, 0, sizeof(st));
         st.st_ino = de->d_ino;
         st.st_mode = de->d_type << 12;
@@ -702,15 +679,8 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
 
     free(de_buf);
-    return result;
-}
-
-static int bindfs_releasedir(const char *path, struct fuse_file_info *fi)
-{
-    DIR *dp = get_dirp(fi);
-    (void) path;
     closedir(dp);
-    return 0;
+    return result;
 }
 
 static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
@@ -1361,9 +1331,7 @@ static struct fuse_operations bindfs_oper = {
     .fgetattr   = bindfs_fgetattr,
     /* no access() since we always use -o default_permissions */
     .readlink   = bindfs_readlink,
-    .opendir    = bindfs_opendir,
     .readdir    = bindfs_readdir,
-    .releasedir = bindfs_releasedir,
     .mknod      = bindfs_mknod,
     .mkdir      = bindfs_mkdir,
     .symlink    = bindfs_symlink,

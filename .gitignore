@@ -36,6 +36,7 @@ Makefile
 src/bindfs
 tests/fcntl_locker
 tests/readdir_inode
+tests/test_dir_rewind
 tests/utimens_nofollow
 tests/*.log
 tests/*.trs

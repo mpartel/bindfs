@@ -678,6 +678,18 @@ root_testenv("", :title => "ioctl not enabled by default") do
   assert { `chattr +a mnt/file 2>&1`; !$?.success? }
 end
 
+# Issue #41
+testenv("", :title => "reading directory with rewind") do
+  touch('mnt/file1')
+  touch('mnt/file2')
+  mkdir('mnt/subdir')
+
+  Dir.chdir 'mnt' do
+    system("#{$tests_dir}/test_dir_rewind")
+    assert { $?.success? }
+  end
+end
+
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 if Process.uid == 0
