@@ -1,3 +1,9 @@
+2016-10-29  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed compilation of tests on some non-x86 platforms.
+	* Removed extra debug/optimization CFLAGS. Defaults to -g -O2.
+	* Released 1.13.5.
+
 2016-10-15  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed #41 (directory handle reuse).
