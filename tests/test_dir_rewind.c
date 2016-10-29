@@ -3,7 +3,7 @@
 //
 // https://github.com/mpartel/bindfs/issues/41
 
-#ifdef __linux__
+#if __linux__ && __x86_64__
 
 #define _GNU_SOURCE
 #include <fcntl.h>
@@ -68,13 +68,15 @@ int main()
     return 0;
 }
 
-#else  // #ifdef __linux__
+#else
+
+#include <stdio.h>
 
 int main()
 {
-    printf("This test (probably) only compiles on Linux.\n");
+    printf("This test currently only compiles on Linux/amd64.\n");
     printf("Skipping by just returning successfully.\n");
     return 0;
 }
 
-#endif  // #ifdef __linux__
+#endif
