@@ -8,8 +8,6 @@ AC_LANG(C)
 AC_PROG_LIBTOOL
 
 # --enable and --with options
-AC_ARG_ENABLE([debug],
-    [AS_HELP_STRING([--enable-debug], [enable debug symbols])])
 AC_ARG_ENABLE([debug-output],
     [AS_HELP_STRING([--enable-debug-output], [enable debug output])])
 AC_ARG_WITH([core-foundation],

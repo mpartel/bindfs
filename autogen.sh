@@ -4,10 +4,10 @@ autoreconf -fi
 
 if [ "$1" == "-d" ]; then
 	shift;
-	echo "Running configure --enable-debug (but not --enable-debug-output)"
+	echo "Running ./configure"
 	echo
 	sleep 1s
-	./configure --enable-debug "$@"
+	./configure "$@"
 elif [ -n "$1" ]; then
 	echo
 	echo "./configure $@"
