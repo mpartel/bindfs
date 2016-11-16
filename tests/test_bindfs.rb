@@ -18,7 +18,10 @@
 #   along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-require './common.rb'
+# if we are being run by make check it will set srcdir and we should use it
+localsrc_path = ENV['srcdir'] || '.'
+
+require localsrc_path + '/common.rb'
 
 include Errno
 
@@ -39,7 +42,7 @@ $nobody_uid = nobody_uid = Etc.getpwnam('nobody').uid
 $nobody_gid = nobody_gid = Etc.getpwnam('nobody').gid
 $nobody_group = nobody_group = Etc.getgrgid(nobody_gid).name
 
-$tests_dir = File.dirname(File.realpath(__FILE__))
+$tests_dir = File.realpath('.')
 
 
 testenv("") do
