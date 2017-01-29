@@ -1474,8 +1474,7 @@ enum OptionKey {
     OPTKEY_DISABLE_LOCK_FORWARDING,
     OPTKEY_ENABLE_IOCTL,
     OPTKEY_HIDE_HARD_LINKS,
-    OPTKEY_RESOLVE_SYMLINKS,
-    OPTKEY_MULTITHREADED
+    OPTKEY_RESOLVE_SYMLINKS
 };
 
 static int process_option(void *data, const char *arg, int key,
