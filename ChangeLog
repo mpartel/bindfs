@@ -1,6 +1,7 @@
 2017-01-29  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed option parsing failure when source dir has a comma (issue #47).
+	* Released 1.13.6.
 
 2016-10-30  Martin Pärtel <martin dot partel at gmail dot com>
 
