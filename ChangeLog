@@ -1,3 +1,12 @@
+2017-01-29  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed option parsing failure when source dir has a comma (issue #47).
+
+2016-10-30  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Removed ./configure --enable-debug, which has done nothing for some
+	  time.
+
 2016-10-29  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed compilation of tests on some non-x86 platforms.

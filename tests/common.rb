@@ -19,6 +19,7 @@
 #
 
 require 'fileutils'
+require 'shellwords'
 include FileUtils
 
 # Set the default umask for all tests
@@ -92,13 +93,18 @@ def testenv(bindfs_args, options = {}, &block)
     options = {
         :title => bindfs_args,
         :valgrind => valgrind_options != nil,
-        :valgrind_opts => valgrind_options
+        :valgrind_opts => valgrind_options,
+        :srcdir_name => 'src',
+        :mntdir_name => 'mnt'
     }.merge(options)
 
     # todo: less repetitive and more careful error handling and cleanup
 
     puts "--- #{options[:title]} ---"
     puts "[  #{bindfs_args}  ]"
+
+    srcdir = options[:srcdir_name]
+    mntdir = options[:mntdir_name]
 
     begin
         Dir.mkdir TESTDIR_NAME
@@ -108,15 +114,15 @@ def testenv(bindfs_args, options = {}, &block)
 
     begin
         Dir.chdir TESTDIR_NAME
-        Dir.mkdir 'src'
-        Dir.mkdir 'mnt'
+        Dir.mkdir srcdir
+        Dir.mkdir mntdir
     rescue Exception => ex
         fail!("ERROR preparing testdir at #{TESTDIR_NAME}", ex)
     end
 
     bindfs_pid = nil
     begin
-        cmd = "../#{EXECUTABLE_PATH} #{bindfs_args} -f src mnt"
+        cmd = "../#{EXECUTABLE_PATH} #{bindfs_args} -f #{Shellwords.escape(srcdir)} #{Shellwords.escape(mntdir)}"
         if options[:valgrind]
             cmd = "valgrind --error-exitcode=100 #{options[:valgrind_opts]} #{cmd}"
         end
@@ -146,7 +152,7 @@ def testenv(bindfs_args, options = {}, &block)
     end
 
     begin
-        unless system(umount_cmd + ' mnt')
+        unless system(umount_cmd + ' ' + Shellwords.escape(mntdir))
             raise Exception.new(umount_cmd + " failed with status #{$?}")
         end
         Process.wait bindfs_pid

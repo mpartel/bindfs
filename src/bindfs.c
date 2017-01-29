@@ -2155,8 +2155,15 @@ int main(int argc, char *argv[])
     fuse_opt_add_arg(&args, "-ouse_ino");
     fuse_opt_add_arg(&args, "-oreaddir_ino");
 
-    /* Show the source dir in the first field on /etc/mtab. */
-    {
+    /* Show the source dir in the first field on /etc/mtab, to be consistent
+       with "real" filesystems.
+
+       We don't do this if the source dir contains some special characters.
+       Comma is on this list because it would mess up FUSE's option parsing
+       (issue #47). The character blacklist is likely not complete, which is
+       acceptable since this is not a security check. The aim is to avoid giving
+       the user a confusing error. */
+    if (strpbrk(settings.mntsrc, ", \t\n") == NULL) {
         char *tmp = sprintf_new("-ofsname=%s", settings.mntsrc);
         fuse_opt_add_arg(&args, tmp);
         free(tmp);

@@ -695,6 +695,37 @@ testenv("", :title => "reading directory with rewind") do
   end
 end
 
+# Issue 47
+testenv("", :title => "srcdir with comma", :srcdir_name => "a,b") do
+  touch('a,b/f')
+  assert { File.exist?('mnt/f') }
+end
+
+testenv("", :title => "mntdir with comma", :mntdir_name => "a,b") do
+  touch('src/f')
+  assert { File.exist?('a,b/f') }
+end
+
+testenv("", :title => "srcdir with space", :srcdir_name => "a b") do
+  touch('a b/f')
+  assert { File.exist?('mnt/f') }
+end
+
+testenv("", :title => "mntdir with space", :mntdir_name => "a b") do
+  touch('src/f')
+  assert { File.exist?('a b/f') }
+end
+
+testenv("", :title => "srcdir with newline", :srcdir_name => "a\nb") do
+  touch("a\nb/f")
+  assert { File.exist?('mnt/f') }
+end
+
+testenv("", :title => "mntdir with newline", :mntdir_name => "a\nb") do
+  touch('src/f')
+  assert { File.exist?("a\nb/f") }
+end
+
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 if Process.uid == 0
