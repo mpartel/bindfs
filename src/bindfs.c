@@ -1424,7 +1424,7 @@ static void print_usage(const char *progname)
            "  --write-rate=...          Limit to bytes/sec that can be written.\n"
            "\n"
            "Miscellaneous:\n"
-           "  -n      --no-allow-other  Do not add -o allow_other to fuse options.\n"
+           "  --no-allow-other          Do not add -o allow_other to fuse options.\n"
            "  --realistic-permissions   Hide permission bits for actions mounter can't do.\n"
            "  --ctime-from-mtime        Read file properties' change time\n"
            "                            from file content modification time.\n"
