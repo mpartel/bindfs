@@ -1,0 +1,23 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "centos/7"
+
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder "../../", "/bindfs",
+    type: "rsync",
+    rsync__auto: false,
+    rsync__exclude: ["vagrant"],
+    rsync__args: ["-av", "--delete-after"]
+
+  config.vm.provider "virtualbox" do |v|
+    v.name = "bindfs-centos7"
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    yum install -y fuse fuse-devel gcc make pkg-config ruby valgrind
+    usermod -G fuse -a vagrant
+    echo user_allow_other > /etc/fuse.conf
+  SHELL
+end

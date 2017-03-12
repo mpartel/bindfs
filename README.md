@@ -60,6 +60,14 @@ The test suite requires Ruby 1.8.7+. If you're using [RVM](https://rvm.io/)
 then you may need to use `rvmsudo` instead of plain `sudo` to run the root
 tests.
 
+### Vagrant test runner ###
+
+There is also a set of Vagrant configs for running the test suite on a variety
+of systems. Run them with `vagrant/test.rb` (add `--help` for extra options).
+
+You can destroy all bindfs Vagrant machines (but not the downloaded images)
+with `make vagrant-clean`.
+
 
 ## License ##
 

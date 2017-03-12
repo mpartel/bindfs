@@ -1,6 +1,8 @@
 2017-03-12  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Made tests work with Ruby 1.8.7 and FUSE 2.8 again (issue #49).
+	* Added Vagrant test runner, initially running some Ubuntus and
+	  CentOSes.
 
 2017-02-04  Martin Pärtel <martin dot partel at gmail dot com>
 

@@ -45,3 +45,8 @@ tests/internals/test_rate_limiter
 tests/internals/*.log
 tests/internals/*.trs
 
+# Vagrant
+
+vagrant/*/*.log
+vagrant/*/.vagrant
+
