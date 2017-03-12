@@ -56,9 +56,9 @@ The test suite has two kinds of tests: those that have to be run as root and
 those that have to be run as non-root. To run all of the tests, do
 `make check` both as root and as non-root.
 
-The test suite requires Ruby 2.0+ (1.9+ might also work). If you're using
-[RVM](https://rvm.io/) then you may need to use `rvmsudo` instead of plain
-`sudo` to run the root tests.
+The test suite requires Ruby 1.8.7+. If you're using [RVM](https://rvm.io/)
+then you may need to use `rvmsudo` instead of plain `sudo` to run the root
+tests.
 
 
 ## License ##

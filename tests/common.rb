@@ -18,8 +18,9 @@
 #   along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+require 'ruby18_hacks.rb'
+require 'shellwords' unless $ruby_18_hacks_enabled  # Ruby 1.8 doesn't have shellwords
 require 'fileutils'
-require 'shellwords'
 include FileUtils
 
 # Set the default umask for all tests

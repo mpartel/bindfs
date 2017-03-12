@@ -19,11 +19,19 @@
 #
 
 # if we are being run by make check it will set srcdir and we should use it
-localsrc_path = ENV['srcdir'] || '.'
+$LOAD_PATH << (ENV['srcdir'] || '.')
 
-require localsrc_path + '/common.rb'
+require 'common.rb'
 
 include Errno
+
+$have_fuse_29 = Proc.new do
+  v = `pkg-config --modversion fuse`.split('.')
+  raise "failed to get FUSE version with pkg-config" if v.size < 2
+  v = v.map(&:to_i)
+  v = [2, 8, 0]
+  v[0] > 2 || (v[0] == 2 && v[1] >= 9)
+end.call
 
 # FileUtils.chown turned out to be quite buggy in Ruby 1.8.7,
 # so we'll use File.chown instead.
@@ -619,62 +627,70 @@ testenv("", :title => "many files in a directory") do
   assert { Dir.entries('mnt/dir').sort == expected_entries.sort }
 end
 
-testenv("--enable-lock-forwarding --multithreaded", :title => "lock forwarding") do
-  File.write('src/file', 'some contents for fcntl lockng')
-  # (this test passes with an empty file as well, but this way is clearer)
+if $have_fuse_29
+  testenv("--enable-lock-forwarding --multithreaded", :title => "lock forwarding") do
+    File.write('src/file', 'some contents for fcntl lockng')
+    # (this test passes with an empty file as well, but this way is clearer)
 
-  # flock
-  File.open('mnt/file') do |f1|
-    File.open('src/file') do |f2|
+    # flock
+    File.open('mnt/file') do |f1|
+      File.open('src/file') do |f2|
+        assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+        assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+        assert { f1.flock(File::LOCK_UN)  }
+
+        assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+        assert { !f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+      end
       assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
-      assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
-      assert { f1.flock(File::LOCK_UN)  }
-
-      assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
-      assert { !f1.flock(File::LOCK_EX | File::LOCK_NB)  }
     end
-    assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+
+    # fcntl locking
+    system("#{$tests_dir}/fcntl_locker src/file mnt/file")
+    raise "fcntl lock sharing test failed" unless $?.success?
   end
 
-  # fcntl locking
-  system("#{$tests_dir}/fcntl_locker src/file mnt/file")
-  raise "fcntl lock sharing test failed" unless $?.success?
-end
+  testenv("--disable-lock-forwarding", :title => "no lock forwarding") do
+    File.write('src/file', 'some contents for fcntl lockng')
 
-testenv("--disable-lock-forwarding", :title => "no lock forwarding") do
-  File.write('src/file', 'some contents for fcntl lockng')
+    # flock
+    File.open('mnt/file') do |f1|
+      File.open('src/file') do |f2|
+        assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+        assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+      end
+      File.open('mnt/file') do |f2|
+        assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+      end
+    end
 
-  # flock
-  File.open('mnt/file') do |f1|
-    File.open('src/file') do |f2|
-      assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
-      assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
-    end
-    File.open('mnt/file') do |f2|
-      assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
-    end
+    # fcntl locking
+    system("#{$tests_dir}/fcntl_locker src/file mnt/file")
+    raise "fcntl lock sharing test failed" unless $?.exitstatus == 1
   end
-
-  # fcntl locking
-  system("#{$tests_dir}/fcntl_locker src/file mnt/file")
-  raise "fcntl lock sharing test failed" unless $?.exitstatus == 1
-end
+end # have_fuse_29
 
 # Issue #37
-# Valgrind disabled for ioctl tests since it seems to give a false negative
+#
+# Valgrind is disabled for ioctl tests since it seems to give a false negative
 # about a null parameter to ioctl.
-root_testenv("--enable-ioctl", :title => "append-only ioctl", :valgrind => false) do
-  touch('mnt/file')
-  system('chattr +a mnt/file')
-  raise 'chattr +a failed' unless $?.success?
-  begin
-    File.open('mnt/file', 'a') do |f|
-      f.write('stuff')
+#
+# This test is also disabled for old (FUSE < 2.9) systems.
+# TODO: figure out why it doesn't work.
+if $have_fuse_29
+  root_testenv("--enable-ioctl", :title => "append-only ioctl", :valgrind => false) do
+    touch('mnt/file')
+    system('chattr +a mnt/file')
+    raise 'chattr +a failed' unless $?.success?
+    begin
+      File.open('mnt/file', 'a') do |f|
+        f.write('stuff')
+      end
+      assert { File.read('mnt/file') == 'stuff' }
+      assert_exception(EPERM) { File.write('mnt/file', 'newstuff') }
+    ensure
+      system('chattr -a mnt/file')
     end
-    assert { File.read('mnt/file') == 'stuff' }
-    assert_exception(EPERM) { File.write('mnt/file', 'newstuff') }
-  ensure
-    system('chattr -a mnt/file')
   end
 end
 

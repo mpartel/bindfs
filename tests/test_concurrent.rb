@@ -17,7 +17,10 @@
 #   You should have received a copy of the GNU General Public License
 #   along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 #
-require './common.rb'
+
+# if we are being run by make check it will set srcdir and we should use it
+$LOAD_PATH << (ENV['srcdir'] || '.')
+require 'common.rb'
 
 raise "Please run this as root" unless Process.uid == 0
 

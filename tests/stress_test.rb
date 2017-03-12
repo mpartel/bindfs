@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 
-require './common.rb'
+# if we are being run by make check it will set srcdir and we should use it
+$LOAD_PATH << (ENV['srcdir'] || '.')
+require 'common.rb'
 require 'shellwords'
 
 if ARGV.length == 0 || ['-h', '--help'].include?(ARGV[0])
