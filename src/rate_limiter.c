@@ -17,7 +17,7 @@
     along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define _POSIX_C_SOURCE 199309L  /* for nanosleep() */
+#define _XOPEN_SOURCE 700  /* for gettimeofday() on freebsd, and for nanosleep() */
 
 #include "rate_limiter.h"
 #include <assert.h>

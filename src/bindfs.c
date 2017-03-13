@@ -34,6 +34,9 @@
 /* For >= 500 for pread/pwrite and readdir_r; >= 700 for utimensat */
 #define _XOPEN_SOURCE 700
 
+/* For flock() on FreeBSD. It otherwise gets hidden by _XOPEN_SOURCE  */
+#define __BSD_VISIBLE 1
+
 /* For stat() nanosecond precision and lutimes() */
 #define _BSD_SOURCE
 /* The new non-deprecated version of _BSD_SOURCE */
