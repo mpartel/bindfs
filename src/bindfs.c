@@ -1668,12 +1668,12 @@ static int parse_user_map(UserMap *map, UserMap *reverse_map, char *spec)
             }
             *q = '\0';
             if (!group_gid(tmpstr + 1, &gid_from)) {
-                fprintf(stderr, "Invalid group: %s\n", tmpstr);
+                fprintf(stderr, "Invalid group: %s\n", tmpstr + 1);
                 goto fail;
             }
             q += strlen("/@");
             if (!group_gid(q, &gid_to)) {
-                fprintf(stderr, "Invalid group: %s\n", tmpstr);
+                fprintf(stderr, "Invalid group: %s\n", q);
                 goto fail;
             }
 
@@ -1702,7 +1702,7 @@ static int parse_user_map(UserMap *map, UserMap *reverse_map, char *spec)
             }
             q += strlen("/");
             if (!user_uid(q, &uid_to)) {
-                fprintf(stderr, "Invalid username: %s\n", tmpstr);
+                fprintf(stderr, "Invalid username: %s\n", q);
                 goto fail;
             }
 
