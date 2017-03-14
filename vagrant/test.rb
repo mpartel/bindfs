@@ -38,6 +38,23 @@ unless specifically_selected_vms.empty?
   dirs = dirs.select { |dir| ARGV.include?(dir) }
 end
 
+def with_retries(n, options = {}, &block)
+  options = {
+    sleep: 0,
+    sleep_jitter: 0,
+  }.merge options
+  loop do
+    begin
+      return block.call
+    rescue
+      raise $! if n <= 0
+      puts "Retrying #{n} more times after catching: #{$!}"
+    end
+    sleep(options[:sleep] + (Random.rand - 0.5) * options[:sleep_jitter])
+    n -= 1
+  end
+end
+
 puts "Running #{dirs.size} VMs in parallel: #{dirs.join(' ')}"
 puts "You can follow the progress of each VM by tailing vagrant/*/test.log"
 puts "Note: if your terminal goes wonky after this command, type 'reset'"
@@ -55,8 +72,12 @@ threads = dirs.map do |dir|
           Process.waitpid(pid)
           $?.success?
         end
-        unless run_and_log.call "vagrant up"
-          raise "vagrant up failed"
+        # parallel `vagrant up` commands can be flaky with VirtualBox due to lock contention,
+        # so give it a few retries.
+        with_retries(3, sleep: 1.0, sleep_jitter: 0.5) do
+          unless run_and_log.call "vagrant up"
+            raise "vagrant up failed"
+          end
         end
         unless run_and_log.call "vagrant rsync"
           raise "vagrant rsync failed"
