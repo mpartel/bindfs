@@ -22,6 +22,7 @@
 $LOAD_PATH << (ENV['srcdir'] || '.')
 
 require 'common.rb'
+require 'etc'
 
 include Errno
 
@@ -49,6 +50,7 @@ end
 $nobody_uid = nobody_uid = Etc.getpwnam('nobody').uid
 $nobody_gid = nobody_gid = Etc.getpwnam('nobody').gid
 $nobody_group = nobody_group = Etc.getgrgid(nobody_gid).name
+$root_group = root_group = Etc.getgrgid(0).name
 
 $tests_dir = File.realpath('.')
 
@@ -247,18 +249,20 @@ root_testenv("--mirror=root") do
     assert { File.stat('mnt/file').gid == $nobody_gid }
 end
 
-testenv("--chmod-allow-x --chmod-ignore") do
-    touch('src/file')
+if `uname`.strip != 'FreeBSD'  # FreeBSD doesn't let us set the sticky bit on files
+  testenv("--chmod-allow-x --chmod-ignore") do
+      touch('src/file')
 
-    chmod(01700, 'src/file') # sticky bit set
+      chmod(01700, 'src/file') # sticky bit set
 
-    chmod(00077, 'mnt/file') # should change x bits; should not unset sticky bit
-    assert { File.stat('src/file').mode & 07777 == 01611 }
+      chmod(00077, 'mnt/file') # should change x bits; should not unset sticky bit
+      assert { File.stat('src/file').mode & 07777 == 01611 }
 
-    mkdir('src/dir')
-    chmod(0700, 'src/dir')
-    chmod(0077, 'mnt/dir') # bits on dir should not change
-    assert { File.stat('src/dir').mode & 0777 == 0700 }
+      mkdir('src/dir')
+      chmod(0700, 'src/dir')
+      chmod(0077, 'mnt/dir') # bits on dir should not change
+      assert { File.stat('src/dir').mode & 0777 == 0700 }
+  end
 end
 
 testenv("--chmod-deny --chmod-allow-x") do
@@ -289,7 +293,7 @@ testenv("--chmod-filter=g-w,o-rwx") do
     assert { File.stat('src/file').mode & 0777 == 0640 }
 end
 
-root_testenv("--map=nobody/root:@#{nobody_group}/@root") do
+root_testenv("--map=nobody/root:@#{nobody_group}/@#{root_group}") do
     touch('src/file')
     chown('nobody', nobody_group, 'src/file')
 
@@ -310,7 +314,7 @@ root_testenv("--map=nobody/root:@#{nobody_group}/@root") do
     assert { File.stat('mnt/newdir').gid == 0 }
 end
 
-root_testenv("--map=@#{nobody_group}/@root") do
+root_testenv("--map=@#{nobody_group}/@#{root_group}") do
     touch('src/file')
     chown('nobody', nobody_group, 'src/file')
 
@@ -377,20 +381,21 @@ end
 root_testenv("--uid-offset=2 --gid-offset=20", :title => "file creation with --uid-offset and --gid-offset") do
     touch('mnt/file')
 
-    assert { File.stat('mnt/file').uid == 2 }
-    assert { File.stat('mnt/file').gid == 20 }
     assert { File.stat('src/file').uid == 0 }
-    assert { File.stat('src/file').gid == 0 }
+    assert { File.stat('mnt/file').uid == 2 }
+    # Note: BSDs tend to inherit group from parent dir while Linux uses the effective GID.
+    # This check works for both.
+    assert { File.stat('mnt/file').gid == File.stat('src/file').gid + 20 }
 end
 
 root_testenv("--uid-offset=2 --gid-offset=20", :title => "chown/chgrp with --uid-offset and --gid-offset") do
     touch('src/file')
     chown(6, 25, 'mnt/file')
 
-    assert { File.stat('mnt/file').uid == 6 }
-    assert { File.stat('mnt/file').gid == 25 }
     assert { File.stat('src/file').uid == 4 }
     assert { File.stat('src/file').gid == 5 }
+    assert { File.stat('mnt/file').uid == 6 }
+    assert { File.stat('mnt/file').gid == 25 }
 end
 
 testenv("", :title => "preserves inode numbers") do
@@ -400,7 +405,7 @@ testenv("", :title => "preserves inode numbers") do
     assert { File.stat('mnt/dir').ino == File.stat('src/dir').ino }
 end
 
-testenv("", :title => "has readdir inode numbers") do
+testenv("", :title => "preserves readdir inode numbers") do
     touch('src/file')
     mkdir('src/dir')
 
@@ -744,7 +749,8 @@ end
 
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
-if Process.uid == 0
+# TODO: support FreeBSD in this test (different group management commands)
+if Process.uid == 0 && `uname`.strip == 'Linux'
     begin
         `groupdel bindfs_test_group 2>&1`
         `groupadd -f bindfs_test_group`

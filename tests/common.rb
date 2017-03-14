@@ -123,7 +123,12 @@ def testenv(bindfs_args, options = {}, &block)
 
     bindfs_pid = nil
     begin
-        cmd = "../#{EXECUTABLE_PATH} #{bindfs_args} -f #{Shellwords.escape(srcdir)} #{Shellwords.escape(mntdir)}"
+        extra_args = "-f"
+        # Don't rely on user_allow_other in /etc/fuse.conf.
+        # On FreeBSD it isn't even possible to set that.
+        extra_args += " --no-allow-other" if Process.uid != 0
+
+        cmd = "../#{EXECUTABLE_PATH} #{bindfs_args} #{extra_args} #{Shellwords.escape(srcdir)} #{Shellwords.escape(mntdir)}"
         if options[:valgrind]
             cmd = "valgrind --error-exitcode=100 #{options[:valgrind_opts]} #{cmd}"
         end

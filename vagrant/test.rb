@@ -39,6 +39,7 @@ unless specifically_selected_vms.empty?
 end
 
 puts "Running #{dirs.size} VMs in parallel: #{dirs.join(' ')}"
+puts "You can follow the progress of each VM by tailing vagrant/*/test.log"
 puts "Note: if your terminal goes wonky after this command, type 'reset'"
 mutex = Thread::Mutex.new  # protects `$stdout` and `errors`
 errors = []

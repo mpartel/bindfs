@@ -20,14 +20,15 @@ int main(int argc, char* argv[])
         return 2;
     }
 
+    errno = 0;
     dent = readdir(dirp);
     while (dent != NULL) {
-        if (errno != 0) {
-            perror("failed to read directory entry");
-            return 3;
-        }
         printf("%llu %s\n", (unsigned long long)dent->d_ino, dent->d_name);
         dent = readdir(dirp);
+    }
+    if (errno != 0) {
+        perror("failed to read directory entry");
+        return 3;
     }
 
     closedir(dirp);

@@ -1,0 +1,31 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  #config.vm.box = "freebsd/FreeBSD-11.0-STABLE"  # doesn't set base_mac so can't use NAT networking :(
+  config.vm.box = "bento/freebsd-10.3"
+
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder "../../", "/bindfs",
+    type: "rsync",
+    rsync__auto: false,
+    rsync__exclude: ["vagrant"],
+    rsync__args: ["-av", "--delete-after"]
+
+  config.vm.provider "virtualbox" do |v|
+    v.name = "bindfs-freebsd10_3"
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    pkg update
+    pkg install -y fusefs-libs pkgconf ruby valgrind
+
+    kldload fuse.ko
+    echo 'fuse_load="YES"' >> /boot/loader.conf
+
+    sysctl vfs.usermount=1
+    echo vfs.usermount=1 >> /etc/sysctl.conf
+
+    pw groupmod operator -m vagrant  # For access to /dev/fuse
+  SHELL
+end
