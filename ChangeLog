@@ -1,3 +1,8 @@
+2017-03-14  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added Vagrantfile for FreeBSD 10.3 and fixed build and test suite to
+	  work with it.
+
 2017-03-12  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Made tests work with Ruby 1.8.7 and FUSE 2.8 again (issue #49).
