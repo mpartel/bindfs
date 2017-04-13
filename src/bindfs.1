@@ -455,6 +455,10 @@ Older systems may require this deprecated fstab syntax.
 Setuid and setgid bits have no effect inside the mount.
 This is a necessary security feature of FUSE.
 
+Access to device files is denied by default by FUSE as a security precaution.
+Use \fB\-o dev\fP to enable access (requires mounting as root). This may not
+be supported on all operating systems.
+
 MacFuse caches file contents by default.
 This means that changes in source files are not always immediately visible under the mount point.
 \fB\-o nolocalcaches\fP can be used to disable the cache.

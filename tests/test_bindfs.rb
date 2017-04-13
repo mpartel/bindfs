@@ -747,6 +747,17 @@ testenv("", :title => "mntdir with newline", :mntdir_name => "a\nb") do
   assert { File.exist?("a\nb/f") }
 end
 
+if `uname`.strip != 'FreeBSD'  # -o dev is not supported on FreeBSD
+  root_testenv("-odev") do
+    system("mknod mnt/zero c 1 5")
+    data = File.read("mnt/zero", 3)
+    assert { data.length == 3 }
+    assert { data.chars.to_a[0] == "\0" }
+    assert { data.chars.to_a[1] == "\0" }
+    assert { data.chars.to_a[2] == "\0" }
+  end
+end
+
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 # TODO: support FreeBSD in this test (different group management commands)
