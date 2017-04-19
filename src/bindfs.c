@@ -72,6 +72,10 @@
 #include <sys/xattr.h>
 #endif
 
+#ifdef __LINUX__
+#include <linux/fs.h>  // For BLKGETSIZE64
+#endif
+
 #include <fuse.h>
 #include <fuse_opt.h>
 
@@ -163,6 +167,8 @@ static struct Settings {
 
     int hide_hard_links;
     int resolve_symlinks;
+
+    int block_devices_as_files;
 
     enum ResolvedSymlinkDeletion {
         RESOLVED_SYMLINK_DELETION_DENY,
@@ -365,8 +371,34 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     }
 
     /* Hide hard links */
-    if (settings.hide_hard_links)
+    if (settings.hide_hard_links) {
         stbuf->st_nlink = 1;
+    }
+
+    /* Block files as regular files. */
+    if (settings.block_devices_as_files && S_ISBLK(stbuf->st_mode)) {
+        stbuf->st_mode ^= S_IFBLK | S_IFREG;  // Flip both bits
+#ifdef __LINUX__
+        uint64_t size;
+        ioctl(file, BLKGETSIZE64, &size);
+        stbuf->st_size = (off_t)size;
+        if (stbuf->st_size < 0) {  // Underflow
+            return -EOVERFLOW;
+        }
+#else
+        int fd = open(procpath, O_RDONLY);
+        if (fd == -1) {
+            return -errno;
+        }
+        off_t size = lseek(fd, 0, SEEK_END);
+        if (size == (off_t)-1) {
+            close(fd);
+            return -errno;
+        }
+        stbuf->st_size = size;
+        close(fd);
+#endif
+    }
 
     /* Then permission bits. Symlink permissions don't matter, though. */
     if ((stbuf->st_mode & S_IFLNK) != S_IFLNK) {
@@ -1436,6 +1468,7 @@ static void print_usage(const char *progname)
            "  --hide-hard-links         Always report a hard link count of 1.\n"
            "  --resolve-symlinks        Resolve symbolic links.\n"
            "  --resolved-symlink-deletion=...  Decide how to delete resolved symlinks.\n"
+           "  --block-devices-as-files  Show block devices as regular files.\n"
            "  --multithreaded           Enable multithreaded mode. See man page\n"
            "                            for security issue with current implementation.\n"
            "\n"
@@ -1477,7 +1510,8 @@ enum OptionKey {
     OPTKEY_DISABLE_LOCK_FORWARDING,
     OPTKEY_ENABLE_IOCTL,
     OPTKEY_HIDE_HARD_LINKS,
-    OPTKEY_RESOLVE_SYMLINKS
+    OPTKEY_RESOLVE_SYMLINKS,
+    OPTKEY_BLOCK_DEVICES_AS_FILES
 };
 
 static int process_option(void *data, const char *arg, int key,
@@ -1569,6 +1603,9 @@ static int process_option(void *data, const char *arg, int key,
         return 0;
     case OPTKEY_RESOLVE_SYMLINKS:
         settings.resolve_symlinks = 1;
+        return 0;
+    case OPTKEY_BLOCK_DEVICES_AS_FILES:
+        settings.block_devices_as_files = 1;
         return 0;
 
     case OPTKEY_NONOPTION:
@@ -1901,6 +1938,7 @@ int main(int argc, char *argv[])
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
         OPT2("--resolve-symlinks", "resolve-symlinks", OPTKEY_RESOLVE_SYMLINKS),
         OPT_OFFSET2("--resolved-symlink-deletion=%s", "resolved-symlink-deletion=%s", resolved_symlink_deletion, -1),
+        OPT2("--block-devices-as-files", "block-devices-as-files", OPTKEY_BLOCK_DEVICES_AS_FILES),
 
         OPT2("--realistic-permissions", "realistic-permissions", OPTKEY_REALISTIC_PERMISSIONS),
         OPT2("--ctime-from-mtime", "ctime-from-mtime", OPTKEY_CTIME_FROM_MTIME),
@@ -1949,6 +1987,7 @@ int main(int argc, char *argv[])
     settings.hide_hard_links = 0;
     settings.resolve_symlinks = 0;
     settings.resolved_symlink_deletion_policy = RESOLVED_SYMLINK_DELETION_SYMLINK_ONLY;
+    settings.block_devices_as_files = 0;
     settings.realistic_permissions = 0;
     settings.ctime_from_mtime = 0;
     settings.enable_lock_forwarding = 0;
