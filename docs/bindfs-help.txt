@@ -53,7 +53,7 @@ Rate limits:
   --write-rate=...          Limit to bytes/sec that can be written.
 
 Miscellaneous:
-  -n      --no-allow-other  Do not add -o allow_other to fuse options.
+  --no-allow-other          Do not add -o allow_other to fuse options.
   --realistic-permissions   Hide permission bits for actions mounter can't do.
   --ctime-from-mtime        Read file properties' change time
                             from file content modification time.
@@ -62,6 +62,7 @@ Miscellaneous:
   --hide-hard-links         Always report a hard link count of 1.
   --resolve-symlinks        Resolve symbolic links.
   --resolved-symlink-deletion=...  Decide how to delete resolved symlinks.
+  --block-devices-as-files  Show block devices as regular files.
   --multithreaded           Enable multithreaded mode. See man page
                             for security issue with current implementation.
 

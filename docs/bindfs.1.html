@@ -332,6 +332,11 @@ deleted only if deleting the target succeeded).  The default is <b>symlink-only<
 <p> Note that deleting files inside symlinked directories is always possible
 with all settings, including <b>deny</b>, unless something else protects those
 files. 
+<p> </dd>
+
+<dt><b>--block-devices-as-files, -o block-devices-as-files</b> </dt>
+<dd>Shows block devices as
+regular files. 
 <p> 
 <p> </dd>
 </dl>
@@ -342,74 +347,75 @@ files.
 <dl>
 
 <dt><b>-h, --help</b> </dt>
-<dd>Displays a help message and exits.
-
+<dd>Displays a help message and
+exits. 
 <p> </dd>
 
 <dt><b>-V, --version</b> </dt>
 <dd>Displays version information and exits. 
 <p> </dd>
 
-<dt><b>-n, --no-allow-other, -o
-no-allow-other</b> </dt>
+<dt><b>--no-allow-other,
+-o no-allow-other</b> </dt>
 <dd>Does not add <b>-o allow_other</b> to FUSE options. This causes the
 mount to be accessible only by the current user. 
+<p> (The deprecated shorthand
+<b>-n</b> is also still accepted.) 
 <p> </dd>
 
-<dt><b>--realistic-permissions,
--o realistic-permissions</b> </dt>
-<dd>Hides read/write/execute permissions for a mirrored
-file when the mounter doesn&rsquo;t have read/write/execute access to the underlying
-file. Useless when mounting as root, since root will always have full access.
+<dt><b>--realistic-permissions, -o realistic-permissions</b>
+</dt>
+<dd>Hides read/write/execute permissions for a mirrored file when the mounter
+doesn&rsquo;t have read/write/execute access to the underlying file. Useless when
+mounting as root, since root will always have full access. 
+<p> (Prior to version
+1.10 this option was the default behavior. I felt it violated the principle
+of least surprise badly enough to warrant a small break in backwards-compatibility.)
 
-<p> (Prior to version 1.10 this option was the default behavior. I felt it violated
-the principle of least surprise badly enough to warrant a small break in
-backwards-compatibility.) 
 <p> </dd>
 
 <dt><b>--ctime-from-mtime, -o ctime-from-mtime</b> </dt>
-<dd>Recall that a
-unix file has three standard timestamps: <b>atime</b> (last access i.e. read time),
-<b>mtime</b> (last content modification time) <b>ctime</b> (last content or metadata
-(inode) change time) 
-<p> With this option, the ctime of each file and directory
-is read from its mtime. In other words, only content modifications (as opposed
-to metadata changes) will be reflected in a mirrored file&rsquo;s ctime. The underlying
-file&rsquo;s ctime will still be updated normally. 
+<dd>Recall that a unix file has three standard
+timestamps: <b>atime</b> (last access i.e. read time), <b>mtime</b> (last content modification
+time) <b>ctime</b> (last content or metadata (inode) change time) 
+<p> With this option,
+the ctime of each file and directory is read from its mtime. In other words,
+only content modifications (as opposed to metadata changes) will be reflected
+in a mirrored file&rsquo;s ctime. The underlying file&rsquo;s ctime will still be updated
+normally. 
 <p> </dd>
 
-<dt><b>--enable-lock-forwarding, -o enable-lock-forwarding</b>
-</dt>
-<dd>Forwards <b>flock</b> and <b>fcntl</b> locking requests to the source directory. This
-way, locking a file in the bindfs mount will also lock the file in the
-source directory. 
-<p> This option <b>must</b> be used with <b>--multithreaded</b> because otherwise
-bindfs will deadlock as soon as there is lock contention. However, see <b>BUGS</b>
-below for caveats about <b>--multithreaded</b> with the current implementation. 
-<p>
-</dd>
-
-<dt><b>--disable-lock-forwarding, -o disable-lock-forwarding</b> </dt>
-<dd>Currently does nothing,
-but a future release may default to enabling lock forwarding. If you depend
-on this behaviour, it&rsquo;s recommended to set this flag explicitly. 
+<dt><b>--enable-lock-forwarding, -o enable-lock-forwarding</b> </dt>
+<dd>Forwards <b>flock</b> and
+<b>fcntl</b> locking requests to the source directory. This way, locking a file
+in the bindfs mount will also lock the file in the source directory. 
+<p> This
+option <b>must</b> be used with <b>--multithreaded</b> because otherwise bindfs will deadlock
+as soon as there is lock contention. However, see <b>BUGS</b> below for caveats
+about <b>--multithreaded</b> with the current implementation. 
 <p> </dd>
 
-<dt><b>--enable-ioctl,
--o enable-ioctl</b> </dt>
-<dd>Enables forwarding of ioctl, which is needed for some advanced
-features such as append-only files (<b>chattr +a</b>). Note that the ioctl action
-will be performed as the mounter, not the calling user. No efforts are made
-to check whether the calling user would ordinarily have the permissions
-to make the ioctl. This may be a security concern, especially when mounting
-as root. 
+<dt><b>--disable-lock-forwarding,
+-o disable-lock-forwarding</b> </dt>
+<dd>Currently does nothing, but a future release may
+default to enabling lock forwarding. If you depend on this behaviour, it&rsquo;s
+recommended to set this flag explicitly. 
 <p> </dd>
 
-<dt><b>--multithreaded, -o multithreaded</b> </dt>
-<dd>Run bindfs in multithreaded mode.
-While bindfs is designed to be otherwise thread-safe, there is currently
-a race condition that may pose a security risk for some use cases. See <b>BUGS</b>
-below. 
+<dt><b>--enable-ioctl, -o enable-ioctl</b> </dt>
+<dd>Enables
+forwarding of ioctl, which is needed for some advanced features such as
+append-only files (<b>chattr +a</b>). Note that the ioctl action will be performed
+as the mounter, not the calling user. No efforts are made to check whether
+the calling user would ordinarily have the permissions to make the ioctl.
+This may be a security concern, especially when mounting as root. 
+<p> </dd>
+
+<dt><b>--multithreaded,
+-o multithreaded</b> </dt>
+<dd>Run bindfs in multithreaded mode. While bindfs is designed
+to be otherwise thread-safe, there is currently a race condition that may
+pose a security risk for some use cases. See <b>BUGS</b> below. 
 <p> 
 <p> </dd>
 </dl>
@@ -418,38 +424,39 @@ below.
 
 <dl>
 
-<dt><b>-o <i>options</b> </i></dt>
+<dt><b>-o
+<i>options</b> </i></dt>
 <dd>Fuse options. 
 <p> </dd>
 
 <dt><b>-r, -o ro</b> </dt>
-<dd>Make the mount strictly
-read-only. This even prevents root from writing to it. If this is all you
-need, then (since Linux 2.6.26) you can get a more efficent mount with <b>mount
---bind</b> and then <b>mount -o remount,ro</b>. 
+<dd>Make the mount strictly read-only. This even
+prevents root from writing to it. If this is all you need, then (since Linux
+2.6.26) you can get a more efficent mount with <b>mount --bind</b> and then <b>mount
+-o remount,ro</b>. 
 <p> </dd>
 
 <dt><b>-d, -o debug</b> </dt>
-<dd>Enable debug output (implies
--f). 
+<dd>Enable debug output (implies -f). 
 <p> </dd>
 
 <dt><b>-f</b> </dt>
-<dd>Foreground operation. 
+<dd>Foreground
+operation. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect12' href='#toc12'>Permission Specification</a></h2>
-The <b>-p</b> option takes
-a comma- or colon-separated list of either octal numeric permission bits
-or symbolic representations of permission bit operations. The symbolic representation
-is based on that of the  <i><b>chmod</b>(1)</i> command. setuid, setgid and sticky bits
-are ignored. 
-<p> This program extends the chmod symbolic representation with
-the following operands: 
-<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but applies
-only to directories (not to executables).<br>
+The <b>-p</b> option takes a comma- or colon-separated
+list of either octal numeric permission bits or symbolic representations
+of permission bit operations. The symbolic representation is based on that
+of the  <i><b>chmod</b>(1)</i> command. setuid, setgid and sticky bits are ignored. 
+<p> This
+program extends the chmod symbolic representation with the following operands:
+
+<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but applies only to directories (not
+to executables).<br>
  
 <p> &lsquo;<b>d</b>&rsquo; and &lsquo;<b>f</b>&rsquo; (left hand side)     Makes this directive only apply to directories
 (d) or files (f).<br>
@@ -537,21 +544,25 @@ separate arguments to perms, because the comma is an option separator in
 <p>
 Setuid and setgid bits have no effect inside the mount. This is a necessary
 security feature of FUSE. 
-<p> MacFuse caches file contents by default. This
-means that changes in source files are not always immediately visible under
-the mount point. <b>-o nolocalcaches</b> can be used to disable the cache. 
-<p> When
-using <b>--mirror[-only] @somegroup</b>, bindfs won&rsquo;t see changes to the group&rsquo;s member
-list. Sending bindfs a <b>SIGUSR1</b> signal will make it reread the user database.
-
-<p> The following extra options may be useful under osxfuse: <b>-o local,allow_other,extended_security,noappledouble</b>
-See <i><b>https://github.com/osxfuse/osxfuse/wiki/Mount-options</b></i> for details. 
+<p> Access to device files is denied by default by
+FUSE as a security precaution. Use <b>-o dev</b> to enable access (requires mounting
+as root). This may not be supported on all operating systems. 
+<p> MacFuse caches
+file contents by default. This means that changes in source files are not
+always immediately visible under the mount point. <b>-o nolocalcaches</b> can be
+used to disable the cache. 
+<p> When using <b>--mirror[-only] @somegroup</b>, bindfs won&rsquo;t
+see changes to the group&rsquo;s member list. Sending bindfs a <b>SIGUSR1</b> signal will
+make it reread the user database. 
+<p> The following extra options may be useful
+under osxfuse: <b>-o local,allow_other,extended_security,noappledouble</b> See
+<i><b>https://github.com/osxfuse/osxfuse/wiki/Mount-options</b></i> for details. 
 <p> 
 <h2><a name='sect15' href='#toc15'>Bugs</a></h2>
 
-<p>
-If bindfs is run in multithreaded mode (with the <b>--multithreaded</b> option)
-then it&rsquo;s possible for another process to briefly see a file with an incorrect
+<p> If
+bindfs is run in multithreaded mode (with the <b>--multithreaded</b> option) then
+it&rsquo;s possible for another process to briefly see a file with an incorrect
 owner, group or permissions. This may constitute a security risk if you
 rely on bindfs to reduce permissions on new files. For this reason, as of
 version 1.11 bindfs runs in single-threaded mode by default. 

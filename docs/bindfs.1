@@ -277,6 +277,10 @@ only if deleting the target succeeded).  The default is \fBsymlink-only\fP.
 Note that deleting files inside symlinked directories is always possible with
 all settings, including \fBdeny\fP, unless something else protects those files.
 
+.TP
+.B \-\-block\-devices\-as\-files, \-o block\-devices\-as\-files
+Shows block devices as regular files.
+
 
 .SH MISCELLANEOUS OPTIONS
 
@@ -289,9 +293,11 @@ Displays a help message and exits.
 Displays version information and exits.
 
 .TP
-.B \-n, \-\-no\-allow\-other, \-o no\-allow\-other
+.B \-\-no\-allow\-other, \-o no\-allow\-other
 Does not add \fB\-o allow_other\fP to FUSE options.
 This causes the mount to be accessible only by the current user.
+
+(The deprecated shorthand \fB\-n\fP is also still accepted.)
 
 .TP
 .B \-\-realistic\-permissions, \-o realistic\-permissions
@@ -452,6 +458,10 @@ Older systems may require this deprecated fstab syntax.
 
 Setuid and setgid bits have no effect inside the mount.
 This is a necessary security feature of FUSE.
+
+Access to device files is denied by default by FUSE as a security precaution.
+Use \fB\-o dev\fP to enable access (requires mounting as root). This may not
+be supported on all operating systems.
 
 MacFuse caches file contents by default.
 This means that changes in source files are not always immediately visible under the mount point.
