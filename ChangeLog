@@ -1,6 +1,7 @@
 2017-04-19  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --block-devices-as-files (issue #53).
+	* Released 1.13.7.
 
 2017-03-14  Martin Pärtel <martin dot partel at gmail dot com>
 
