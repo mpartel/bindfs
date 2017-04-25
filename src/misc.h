@@ -17,6 +17,19 @@
     along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* Workaround for missing utimens AT_SYMLINK_NOFOLLOW  in OSX
+   For details refer to https://github.com/mpartel/bindfs/issues/6
+ */
+#ifndef AT_SYMLINK_NOFOLLOW
+#define AT_SYMLINK_NOFOLLOW     0x100   /* Do not follow symbolic links.  */
+#define AT_REMOVEDIR            0x200   /* Remove directory instead of
+                                        unlinking file.  */
+#define AT_SYMLINK_FOLLOW       0x400   /* Follow symbolic links.  */
+#define AT_NO_AUTOMOUNT         0x800   /* Suppress terminal automount traversa*/
+#define AT_EMPTY_PATH           0x1000  /* Allow empty relative pathname */
+#endif
+
+
 #ifndef INC_BINDFS_MISC_H
 #define INC_BINDFS_MISC_H
 
