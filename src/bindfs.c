@@ -678,6 +678,10 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     if (pc_ret < 0) {
         DPRINTF("pathconf failed: %s (%d)", strerror(errno), errno);
         pc_ret = NAME_MAX;
+    } else if (pc_ret == 0) {
+        // Workaround for some source filesystems erroneously returning 0
+        // (see issue #54).
+        pc_ret = NAME_MAX;
     }
 
     struct dirent *de_buf =
