@@ -277,6 +277,14 @@ only if deleting the target succeeded).  The default is \fBsymlink-only\fP.
 Note that deleting files inside symlinked directories is always possible with
 all settings, including \fBdeny\fP, unless something else protects those files.
 
+.SH SIZE LIMITS AND FAKE SIZE REPORTING
+
+.TP
+.B \-\-size=\fI...\fPM, \-o size=\fI...\fPM
+Report fake FS size of \fB...\fP Megabytes. Note this does not actually limit anything.
+It's experimental feature and it may cause your \fBdf\fP go nuts.
+Currently only \fBM\fP suffix is supported.
+Actual limiting is planned in future.
 
 .SH MISCELLANEOUS OPTIONS
 
@@ -512,6 +520,7 @@ for consistency.
 .SH AUTHOR
 Martin P\[:a]rtel <martin dot partel at gmail dot com>
 
+Contributors: Tomas 'Harvie' Mudrunka (2016 - concept of size limiting and initial code for reporting fake fs size)
 
 .SH SEE ALSO
 \fBchmod\fP(1), \fBfusermount\fP(1), \fBhttp://bindfs.org/\fP

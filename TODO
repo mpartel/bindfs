@@ -20,3 +20,7 @@ Minor:
 - Look at capabilities instead of uid==0 when checking for special privileges.
   Do this in a portable way and fall back to uid==0 if not available.
 
+- add real diskspace limiting (quota) besides of ability to report fake size.
+  Maybe there can be even different limit for different paths? dunno.
+  I think it's good idea to have sepparate code for faking reported size and
+  limiting size, so user can decide if he wants both or only one of them.
