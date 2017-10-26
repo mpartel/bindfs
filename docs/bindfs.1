@@ -277,10 +277,6 @@ only if deleting the target succeeded).  The default is \fBsymlink-only\fP.
 Note that deleting files inside symlinked directories is always possible with
 all settings, including \fBdeny\fP, unless something else protects those files.
 
-.TP
-.B \-\-block\-devices\-as\-files, \-o block\-devices\-as\-files
-Shows block devices as regular files.
-
 
 .SH MISCELLANEOUS OPTIONS
 
@@ -345,6 +341,10 @@ append-only files (\fBchattr +a\fP). Note that the ioctl action will be
 performed as the mounter, not the calling user. No efforts are made to check
 whether the calling user would ordinarily have the permissions to make the
 ioctl. This may be a security concern, especially when mounting as root.
+
+.TP
+.B \-\-block\-devices\-as\-files, \-o block\-devices\-as\-files
+Shows block devices as regular files.
 
 .TP
 .B \-\-multithreaded, \-o multithreaded

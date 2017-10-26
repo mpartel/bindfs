@@ -332,11 +332,6 @@ deleted only if deleting the target succeeded).  The default is <b>symlink-only<
 <p> Note that deleting files inside symlinked directories is always possible
 with all settings, including <b>deny</b>, unless something else protects those
 files. 
-<p> </dd>
-
-<dt><b>--block-devices-as-files, -o block-devices-as-files</b> </dt>
-<dd>Shows block devices as
-regular files. 
 <p> 
 <p> </dd>
 </dl>
@@ -347,37 +342,37 @@ regular files.
 <dl>
 
 <dt><b>-h, --help</b> </dt>
-<dd>Displays a help message and
-exits. 
+<dd>Displays a help message and exits.
+
 <p> </dd>
 
 <dt><b>-V, --version</b> </dt>
 <dd>Displays version information and exits. 
 <p> </dd>
 
-<dt><b>--no-allow-other,
--o no-allow-other</b> </dt>
-<dd>Does not add <b>-o allow_other</b> to FUSE options. This causes the
-mount to be accessible only by the current user. 
-<p> (The deprecated shorthand
-<b>-n</b> is also still accepted.) 
-<p> </dd>
-
-<dt><b>--realistic-permissions, -o realistic-permissions</b>
+<dt><b>--no-allow-other, -o no-allow-other</b>
 </dt>
-<dd>Hides read/write/execute permissions for a mirrored file when the mounter
-doesn&rsquo;t have read/write/execute access to the underlying file. Useless when
-mounting as root, since root will always have full access. 
-<p> (Prior to version
-1.10 this option was the default behavior. I felt it violated the principle
-of least surprise badly enough to warrant a small break in backwards-compatibility.)
-
+<dd>Does not add <b>-o allow_other</b> to FUSE options. This causes the mount to be
+accessible only by the current user. 
+<p> (The deprecated shorthand <b>-n</b> is also
+still accepted.) 
 <p> </dd>
 
-<dt><b>--ctime-from-mtime, -o ctime-from-mtime</b> </dt>
-<dd>Recall that a unix file has three standard
-timestamps: <b>atime</b> (last access i.e. read time), <b>mtime</b> (last content modification
-time) <b>ctime</b> (last content or metadata (inode) change time) 
+<dt><b>--realistic-permissions, -o realistic-permissions</b> </dt>
+<dd>Hides read/write/execute
+permissions for a mirrored file when the mounter doesn&rsquo;t have read/write/execute
+access to the underlying file. Useless when mounting as root, since root
+will always have full access. 
+<p> (Prior to version 1.10 this option was the
+default behavior. I felt it violated the principle of least surprise badly
+enough to warrant a small break in backwards-compatibility.) 
+<p> </dd>
+
+<dt><b>--ctime-from-mtime,
+-o ctime-from-mtime</b> </dt>
+<dd>Recall that a unix file has three standard timestamps:
+<b>atime</b> (last access i.e. read time), <b>mtime</b> (last content modification time)
+<b>ctime</b> (last content or metadata (inode) change time) 
 <p> With this option,
 the ctime of each file and directory is read from its mtime. In other words,
 only content modifications (as opposed to metadata changes) will be reflected
@@ -409,6 +404,11 @@ append-only files (<b>chattr +a</b>). Note that the ioctl action will be perform
 as the mounter, not the calling user. No efforts are made to check whether
 the calling user would ordinarily have the permissions to make the ioctl.
 This may be a security concern, especially when mounting as root. 
+<p> </dd>
+
+<dt><b>--block-devices-as-files,
+-o block-devices-as-files</b> </dt>
+<dd>Shows block devices as regular files. 
 <p> </dd>
 
 <dt><b>--multithreaded,
