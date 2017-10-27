@@ -10,7 +10,7 @@ layout: default
   Mount a directory to another location and alter permission bits.
 </p>
 
-*bindfs* is a [FUSE](http://fuse.sourceforge.net/) filesystem for mounting a directory to another location, similarly to `mount --bind`. The permissions inside the mountpoint can be altered using various rules.
+*bindfs* is a [FUSE](https://github.com/libfuse/libfuse) filesystem for mounting a directory to another location, similarly to `mount --bind`. The permissions inside the mountpoint can be altered using various rules.
 
 ## Examples
 
@@ -49,7 +49,7 @@ There is an extensive [HowTo on Ubuntu Forums](http://ubuntuforums.org/showthrea
 
 ## About
 
-bindfs is developed and tested primarily on Ubuntu Linux with [FUSE](http://fuse.sourceforge.net/), but it's been reported to work reasonably well on Mac OS X with [osxfuse](http://osxfuse.github.io/) and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
+bindfs is developed and tested primarily on Ubuntu Linux with [FUSE](https://github.com/libfuse/libfuse), but it's been reported to work reasonably well on Mac OS X with [osxfuse](http://osxfuse.github.io/) and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
 
 All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
