@@ -51,7 +51,7 @@ There is an extensive [HowTo on Ubuntu Forums](http://ubuntuforums.org/showthrea
 
 bindfs is developed and tested primarily on Ubuntu Linux with [FUSE](http://fuse.sourceforge.net/), but it's been reported to work reasonably well on Mac OS X with [osxfuse](http://osxfuse.github.io/) and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
 
-All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. While bindfs is very flexible, it can be quite slow as [Guy Paddock's analysis and benchmark](http://www.redbottledesign.com/node/2495) demonstrates. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
+All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
 bindfs was initially developed in 2006. I consider the program fairly feature-complete but I'll still gladly fix bugs and add some small features as people suggest them.
 
