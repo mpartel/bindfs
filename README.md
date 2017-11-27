@@ -21,6 +21,9 @@ use-cases need `user_allow_other` to be defined in `/etc/fuse.conf`.
 ## Installation ##
 
 Make sure FUSE 2.6.0 or above is installed (https://github.com/libfuse/libfuse).
+
+Download a [release](https://bindfs.org/downloads/) or clone this repository.
+
 Then compile and install as usual:
 
     ./configure
