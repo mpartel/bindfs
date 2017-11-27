@@ -1,7 +1,7 @@
 
 ## Overview ##
 
-bindfs  -  http://bindfs.org/
+bindfs  -  https://bindfs.org/
 
 bindfs is a FUSE filesystem for mirroring a directory to another
 directory, similarly to `mount --bind`. The permissions of the mirrored
@@ -20,7 +20,7 @@ use-cases need `user_allow_other` to be defined in `/etc/fuse.conf`.
 
 ## Installation ##
 
-Make sure FUSE 2.6.0 or above is installed (http://fuse.sf.net/).
+Make sure FUSE 2.6.0 or above is installed (https://github.com/libfuse/libfuse).
 Then compile and install as usual:
 
     ./configure
