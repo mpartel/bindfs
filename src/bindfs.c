@@ -185,6 +185,10 @@ static struct Settings {
 
     int enable_ioctl;
 
+    /* should probably be handled with enum... */
+    int block_delete;
+    int block_rename;
+    
     uid_t uid_offset;
     gid_t gid_offset;
 
@@ -476,6 +480,10 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
     char *unlink_first = NULL;
     int (*main_delete_func)(const char*) = target_delete_func;
 
+     if (settings.block_delete)
+        return -EPERM;
+
+    
     real_path = process_path(path, false);
     if (real_path == NULL)
         return -errno;
@@ -816,6 +824,9 @@ static int bindfs_rename(const char *from, const char *to)
 {
     int res;
     char *real_from, *real_to;
+    
+    if (settings.block_rename)
+        return -EPERM;
 
     real_from = process_path(from, false);
     if (real_from == NULL)
@@ -1515,7 +1526,9 @@ enum OptionKey {
     OPTKEY_ENABLE_IOCTL,
     OPTKEY_HIDE_HARD_LINKS,
     OPTKEY_RESOLVE_SYMLINKS,
-    OPTKEY_BLOCK_DEVICES_AS_FILES
+    OPTKEY_BLOCK_DEVICES_AS_FILES,
+    OPTKEY_BLOCK_DELETE,
+    OPTKEY_BLOCK_RENAME
 };
 
 static int process_option(void *data, const char *arg, int key,
@@ -1612,6 +1625,14 @@ static int process_option(void *data, const char *arg, int key,
         settings.block_devices_as_files = 1;
         return 0;
 
+    case OPTKEY_BLOCK_DELETE:
+        settings.block_delete = 1;
+        return 0;        
+    
+    case OPTKEY_BLOCK_DELETE:
+        settings.block_rename = 1;
+        return 0;            
+    
     case OPTKEY_NONOPTION:
         if (!settings.mntsrc) {
             settings.mntsrc = realpath(arg, NULL);
@@ -1950,9 +1971,15 @@ int main(int argc, char *argv[])
         OPT2("--disable-lock-forwarding", "disable-lock-forwarding", OPTKEY_DISABLE_LOCK_FORWARDING),
         OPT2("--enable-ioctl", "enable-ioctl", OPTKEY_ENABLE_IOCTL),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
-
         OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, 0),
         OPT_OFFSET2("--gid-offset=%s", "gid-offset=%s", gid_offset, 0),
+        
+        OPT2("--block-delete", "block-delete", OPTKEY_BLOCK_DELETE),
+        OPT2("--block-rename", "block-rename", OPTKEY_BLOCK_RENAME),
+        
+        
+        
+        
         FUSE_OPT_END
     };
 
@@ -1998,6 +2025,9 @@ int main(int argc, char *argv[])
     settings.enable_ioctl = 0;
     settings.uid_offset = 0;
     settings.gid_offset = 0;
+    
+    settings.block_delete = 0;
+    settings.block_rename = 0;
 
     atexit(&atexit_func);
 
