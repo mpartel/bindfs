@@ -1,4 +1,12 @@
 
+## slightly modified ##
+
+Just added block_delete,block_rename
+
+So you can use it with sftp and disable delete/rename ....
+
+
+
 ## Overview ##
 
 bindfs  -  https://bindfs.org/
