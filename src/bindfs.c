@@ -1629,7 +1629,7 @@ static int process_option(void *data, const char *arg, int key,
         settings.block_delete = 1;
         return 0;        
     
-    case OPTKEY_BLOCK_DELETE:
+    case OPTKEY_BLOCK_RENAME:
         settings.block_rename = 1;
         return 0;            
     
