@@ -48,6 +48,10 @@ Extended attribute policy:
   --xattr-ro                Read-only xattr operations.
   --xattr-rw                Read-write xattr operations (the default).
 
+Other file operations:
+  --delete-deny             Disallow deleting files.
+  --rename-deny             Disallow renaming files (within the mount).
+
 Rate limits:
   --read-rate=...           Limit to bytes/sec that can be read.
   --write-rate=...          Limit to bytes/sec that can be written.

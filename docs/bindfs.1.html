@@ -266,36 +266,56 @@ inside the mount.
 <p> </dd>
 </dl>
 
-<h2><a name='sect8' href='#toc8'>Rate Limits</a></h2>
-Reads and writes through the mount point
-can be throttled. Throttling works by sleeping the required amount of time
-on each read or write request. Throttling imposes one global limit on all
-readers/writers as opposed to a per-process or per-user limit. 
-<p> Currently,
-the implementation is not entirely fair. See <b>BUGS</b> below. 
+<h2><a name='sect8' href='#toc8'>Other File Operations</a></h2>
+
 <p> 
 <dl>
 
-<dt><b>--read-rate=<i>N</i>, -o read-rate=<i>N</i></b>
-</dt>
-<dd>Allow at most <i>N</i> bytes per second to be read. <i>N</i> may have one of the following
-(1024-based) suffixes: <b>k</b>, <b>M</b>, <b>G</b>, <b>T</b>. 
+<dt><b>--delete-deny, -o delete-deny</b> </dt>
+<dd>Makes
+all file delete operations fail with a &rsquo;permission denied&rsquo;. By default, files
+can still be modified if they have write permission, and renamed if the
+directory has write permission. 
 <p> </dd>
 
-<dt><b>--write-rate=<i>N</i>, -o write-rate=<i>N</i></b> </dt>
-<dd>Same as above,
-but for writes. 
+<dt><b>--rename-deny, -o rename-deny</b> </dt>
+<dd>Makes all file
+rename/move operations <b>within the mountpoint</b> fail with a &rsquo;permission denied&rsquo;.
+Programs that move files out of a mountpoint do so by copying and deleting
+the original. 
 <p> </dd>
 </dl>
 
-<h2><a name='sect9' href='#toc9'>Link Handling</a></h2>
+<h2><a name='sect9' href='#toc9'>Rate Limits</a></h2>
+Reads and writes through the mount point can be
+throttled. Throttling works by sleeping the required amount of time on each
+read or write request. Throttling imposes one global limit on all readers/writers
+as opposed to a per-process or per-user limit. 
+<p> Currently, the implementation
+is not entirely fair. See <b>BUGS</b> below. 
+<p> 
+<dl>
+
+<dt><b>--read-rate=<i>N</i>, -o read-rate=<i>N</i></b> </dt>
+<dd>Allow at
+most <i>N</i> bytes per second to be read. <i>N</i> may have one of the following (1024-based)
+suffixes: <b>k</b>, <b>M</b>, <b>G</b>, <b>T</b>. 
+<p> </dd>
+
+<dt><b>--write-rate=<i>N</i>, -o write-rate=<i>N</i></b> </dt>
+<dd>Same as above, but for
+writes. 
+<p> </dd>
+</dl>
+
+<h2><a name='sect10' href='#toc10'>Link Handling</a></h2>
 
 <p> 
 <dl>
 
 <dt><b>--hide-hard-links, -o hide-hard-links</b> </dt>
-<dd>Shows the
-hard link count of all files as 1. 
+<dd>Shows the hard link
+count of all files as 1. 
 <p> </dd>
 
 <dt><b>--resolve-symlinks, -o resolve-symlinks</b> </dt>
@@ -336,7 +356,7 @@ files.
 <p> </dd>
 </dl>
 
-<h2><a name='sect10' href='#toc10'>Miscellaneous Options</a></h2>
+<h2><a name='sect11' href='#toc11'>Miscellaneous Options</a></h2>
 
 <p> 
 <dl>
@@ -420,7 +440,7 @@ pose a security risk for some use cases. See <b>BUGS</b> below.
 <p> </dd>
 </dl>
 
-<h2><a name='sect11' href='#toc11'>Fuse Options</a></h2>
+<h2><a name='sect12' href='#toc12'>Fuse Options</a></h2>
 
 <dl>
 
@@ -447,7 +467,7 @@ operation.
 <p> </dd>
 </dl>
 
-<h2><a name='sect12' href='#toc12'>Permission Specification</a></h2>
+<h2><a name='sect13' href='#toc13'>Permission Specification</a></h2>
 The <b>-p</b> option takes a comma- or colon-separated
 list of either octal numeric permission bits or symbolic representations
 of permission bit operations. The symbolic representation is based on that
@@ -496,7 +516,7 @@ adds read and write for group.
 <p> </dd>
 </dl>
 
-<h2><a name='sect13' href='#toc13'>Examples</a></h2>
+<h2><a name='sect14' href='#toc14'>Examples</a></h2>
  
 <dl>
 
@@ -539,7 +559,7 @@ separate arguments to perms, because the comma is an option separator in
 <p> </dd>
 </dl>
 
-<h2><a name='sect14' href='#toc14'>Notes</a></h2>
+<h2><a name='sect15' href='#toc15'>Notes</a></h2>
 
 <p>
 Setuid and setgid bits have no effect inside the mount. This is a necessary
@@ -558,7 +578,7 @@ make it reread the user database.
 under osxfuse: <b>-o local,allow_other,extended_security,noappledouble</b> See
 <i><b>https://github.com/osxfuse/osxfuse/wiki/Mount-options</b></i> for details. 
 <p> 
-<h2><a name='sect15' href='#toc15'>Bugs</a></h2>
+<h2><a name='sect16' href='#toc16'>Bugs</a></h2>
 
 <p> If
 bindfs is run in multithreaded mode (with the <b>--multithreaded</b> option) then
@@ -580,7 +600,7 @@ bugs and/or send pull requests to <i><b>https://github.com/mpartel/bindfs/issues
 
 <p> 
 <p> 
-<h2><a name='sect16' href='#toc16'>Deprecations</a></h2>
+<h2><a name='sect17' href='#toc17'>Deprecations</a></h2>
 
 <p> The option names <b>--user</b> and <b>--group</b> were deprecated and replaced
 with <b>--force-user</b> and <b>--force-group</b> in version 1.12. The former names clashed with
@@ -589,11 +609,11 @@ and prints a warning. The synonym <b>--owner</b> is also deprecated for consiste
 
 <p> 
 <p> 
-<h2><a name='sect17' href='#toc17'>Author</a></h2>
+<h2><a name='sect18' href='#toc18'>Author</a></h2>
 Martin P[:a]rtel &lt;martin dot partel at gmail dot com&gt; 
 <p> 
 <p> 
-<h2><a name='sect18' href='#toc18'>See Also</a></h2>
+<h2><a name='sect19' href='#toc19'>See Also</a></h2>
 <i><b>chmod</b>(1)</i>,
 <i><b>fusermount</b>(1)</i>, <i><b>http://bindfs.org/</b></i> 
 <p> <p>
@@ -609,17 +629,18 @@ Martin P[:a]rtel &lt;martin dot partel at gmail dot com&gt;
 <li><a name='toc5' href='#sect5'>Chown/Chgrp Policy</a></li>
 <li><a name='toc6' href='#sect6'>Chmod Policy</a></li>
 <li><a name='toc7' href='#sect7'>Xattr Policy</a></li>
-<li><a name='toc8' href='#sect8'>Rate Limits</a></li>
-<li><a name='toc9' href='#sect9'>Link Handling</a></li>
-<li><a name='toc10' href='#sect10'>Miscellaneous Options</a></li>
-<li><a name='toc11' href='#sect11'>Fuse Options</a></li>
-<li><a name='toc12' href='#sect12'>Permission Specification</a></li>
-<li><a name='toc13' href='#sect13'>Examples</a></li>
-<li><a name='toc14' href='#sect14'>Notes</a></li>
-<li><a name='toc15' href='#sect15'>Bugs</a></li>
-<li><a name='toc16' href='#sect16'>Deprecations</a></li>
-<li><a name='toc17' href='#sect17'>Author</a></li>
-<li><a name='toc18' href='#sect18'>See Also</a></li>
+<li><a name='toc8' href='#sect8'>Other File Operations</a></li>
+<li><a name='toc9' href='#sect9'>Rate Limits</a></li>
+<li><a name='toc10' href='#sect10'>Link Handling</a></li>
+<li><a name='toc11' href='#sect11'>Miscellaneous Options</a></li>
+<li><a name='toc12' href='#sect12'>Fuse Options</a></li>
+<li><a name='toc13' href='#sect13'>Permission Specification</a></li>
+<li><a name='toc14' href='#sect14'>Examples</a></li>
+<li><a name='toc15' href='#sect15'>Notes</a></li>
+<li><a name='toc16' href='#sect16'>Bugs</a></li>
+<li><a name='toc17' href='#sect17'>Deprecations</a></li>
+<li><a name='toc18' href='#sect18'>Author</a></li>
+<li><a name='toc19' href='#sect19'>See Also</a></li>
 </ul>
 </body>
 </html>
