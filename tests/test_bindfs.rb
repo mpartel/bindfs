@@ -293,6 +293,20 @@ testenv("--chmod-filter=g-w,o-rwx") do
     assert { File.stat('src/file').mode & 0777 == 0640 }
 end
 
+testenv("--delete-deny") do
+    touch('src/file')
+    mkdir('src/dir')
+    assert_exception(EPERM) { rm('mnt/file') }
+    assert_exception(EPERM) { rmdir('mnt/dir') }
+end
+
+testenv("--rename-deny") do
+    touch('src/file')
+    mkdir('src/dir')
+    assert_exception(EPERM) { mv('mnt/file', 'mnt/file2') }
+    assert_exception(EPERM) { mv('mnt/dir', 'mnt/dir2') }
+end
+
 root_testenv("--map=nobody/root:@#{nobody_group}/@#{root_group}") do
     touch('src/file')
     chown('nobody', nobody_group, 'src/file')

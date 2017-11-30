@@ -219,6 +219,20 @@ The read/write permissions are checked against the (possibly modified)
 file permissions inside the mount.
 
 
+.SH OTHER FILE OPERATIONS
+
+.TP
+.B \-\-delete\-deny, \-o delete\-deny
+Makes all file delete operations fail with a 'permission denied'.
+By default, files can still be modified if they have write permission,
+and renamed if the directory has write permission.
+
+.TP
+.B \-\-rename\-deny, \-o rename\-deny
+Makes all file rename/move operations \fBwithin the mountpoint\fP fail with
+a 'permission denied'. Programs that move files out of a mountpoint do so
+by copying and deleting the original.
+
 .SH RATE LIMITS
 Reads and writes through the mount point can be throttled. Throttling works
 by sleeping the required amount of time on each read or write request.
