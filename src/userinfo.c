@@ -28,13 +28,13 @@
 struct uid_cache_entry {
     uid_t uid;
     gid_t main_gid;
-    int username_offset; /* arena-allocated */
+    int username_offset; /* allocated in cache_memory_block */
 };
 
 struct gid_cache_entry {
     gid_t gid;
     int uid_count;
-    int uids_offset; /* arena-allocated */
+    int uids_offset; /* allocated in cache_memory_block */
 };
 
 static pthread_rwlock_t cache_lock = PTHREAD_RWLOCK_INITIALIZER;
@@ -47,7 +47,7 @@ static struct gid_cache_entry *gid_cache = NULL;
 static int gid_cache_size = 0;
 static int gid_cache_capacity = 0;
 
-static struct arena cache_arena = ARENA_INITIALIZER;
+static struct memory_block cache_memory_block = MEMORY_BLOCK_INITIALIZER;
 
 static volatile int cache_rebuild_requested = 1;
 
@@ -67,8 +67,8 @@ static int gid_cache_gid_searchcmp(const void *key, const void *entry);
 
 static void rebuild_cache()
 {
-    free_arena(&cache_arena);
-    init_arena(&cache_arena, 1024);
+    free_memory_block(&cache_memory_block);
+    init_memory_block(&cache_memory_block, 1024);
     rebuild_uid_cache();
     rebuild_gid_cache();
     qsort(uid_cache, uid_cache_size, sizeof(struct uid_cache_entry), uid_cache_uid_sortcmp);
@@ -126,7 +126,7 @@ static int rebuild_uid_cache()
         ent->main_gid = pw->pw_gid;
 
         username_len = strlen(pw->pw_name) + 1;
-        ent->username_offset = append_to_arena(&cache_arena, pw->pw_name, username_len);
+        ent->username_offset = append_to_memory_block(&cache_memory_block, pw->pw_name, username_len);
     }
 
     endpwent();
@@ -168,7 +168,7 @@ static int rebuild_gid_cache()
         ent = &gid_cache[gid_cache_size++];
         ent->gid = gr->gr_gid;
         ent->uid_count = 0;
-        ent->uids_offset = cache_arena.size;
+        ent->uids_offset = cache_memory_block.size;
 
         for (i = 0; gr->gr_mem[i] != NULL; ++i) {
             uid_ent = (struct uid_cache_entry *)bsearch(
@@ -179,8 +179,8 @@ static int rebuild_gid_cache()
                 uid_cache_name_searchcmp
             );
             if (uid_ent != NULL) {
-                grow_arena(&cache_arena, sizeof(uid_t));
-                ((uid_t *)ARENA_GET(cache_arena, ent->uids_offset))[ent->uid_count++] = uid_ent->uid;
+                grow_memory_block(&cache_memory_block, sizeof(uid_t));
+                ((uid_t *)MEMORY_BLOCK_GET(cache_memory_block, ent->uids_offset))[ent->uid_count++] = uid_ent->uid;
             }
         }
     }
@@ -208,15 +208,15 @@ static int uid_cache_name_sortcmp(const void *a, const void *b)
 {
     int name_a_off = ((struct uid_cache_entry *)a)->username_offset;
     int name_b_off = ((struct uid_cache_entry *)b)->username_offset;
-    const char *name_a = (const char *)ARENA_GET(cache_arena, name_a_off);
-    const char *name_b = (const char *)ARENA_GET(cache_arena, name_b_off);
+    const char *name_a = (const char *)MEMORY_BLOCK_GET(cache_memory_block, name_a_off);
+    const char *name_b = (const char *)MEMORY_BLOCK_GET(cache_memory_block, name_b_off);
     return strcmp(name_a, name_b);
 }
 
 static int uid_cache_name_searchcmp(const void *key, const void *entry)
 {
     int name_off = ((struct uid_cache_entry *)entry)->username_offset;
-    const char *name = (const char *)ARENA_GET(cache_arena, name_off);
+    const char *name = (const char *)MEMORY_BLOCK_GET(cache_memory_block, name_off);
     return strcmp((const char *)key, name);
 }
 
@@ -368,7 +368,7 @@ int user_belongs_to_group(uid_t uid, gid_t gid)
 
     struct gid_cache_entry *gent = gid_cache_lookup(gid);
     if (gent) {
-        uids = (uid_t*)ARENA_GET(cache_arena, gent->uids_offset);
+        uids = (uid_t*)MEMORY_BLOCK_GET(cache_memory_block, gent->uids_offset);
         for (i = 0; i < gent->uid_count; ++i) {
             if (uids[i] == uid) {
                 ret = 1;

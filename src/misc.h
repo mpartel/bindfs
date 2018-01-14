@@ -58,21 +58,21 @@ void grow_array_impl(void **array, int *capacity, int member_size);
 /* Returns 1 on success, 0 on syntax error. */
 int parse_byte_count(const char *str, double *result);
 
-/* Simple arena allocation for when it's convenient to
-   grow multiple times and deallocate all at once. */
-struct arena {
+/* An allocation of contiguous memory with convenient functions for
+   growing it and appending to it. */
+struct memory_block {
     char *ptr;
     int size;
     int capacity;
 };
 
-#define ARENA_INITIALIZER { NULL, 0, 0 }
+#define MEMORY_BLOCK_INITIALIZER { NULL, 0, 0 }
 
-void init_arena(struct arena *a, int initial_capacity);
-void grow_arena(struct arena *a, int amount);
-int append_to_arena(struct arena *a, void *src, int src_size);
-void free_arena(struct arena *a);
+void init_memory_block(struct memory_block *a, int initial_capacity);
+void grow_memory_block(struct memory_block *a, int amount);
+int append_to_memory_block(struct memory_block *a, void *src, int src_size);
+void free_memory_block(struct memory_block *a);
 
-#define ARENA_GET(a, offset) (&(a).ptr[(offset)])
+#define MEMORY_BLOCK_GET(a, offset) (&(a).ptr[(offset)])
 
 #endif

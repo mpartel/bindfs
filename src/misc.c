@@ -170,7 +170,7 @@ int parse_byte_count(const char *str, double *result)
     return 1;
 }
 
-void init_arena(struct arena *a, int initial_capacity)
+void init_memory_block(struct memory_block *a, int initial_capacity)
 {
     a->size = 0;
     a->capacity = initial_capacity;
@@ -181,7 +181,7 @@ void init_arena(struct arena *a, int initial_capacity)
     }
 }
 
-void grow_arena(struct arena *a, int amount)
+void grow_memory_block(struct memory_block *a, int amount)
 {
     int new_cap;
 
@@ -198,16 +198,16 @@ void grow_arena(struct arena *a, int amount)
     }
 }
 
-int append_to_arena(struct arena *a, void *src, int src_size)
+int append_to_memory_block(struct memory_block *a, void *src, int src_size)
 {
     int dest = a->size;
-    grow_arena(a, src_size);
+    grow_memory_block(a, src_size);
     memcpy(&a->ptr[dest], src, src_size);
     return dest;
 }
 
-void free_arena(struct arena *a)
+void free_memory_block(struct memory_block *a)
 {
     free(a->ptr);
-    init_arena(a, 0);
+    init_memory_block(a, 0);
 }
