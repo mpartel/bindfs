@@ -254,7 +254,8 @@ static struct gid_cache_entry* append_to_gid_cache(struct group *gr)
     entry->uid_count = 0;
     entry->uids_offset = cache_memory_block.size;
 
-    for (int i = 0; gr->gr_mem[i] != NULL; ++i) {
+    int i;
+    for (i = 0; gr->gr_mem[i] != NULL; ++i) {
         struct uid_cache_entry *uid_entry = read_through_uid_by_name_cache(gr->gr_mem[i]);
         if (uid_entry != NULL) {
             grow_memory_block(&cache_memory_block, sizeof(uid_t));
