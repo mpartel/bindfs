@@ -135,6 +135,30 @@ const char *my_dirname(char *path)
     }
 }
 
+void insertion_sort_last(void *base, size_t nmemb, size_t size, int (*compar)(const void*, const void*))
+{
+    void *const last = base + (nmemb - 1) * size;
+    void *const entry = malloc(size);
+    memcpy(entry, last, size);
+
+    // Find the location to insert at.
+    int n = 0;
+    void *p = last - size;
+    while (p >= base && compar(entry, p) < 0) {
+        p -= size;
+        n += 1;
+    }
+
+    // We found a *p that's larger or we went below the start of the array, so go back one step.
+    p += size;
+    // No need to adjust n, it's now the correct number of elements to shift forward
+
+    // Insert at *p.
+    memmove(p + size, p, n * size);
+    memcpy(p, entry, size);
+    free(entry);
+}
+
 void grow_array_impl(void **array, int *capacity, int member_size)
 {
     int new_cap = *capacity;
