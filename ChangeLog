@@ -1,3 +1,7 @@
+2018-01-15  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added option --no-user-group-precaching (issue #62).
+
 2017-11-30  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added options --delete-deny and --rename-deny as suggested by @roojs.

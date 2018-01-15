@@ -20,6 +20,7 @@
 #ifndef INC_BINDFS_MISC_H
 #define INC_BINDFS_MISC_H
 
+#include <stdlib.h>
 
 /* Counts the number of times ch occurs in s. */
 int count_chars(const char *s, char ch);
@@ -48,6 +49,10 @@ const char *my_basename(const char *path);
    If path contains a slash, replaces the last slash with a '\0' and returns path.
    Otherwise, returns ".". */
 const char *my_dirname(char *path);
+
+/* Sorts an array that is otherwise sorted, but whose last element may be in the wrong place.
+   The signature is the same as qsort's. */
+void insertion_sort_last(void *base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
 
 /* Reallocs `*array` (may be NULL) to be at least one larger
    than `*capacity` (may be 0) and stores the new capacity

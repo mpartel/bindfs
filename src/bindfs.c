@@ -1486,6 +1486,7 @@ static void print_usage(const char *progname)
            "  --resolve-symlinks        Resolve symbolic links.\n"
            "  --resolved-symlink-deletion=...  Decide how to delete resolved symlinks.\n"
            "  --block-devices-as-files  Show block devices as regular files.\n"
+           "  --no-user-group-precaching Don't read all users and groups at startup.\n"
            "  --multithreaded           Enable multithreaded mode. See man page\n"
            "                            for security issue with current implementation.\n"
            "\n"
@@ -1846,11 +1847,14 @@ static void setup_signal_handling()
 
 static void signal_handler(int sig)
 {
-    invalidate_user_cache();
+    invalidate_user_caches();
 }
 
 static void atexit_func()
 {
+    // This cleanup is mostly unnecessary, but we do it anyway to
+    // reduce the "still reachable" allocations that Valgrind shows.
+
     free(settings.mntsrc);
     free(settings.mntdest);
     free(settings.original_working_dir);
@@ -1879,6 +1883,8 @@ static void atexit_func()
     settings.mirrored_users = NULL;
     free(settings.mirrored_members);
     settings.mirrored_members = NULL;
+
+    clear_user_caches();
 }
 
 int main(int argc, char *argv[])
@@ -1903,6 +1909,7 @@ int main(int argc, char *argv[])
         char *chmod_filter;
         char *resolved_symlink_deletion;
         int no_allow_other;
+        int no_user_group_precaching;
         int multithreaded;
         char *uid_offset;
         char *gid_offset;
@@ -1974,13 +1981,11 @@ int main(int argc, char *argv[])
         OPT2("--enable-lock-forwarding", "enable-lock-forwarding", OPTKEY_ENABLE_LOCK_FORWARDING),
         OPT2("--disable-lock-forwarding", "disable-lock-forwarding", OPTKEY_DISABLE_LOCK_FORWARDING),
         OPT2("--enable-ioctl", "enable-ioctl", OPTKEY_ENABLE_IOCTL),
+        OPT_OFFSET2("--no-user-group-precaching", "no-user-group-precaching", no_user_group_precaching, -1),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
         OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, 0),
         OPT_OFFSET2("--gid-offset=%s", "gid-offset=%s", gid_offset, 0),
-        
-        
-        
-        
+
         FUSE_OPT_END
     };
 
@@ -2174,6 +2179,11 @@ int main(int argc, char *argv[])
         if (!parse_mirrored_users(od.mirror)) {
             return 0;
         }
+    }
+
+    /* Precache entire user/group database for use by --mirror by default */
+    if (!od.no_user_group_precaching) {
+        rebuild_user_caches();
     }
 
     /* Parse permission bits */

@@ -361,6 +361,14 @@ ioctl. This may be a security concern, especially when mounting as root.
 Shows block devices as regular files.
 
 .TP
+.B \-\-no\-user\-group\-precaching, \-o no\-user\-group\-precaching
+Disables the default behaviour of caching users and their group memberships
+at startup. Instead they are read and then cached indefinitely on-demand.
+Sending bindfs \fBSIGUSR1\fP will clear this cache in either case.
+
+Currently this cache is only used by \fB\-\-mirror\fP and \fB\-\-mirror\-only\fP.
+
+.TP
 .B \-\-multithreaded, \-o multithreaded
 Run bindfs in multithreaded mode. While bindfs is designed to be
 otherwise thread-safe, there is currently a race condition that may pose
