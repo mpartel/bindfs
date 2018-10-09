@@ -1636,7 +1636,15 @@ static int process_option(void *data, const char *arg, int key,
 
     case OPTKEY_NONOPTION:
         if (!settings.mntsrc) {
-            settings.mntsrc = realpath(arg, NULL);
+            if (strncmp(arg, "/proc/", strlen("/proc/")) == 0) {
+                // /proc/<PID>/root is a strange magical symlink that points to '/' when inspected,
+                // but leads to a container's root directory when traversed.
+                // This only works if we don't call realpath() on it.
+                // See also: #66
+                settings.mntsrc = strdup(arg);
+            } else {
+                settings.mntsrc = realpath(arg, NULL);
+            }
             if (settings.mntsrc == NULL) {
                 fprintf(stderr, "Failed to resolve source directory `%s': ", arg);
                 perror(NULL);
@@ -1977,10 +1985,7 @@ int main(int argc, char *argv[])
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
         OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, 0),
         OPT_OFFSET2("--gid-offset=%s", "gid-offset=%s", gid_offset, 0),
-        
-        
-        
-        
+
         FUSE_OPT_END
     };
 
