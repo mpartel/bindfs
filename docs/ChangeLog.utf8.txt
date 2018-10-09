@@ -1,3 +1,8 @@
+2018-10-09  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Don't call realpath() on source dirs starting with "/proc/". See #66.
+	* Released 1.13.10
+
 2017-11-30  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added options --delete-deny and --rename-deny as suggested by @roojs.
