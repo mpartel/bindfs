@@ -452,6 +452,7 @@ testenv("", :title => "utimens on symlinks") do
       symlink('file', 'link')
     end
 
+    sleep 1  # Not sure why this is needed, but something seems to overwrite the atime right after we set it, at least on Bionic.
     system("#{$tests_dir}/utimens_nofollow mnt/link 12 34 56 78")
     raise "Failed to run utimens_nofollow: #{$?.inspect}" unless $?.success?
 
