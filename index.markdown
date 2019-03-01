@@ -65,3 +65,4 @@ Bug reports, pull requests, comments and ideas are very welcome. Developement ta
 * inotify events are not triggered since FUSE doesn't provide an API for this ([#7](https://github.com/mpartel/bindfs/issues/7)).
 * There may be issues with namespaces ([#10](https://github.com/mpartel/bindfs/issues/10)).
 * Multi-threading is disabled by default because it has been seen triggering a race where one user may see attributes meant to be shown to another. If you use bindfs so that all users should see the same permissions and owners then you can enable multithreading by giving `--multithreaded`.
+* Some distros unmount all FUSE filesystems when the network goes down ([#72](https://github.com/mpartel/bindfs/issues/72) & [https://bugs.gentoo.org/679106](https://bugs.gentoo.org/679106))
