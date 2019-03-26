@@ -450,12 +450,17 @@ static int chown_new_file(const char *path, struct fuse_context *fc, int (*chown
     file_owner = usermap_get_uid_or_default(settings.usermap_reverse, fc->uid, file_owner);
     file_group = usermap_get_gid_or_default(settings.usermap_reverse, fc->gid, file_group);
 
-    if (!unapply_uid_offset(&file_owner)) {
-        return -UID_GID_OVERFLOW_ERRNO;
+    if (file_owner != (uid_t)-1) {
+		if (!unapply_uid_offset(&file_owner)) {
+           return -UID_GID_OVERFLOW_ERRNO;
+		}
     }
-    if (!unapply_gid_offset(&file_group)) {
-        return -UID_GID_OVERFLOW_ERRNO;
-    }
+
+    if (file_group != (gid_t)-1) {
+        if (!unapply_gid_offset(&file_group)) {
+            return -UID_GID_OVERFLOW_ERRNO;
+        }
+	}
 
     if (settings.create_for_uid != -1)
         file_owner = settings.create_for_uid;
