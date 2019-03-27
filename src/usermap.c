@@ -99,7 +99,9 @@ const char* usermap_errorstr(UsermapStatus status)
 uid_t usermap_get_uid_or_default(UserMap *map, uid_t u, uid_t deflt)
 {
     int i;
-	if (u == -1) return -1;
+    if (u == -1) {
+        return -1;
+    }
     for (i = 0; i < map->user_size; ++i) {
         if (map->user_from[i] == u) {
             return map->user_to[i];
@@ -111,7 +113,9 @@ uid_t usermap_get_uid_or_default(UserMap *map, uid_t u, uid_t deflt)
 gid_t usermap_get_gid_or_default(UserMap *map, gid_t g, gid_t deflt)
 {
     int i;
-	if (g == -1) return -1;
+    if (g == -1) {
+        return -1;
+    }
     for (i = 0; i < map->group_size; ++i) {
         if (map->group_from[i] == g) {
             return map->group_to[i];
