@@ -763,7 +763,10 @@ testenv("", :title => "mntdir with newline", :mntdir_name => "a\nb") do
 end
 
 # Pull Request #73
-if `uname`.strip == 'Linux' && `which unshare` != ''
+if `uname`.strip == 'Linux' &&
+    `which unshare` != '' &&
+    `unshare --help`.include?("--map-root-user") &&
+    `unshare --help`.include?("--user")
   root_testenv("--gid-offset=10000", :title => "setgid and gid-offset") do
     system("chmod g+s src")
     system("unshare --map-root-user --user #{$nobody} mkdir mnt/dir")
