@@ -1,3 +1,8 @@
+2019-03-31  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixes to --gid-offset when used with a setgid bit or with --create-as-mounter (PR #73, thanks ehmm@!).
+	* Released 1.13.11
+
 2018-10-09  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Don't call realpath() on source dirs starting with "/proc/". See #66.
