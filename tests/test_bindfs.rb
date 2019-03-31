@@ -762,6 +762,16 @@ testenv("", :title => "mntdir with newline", :mntdir_name => "a\nb") do
   assert { File.exist?("a\nb/f") }
 end
 
+# Pull Request #73
+if `uname`.strip == 'Linux' && `which unshare` != ''
+  root_testenv("--gid-offset=10000", :title => "setgid and gid-offset") do
+    system("chmod g+s src")
+    system("unshare --map-root-user --user #{$nobody} mkdir mnt/dir")
+    assert { File.stat("src/dir").gid == 0 }
+    assert { File.stat("mnt/dir").gid == 10000 }
+  end
+end
+
 if `uname`.strip != 'FreeBSD'  # -o dev is not supported on FreeBSD
   root_testenv("-odev") do
     system("mknod mnt/zero c 1 5")
