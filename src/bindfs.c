@@ -72,6 +72,9 @@
 #include <sys/xattr.h>
 #endif
 
+#include <sys/mman.h>
+#include <fcntl.h>
+
 #ifdef __LINUX__
 #include <linux/fs.h>  // For BLKGETSIZE64
 #endif
@@ -94,6 +97,10 @@
 #define A_PREFIX   "com"
 #define A_KAUTH_FILESEC_XATTR A_PREFIX ".apple.system.Security"
 #define XATTR_APPLE_PREFIX   "com.apple."
+#endif
+
+#ifndef O_DIRECT
+#define O_DIRECT 00040000 /* direct disk access hint */
 #endif
 
 /* We pessimistically assume signed uid_t and gid_t in our overflow checks,
@@ -1098,13 +1105,29 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
     int res;
     (void) path;
 
+    char * target_buf = buf;
+
     if (settings.read_limiter) {
         rate_limiter_wait(settings.read_limiter, size);
     }
 
-    res = pread(fi->fh, buf, size, offset);
+    unsigned int page_size = sysconf(_SC_PAGESIZE);
+    if (fi->flags & O_DIRECT) {
+        // allocate 512 bytes aligned buffer for direct io to work
+        target_buf = mmap(NULL, ((page_size - 1 + size) / page_size) * page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+        if (target_buf == MAP_FAILED) {
+            return -ENOMEM;
+        }
+    }
+
+    res = pread(fi->fh, target_buf, size, offset);
     if (res == -1)
         res = -errno;
+
+    if (target_buf != buf) {
+        memcpy(buf, target_buf, size);
+        munmap(target_buf, ((page_size - 1 + size) / page_size) * page_size);
+    }
 
     return res;
 }
@@ -1114,14 +1137,29 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 {
     int res;
     (void) path;
+    char * source_buf = buf;
 
     if (settings.write_limiter) {
         rate_limiter_wait(settings.write_limiter, size);
     }
 
-    res = pwrite(fi->fh, buf, size, offset);
+    unsigned int page_size = sysconf(_SC_PAGESIZE);
+    if (fi->flags & O_DIRECT) {
+        // allocate 512 bytes aligned buffer for direct io to work
+        source_buf = mmap(NULL, ((page_size - 1 + size) / page_size) * page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+        if (source_buf == MAP_FAILED) {
+            return -ENOMEM;
+        }
+        memcpy(source_buf, buf, size);
+    }
+
+    res = pwrite(fi->fh, source_buf, size, offset);
     if (res == -1)
         res = -errno;
+
+    if (source_buf != buf) {   
+        munmap(source_buf, ((page_size - 1 + size) / page_size) * page_size);
+    } 
 
     return res;
 }
