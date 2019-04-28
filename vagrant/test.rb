@@ -82,7 +82,7 @@ threads = dirs.map do |dir|
         unless run_and_log.call "vagrant rsync"
           raise "vagrant rsync failed"
         end
-        unless run_and_log.call "vagrant ssh -c 'cd /bindfs && sudo rm -Rf tests/tmp_test_bindfs && ./configure && make clean && make && make check && sudo make check'"
+        unless run_and_log.call "vagrant ssh -c 'cd /bindfs && sudo rm -Rf tests/tmp_test_bindfs && ./configure && make distclean && ./configure && make && make check && sudo make check'"
           mutex.synchronize do
             errors << "VM #{dir} tests failed."
           end

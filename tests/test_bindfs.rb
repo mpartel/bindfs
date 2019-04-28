@@ -764,12 +764,13 @@ end
 
 # Pull Request #73
 if `uname`.strip == 'Linux' &&
+    `uname -r`.strip =~ /^[456789]/ &&  # 3.x kernels used by CentOS 7 and older don't support all `unshare` options despite the userspace binary supporting them
     `which unshare` != '' &&
     `unshare --help`.include?("--map-root-user") &&
     `unshare --help`.include?("--user")
   root_testenv("--gid-offset=10000", :title => "setgid and gid-offset") do
     system("chmod g+s src")
-    system("unshare --map-root-user --user #{$nobody} mkdir mnt/dir")
+    system("unshare --map-root-user --user mkdir mnt/dir")
     assert { File.stat("src/dir").gid == 0 }
     assert { File.stat("mnt/dir").gid == 10000 }
   end

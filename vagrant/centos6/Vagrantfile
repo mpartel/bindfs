@@ -15,8 +15,9 @@ Vagrant.configure("2") do |config|
     v.name = "bindfs-centos6"
   end
 
+  # Don't install valgrind here since it appears to be broken (2019-04-28)
   config.vm.provision "shell", inline: <<-SHELL
-    yum install -y fuse fuse-devel gcc make pkg-config ruby valgrind
+    yum install -y fuse fuse-devel gcc make pkg-config ruby
     usermod -G fuse -a vagrant
     echo user_allow_other > /etc/fuse.conf
   SHELL
