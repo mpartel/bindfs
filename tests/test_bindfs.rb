@@ -775,6 +775,28 @@ if `uname`.strip == 'Linux' &&
   end
 end
 
+# Pull Request #74
+if `uname`.strip == 'Linux'
+  def odirect_data
+    ('abc' * 10000)[0...8192]
+  end
+
+  testenv("", :title => "O_DIRECT reads") do
+    File.write("src/f", odirect_data)
+    read_data = `#{$tests_dir}/odirect_read mnt/f`
+    assert { $?.success? }
+    assert { read_data == odirect_data }
+  end
+
+  testenv("", :title => "O_DIRECT writes") do
+    IO.popen("#{$tests_dir}/odirect_write mnt/f", "w") do |pipe|
+      pipe.write(odirect_data)
+    end
+    assert { $?.success? }
+    assert { File.read("src/f") == odirect_data }
+  end
+end
+
 if `uname`.strip != 'FreeBSD'  # -o dev is not supported on FreeBSD
   root_testenv("-odev") do
     system("mknod mnt/zero c 1 5")

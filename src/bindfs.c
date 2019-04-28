@@ -72,11 +72,14 @@
 #include <sys/xattr.h>
 #endif
 
+#ifdef __linux__
 #include <sys/mman.h>
 #include <fcntl.h>
-
-#ifdef __LINUX__
 #include <linux/fs.h>  // For BLKGETSIZE64
+
+#ifndef O_DIRECT
+#define O_DIRECT 00040000 /* direct disk access hint */
+#endif
 #endif
 
 #include <fuse.h>
@@ -97,10 +100,6 @@
 #define A_PREFIX   "com"
 #define A_KAUTH_FILESEC_XATTR A_PREFIX ".apple.system.Security"
 #define XATTR_APPLE_PREFIX   "com.apple."
-#endif
-
-#ifndef O_DIRECT
-#define O_DIRECT 00040000 /* direct disk access hint */
 #endif
 
 /* We pessimistically assume signed uid_t and gid_t in our overflow checks,
@@ -194,9 +193,13 @@ static struct Settings {
     int enable_lock_forwarding;
 
     int enable_ioctl;
-    
+
     uid_t uid_offset;
     gid_t gid_offset;
+
+#ifdef __linux__
+    size_t linux_page_size;
+#endif
 
 } settings;
 
@@ -226,6 +229,10 @@ static int apply_uid_offset(uid_t *uid);
 static int apply_gid_offset(gid_t *gid);
 static int unapply_uid_offset(uid_t *uid);
 static int unapply_gid_offset(gid_t *gid);
+
+#ifdef __linux__
+static size_t round_up_buffer_size_for_direct_io(size_t size);
+#endif
 
 /* FUSE callbacks */
 static void *bindfs_init();
@@ -388,15 +395,15 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     /* Block files as regular files. */
     if (settings.block_devices_as_files && S_ISBLK(stbuf->st_mode)) {
         stbuf->st_mode ^= S_IFBLK | S_IFREG;  // Flip both bits
-#ifdef __LINUX__
+        int fd = open(procpath, O_RDONLY);
+#ifdef __linux__
         uint64_t size;
-        ioctl(file, BLKGETSIZE64, &size);
+        ioctl(fd, BLKGETSIZE64, &size);
         stbuf->st_size = (off_t)size;
         if (stbuf->st_size < 0) {  // Underflow
             return -EOVERFLOW;
         }
 #else
-        int fd = open(procpath, O_RDONLY);
         if (fd == -1) {
             return -errno;
         }
@@ -591,6 +598,21 @@ static int unapply_gid_offset(gid_t *gid) {
     *gid -= settings.gid_offset;
     return 1;
 }
+
+#ifdef __linux__
+static size_t round_up_buffer_size_for_direct_io(size_t size)
+{
+    // `man 2 open` says this should be block-size aligned and that there's no
+    // general way to determine this. Empirically the page size should be good enough.
+    // See also: Pull Request #74
+    size_t page_size = settings.linux_page_size;
+    size_t rem = size % page_size;
+    if (rem == 0) {
+        return size;
+    }
+    return size - rem + page_size;
+}
+#endif
 
 
 static void *bindfs_init()
@@ -1105,29 +1127,33 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
     int res;
     (void) path;
 
-    char * target_buf = buf;
+    char *target_buf = buf;
 
     if (settings.read_limiter) {
         rate_limiter_wait(settings.read_limiter, size);
     }
 
-    unsigned int page_size = sysconf(_SC_PAGESIZE);
+#ifdef __linux__
+    size_t mmap_size = 0;
     if (fi->flags & O_DIRECT) {
-        // allocate 512 bytes aligned buffer for direct io to work
-        target_buf = mmap(NULL, ((page_size - 1 + size) / page_size) * page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+        mmap_size = round_up_buffer_size_for_direct_io(size);
+        target_buf = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
         if (target_buf == MAP_FAILED) {
             return -ENOMEM;
         }
     }
+#endif
 
     res = pread(fi->fh, target_buf, size, offset);
     if (res == -1)
         res = -errno;
 
+#ifdef __linux__
     if (target_buf != buf) {
         memcpy(buf, target_buf, size);
-        munmap(target_buf, ((page_size - 1 + size) / page_size) * page_size);
+        munmap(target_buf, mmap_size);
     }
+#endif
 
     return res;
 }
@@ -1137,29 +1163,33 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 {
     int res;
     (void) path;
-    char * source_buf = buf;
+    char *source_buf = (char*)buf;
 
     if (settings.write_limiter) {
         rate_limiter_wait(settings.write_limiter, size);
     }
 
-    unsigned int page_size = sysconf(_SC_PAGESIZE);
+#ifdef __linux__
+    size_t mmap_size = 0;
     if (fi->flags & O_DIRECT) {
-        // allocate 512 bytes aligned buffer for direct io to work
-        source_buf = mmap(NULL, ((page_size - 1 + size) / page_size) * page_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+        mmap_size = round_up_buffer_size_for_direct_io(size);
+        source_buf = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
         if (source_buf == MAP_FAILED) {
             return -ENOMEM;
         }
         memcpy(source_buf, buf, size);
     }
+#endif
 
     res = pwrite(fi->fh, source_buf, size, offset);
     if (res == -1)
         res = -errno;
 
-    if (source_buf != buf) {   
-        munmap(source_buf, ((page_size - 1 + size) / page_size) * page_size);
+#ifdef __linux__
+    if (source_buf != buf) {
+        munmap(source_buf, mmap_size);
     } 
+#endif
 
     return res;
 }
@@ -2076,6 +2106,9 @@ int main(int argc, char *argv[])
     settings.enable_ioctl = 0;
     settings.uid_offset = 0;
     settings.gid_offset = 0;
+#ifdef __linux__
+    settings.linux_page_size = sysconf(_SC_PAGESIZE);
+#endif
 
     atexit(&atexit_func);
 

@@ -35,6 +35,8 @@ Makefile
 
 src/bindfs
 tests/fcntl_locker
+tests/odirect_read
+tests/odirect_write
 tests/readdir_inode
 tests/test_dir_rewind
 tests/utimens_nofollow
