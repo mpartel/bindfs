@@ -31,7 +31,7 @@
 
 #include <config.h>
 
-/* For >= 500 for pread/pwrite and readdir_r; >= 700 for utimensat */
+/* For >= 500 for pread/pwrite; >= 700 for utimensat */
 #define _XOPEN_SOURCE 700
 
 /* For flock() on FreeBSD. It otherwise gets hidden by _XOPEN_SOURCE  */
@@ -724,17 +724,14 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         pc_ret = NAME_MAX;
     }
 
-    struct dirent *de_buf =
-        malloc(offsetof(struct dirent, d_name) + pc_ret + 1);
     int result = 0;
     while (1) {
-        struct dirent *de;
-        result = readdir_r(dp, de_buf, &de);
-        if (result != 0) {
-            result = -result;
-            break;
-        }
+        errno = 0;
+        struct dirent *de = readdir(dp);
         if (de == NULL) {
+            if (errno != 0) {
+                result = -errno;
+            }
             break;
         }
 
@@ -750,14 +747,12 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         // consider it an error if it does. It is undocumented whether it sets
         // errno in that case, so we zero it first and set it ourself if it
         // doesn't.
-        errno = 0;
         if (filler(buf, de->d_name, &st, 0) != 0) {
             result = errno != 0 ? -errno : -EIO;
             break;
         }
     }
 
-    free(de_buf);
     closedir(dp);
     return result;
 }
