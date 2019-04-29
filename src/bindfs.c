@@ -194,12 +194,13 @@ static struct Settings {
 
     int enable_ioctl;
 
+#ifdef __linux__
+    int forward_odirect;
+    size_t odirect_alignment;
+#endif
+
     uid_t uid_offset;
     gid_t gid_offset;
-
-#ifdef __linux__
-    size_t linux_page_size;
-#endif
 
 } settings;
 
@@ -605,12 +606,12 @@ static size_t round_up_buffer_size_for_direct_io(size_t size)
     // `man 2 open` says this should be block-size aligned and that there's no
     // general way to determine this. Empirically the page size should be good enough.
     // See also: Pull Request #74
-    size_t page_size = settings.linux_page_size;
-    size_t rem = size % page_size;
+    size_t alignment = settings.odirect_alignment;
+    size_t rem = size % alignment;
     if (rem == 0) {
         return size;
     }
-    return size - rem + page_size;
+    return size - rem + alignment;
 }
 #endif
 
@@ -1084,7 +1085,14 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
     mode |= S_IFREG; /* tell permchain_apply this is a regular file */
     mode = permchain_apply(settings.create_permchain, mode);
 
-    fd = open(real_path, fi->flags, mode & 0777);
+    int flags = fi->flags;
+#ifdef __linux__
+    if (!settings.forward_odirect) {
+        flags &= ~O_DIRECT;
+    }
+#endif
+
+    fd = open(real_path, flags, mode & 0777);
     if (fd == -1) {
         free(real_path);
         return -errno;
@@ -1107,7 +1115,14 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
     if (real_path == NULL)
         return -errno;
 
-    fd = open(real_path, fi->flags);
+    int flags = fi->flags;
+#ifdef __linux__
+    if (!settings.forward_odirect) {
+        flags &= ~O_DIRECT;
+    }
+#endif
+
+    fd = open(real_path, flags);
     free(real_path);
     if (fd == -1)
         return -errno;
@@ -1130,7 +1145,7 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
 
 #ifdef __linux__
     size_t mmap_size = 0;
-    if (fi->flags & O_DIRECT) {
+    if ((fi->flags & O_DIRECT) && settings.forward_odirect) {
         mmap_size = round_up_buffer_size_for_direct_io(size);
         target_buf = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
         if (target_buf == MAP_FAILED) {
@@ -1166,7 +1181,7 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 
 #ifdef __linux__
     size_t mmap_size = 0;
-    if (fi->flags & O_DIRECT) {
+    if ((fi->flags & O_DIRECT) && settings.forward_odirect) {
         mmap_size = round_up_buffer_size_for_direct_io(size);
         source_buf = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
         if (source_buf == MAP_FAILED) {
@@ -1556,6 +1571,7 @@ static void print_usage(const char *progname)
            "  --block-devices-as-files  Show block devices as regular files.\n"
            "  --multithreaded           Enable multithreaded mode. See man page\n"
            "                            for security issue with current implementation.\n"
+           "  --forward-odirect=...      Forward O_DIRECT (it's cleared by default).\n"
            "\n"
            "FUSE options:\n"
            "  -o opt[,opt,...]          Mount options.\n"
@@ -1980,6 +1996,7 @@ int main(int argc, char *argv[])
         char *resolved_symlink_deletion;
         int no_allow_other;
         int multithreaded;
+        char *forward_odirect;
         char *uid_offset;
         char *gid_offset;
     } od;
@@ -2051,6 +2068,7 @@ int main(int argc, char *argv[])
         OPT2("--disable-lock-forwarding", "disable-lock-forwarding", OPTKEY_DISABLE_LOCK_FORWARDING),
         OPT2("--enable-ioctl", "enable-ioctl", OPTKEY_ENABLE_IOCTL),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
+        OPT_OFFSET2("--forward-odirect=%s", "forward-odirect=%s", forward_odirect, -1),
         OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, 0),
         OPT_OFFSET2("--gid-offset=%s", "gid-offset=%s", gid_offset, 0),
 
@@ -2102,7 +2120,8 @@ int main(int argc, char *argv[])
     settings.uid_offset = 0;
     settings.gid_offset = 0;
 #ifdef __linux__
-    settings.linux_page_size = sysconf(_SC_PAGESIZE);
+    settings.forward_odirect = 0;
+    settings.odirect_alignment = 0;
 #endif
 
     atexit(&atexit_func);
@@ -2193,7 +2212,7 @@ int main(int argc, char *argv[])
         char* endptr = od.uid_offset;
         settings.uid_offset = strtoul(od.uid_offset, &endptr, 10);
         if (*endptr != '\0') {
-            fprintf(stderr, "Error: Value of --uid-offset must be a positive integer.\n");
+            fprintf(stderr, "Error: Value of --uid-offset must be an integer.\n");
             return 1;
         }
     }
@@ -2210,9 +2229,27 @@ int main(int argc, char *argv[])
         char* endptr = od.gid_offset;
         settings.gid_offset = strtoul(od.gid_offset, &endptr, 10);
         if (*endptr != '\0') {
-            fprintf(stderr, "Error: Value of --gid-offset must be a positive integer.\n");
+            fprintf(stderr, "Error: Value of --gid-offset must be an integer.\n");
             return 1;
         }
+    }
+
+    if (od.forward_odirect) {
+#ifdef __linux__
+        settings.forward_odirect = 1;
+        char* endptr = od.forward_odirect;
+        settings.odirect_alignment = strtoul(od.forward_odirect, &endptr, 10);
+        if (*endptr != '\0') {
+            fprintf(stderr, "Error: Value of --forward-odirect must be an integer.\n");
+            return 1;
+        }
+        if (settings.odirect_alignment == 0) {
+            fprintf(stderr, "Error: Value of --forward-odirect must be positive.\n");
+            return 1;
+        }
+#else
+        fprintf(stderr, "Warning: --forward-odirect is not supported on this platform.\n");
+#endif
     }
 
     /* Parse user and group for new creates */

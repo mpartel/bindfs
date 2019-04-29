@@ -782,14 +782,29 @@ if `uname`.strip == 'Linux'
     ('abc' * 10000)[0...8192]
   end
 
-  testenv("", :title => "O_DIRECT reads") do
+  testenv("", :title => "O_DIRECT reads with O_DIRECT ignored") do
     File.write("src/f", odirect_data)
     read_data = `#{$tests_dir}/odirect_read mnt/f`
     assert { $?.success? }
     assert { read_data == odirect_data }
   end
 
-  testenv("", :title => "O_DIRECT writes") do
+  testenv("", :title => "O_DIRECT writes with O_DIRECT ignored") do
+    IO.popen("#{$tests_dir}/odirect_write mnt/f", "w") do |pipe|
+      pipe.write(odirect_data)
+    end
+    assert { $?.success? }
+    assert { File.read("src/f") == odirect_data }
+  end
+
+  testenv("--forward-odirect=512", :title => "O_DIRECT reads with O_DIRECT forwarded") do
+    File.write("src/f", odirect_data)
+    read_data = `#{$tests_dir}/odirect_read mnt/f`
+    assert { $?.success? }
+    assert { read_data == odirect_data }
+  end
+
+  testenv("--forward-odirect=512", :title => "O_DIRECT writes with O_DIRECT forwarded") do
     IO.popen("#{$tests_dir}/odirect_write mnt/f", "w") do |pipe|
       pipe.write(odirect_data)
     end

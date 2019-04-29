@@ -366,6 +366,14 @@ Run bindfs in multithreaded mode. While bindfs is designed to be
 otherwise thread-safe, there is currently a race condition that may pose
 a security risk for some use cases. See \fB\%BUGS\fP below.
 
+.TP
+.B \-\-forward\-odirect=\fIalignment\fP, \-o forward\-odirect=\fIalignment\fP
+Enable experimental \fBO_DIRECT\fP forwarding, with all read/write requests rounded
+to the given alignment (in bytes). By default, the \fBO_DIRECT\fP flag is
+not forwarded to the underlying FS.
+See \fBopen\fP(2) for details about \fBO_DIRECT\fP.
+
+Only works on Linux. Ignored on other platforms.
 
 .SH FUSE OPTIONS
 .TP
