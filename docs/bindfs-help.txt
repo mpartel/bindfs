@@ -69,6 +69,7 @@ Miscellaneous:
   --block-devices-as-files  Show block devices as regular files.
   --multithreaded           Enable multithreaded mode. See man page
                             for security issue with current implementation.
+  --forward-odirect=...      Forward O_DIRECT (it's cleared by default).
 
 FUSE options:
   -o opt[,opt,...]          Mount options.

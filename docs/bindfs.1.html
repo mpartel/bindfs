@@ -436,7 +436,16 @@ This may be a security concern, especially when mounting as root.
 <dd>Run bindfs in multithreaded mode. While bindfs is designed
 to be otherwise thread-safe, there is currently a race condition that may
 pose a security risk for some use cases. See <b>BUGS</b> below. 
-<p> 
+<p> </dd>
+
+<dt><b>--forward-odirect=<i>alignment</i>,
+-o forward-odirect=<i>alignment</i></b> </dt>
+<dd>Enable experimental <b>O_DIRECT</b> forwarding, with
+all read/write requests rounded to the given alignment (in bytes). By default,
+the <b>O_DIRECT</b> flag is not forwarded to the underlying FS. See <i><b>open</b>(2)</i> for
+details about <b>O_DIRECT</b>. 
+<p> Only works on Linux. Ignored on other platforms.
+
 <p> </dd>
 </dl>
 
@@ -444,39 +453,38 @@ pose a security risk for some use cases. See <b>BUGS</b> below.
 
 <dl>
 
-<dt><b>-o
-<i>options</b> </i></dt>
+<dt><b>-o <i>options</b> </i></dt>
 <dd>Fuse options. 
 <p> </dd>
 
 <dt><b>-r, -o ro</b> </dt>
-<dd>Make the mount strictly read-only. This even
-prevents root from writing to it. If this is all you need, then (since Linux
-2.6.26) you can get a more efficent mount with <b>mount --bind</b> and then <b>mount
--o remount,ro</b>. 
+<dd>Make the mount strictly read-only.
+This even prevents root from writing to it. If this is all you need, then
+(since Linux 2.6.26) you can get a more efficent mount with <b>mount --bind</b> and
+then <b>mount -o remount,ro</b>. 
 <p> </dd>
 
 <dt><b>-d, -o debug</b> </dt>
 <dd>Enable debug output (implies -f). 
 <p> </dd>
 
-<dt><b>-f</b> </dt>
-<dd>Foreground
-operation. 
+<dt><b>-f</b>
+</dt>
+<dd>Foreground operation. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect13' href='#toc13'>Permission Specification</a></h2>
-The <b>-p</b> option takes a comma- or colon-separated
-list of either octal numeric permission bits or symbolic representations
-of permission bit operations. The symbolic representation is based on that
-of the  <i><b>chmod</b>(1)</i> command. setuid, setgid and sticky bits are ignored. 
-<p> This
-program extends the chmod symbolic representation with the following operands:
-
-<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but applies only to directories (not
-to executables).<br>
+The <b>-p</b> option takes a comma-
+or colon-separated list of either octal numeric permission bits or symbolic
+representations of permission bit operations. The symbolic representation
+is based on that of the  <i><b>chmod</b>(1)</i> command. setuid, setgid and sticky bits
+are ignored. 
+<p> This program extends the chmod symbolic representation with
+the following operands: 
+<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but applies
+only to directories (not to executables).<br>
  
 <p> &lsquo;<b>d</b>&rsquo; and &lsquo;<b>f</b>&rsquo; (left hand side)     Makes this directive only apply to directories
 (d) or files (f).<br>
