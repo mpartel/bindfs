@@ -1,6 +1,7 @@
 2019-04-29  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --forward-odirect. Bindfs now clears O_DIRECT by default (PR #74, thanks barp@!).
+	* Released 1.14.0
 
 2019-03-31  Martin Pärtel <martin dot partel at gmail dot com>
 
