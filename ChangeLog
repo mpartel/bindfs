@@ -1,3 +1,8 @@
+2019-06-26  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Resolve symlinks in readdir() so correct attributes are returned (issue #76).
+	* Released 1.14.1
+
 2019-04-29  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --forward-odirect. Bindfs now clears O_DIRECT by default (PR #74, thanks barp@!).
