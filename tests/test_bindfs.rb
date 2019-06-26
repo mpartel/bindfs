@@ -635,6 +635,22 @@ nonroot_testenv("--resolve-symlinks --resolved-symlink-deletion=target-first -p 
   end
 end
 
+testenv("--resolve-symlinks", :title => "resolving broken symlinks") do
+  Dir.chdir 'src' do
+    symlink('dir', 'dirlink')
+    symlink('dir/file', 'filelink')
+  end
+
+  assert { File.lstat('mnt/dirlink').symlink? }
+  assert { File.lstat('mnt/filelink').symlink? }
+
+  File.unlink('mnt/filelink')
+  assert { !File.exist?('mnt/filelink') }
+
+  File.unlink('mnt/dirlink')
+  assert { !File.exist?('mnt/dirlink') }
+end
+
 # Issue #28 reproduction attempt.
 testenv("", :title => "many files in a directory") do
   mkdir('src/dir')

@@ -188,10 +188,16 @@ void grow_memory_block(struct memory_block *a, int amount)
     a->size += amount;
     if (a->size >= a->capacity) {
         new_cap = a->capacity;
-        if (new_cap == 0) {
-            new_cap = 8;
-        } else {
-            new_cap *= 2;
+        while (new_cap < a->size) {
+            if (new_cap == 0) {
+                new_cap = 8;
+            } else {
+                new_cap *= 2;
+            }
+            if (new_cap < 0) {  // Overflow
+                fprintf(stderr, "Memory block too large.");
+                abort();
+            }
         }
         a->ptr = (char *)realloc(a->ptr, new_cap);
         a->capacity = new_cap;

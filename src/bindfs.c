@@ -1,5 +1,5 @@
 /*
-    Copyright 2006,2007,2008,2009,2010,2012 Martin Pärtel <martin.partel@gmail.com>
+    Copyright 2006,2007,2008,2009,2010,2012,2019 Martin Pärtel <martin.partel@gmail.com>
 
     This file is part of bindfs.
 
@@ -615,7 +615,6 @@ static size_t round_up_buffer_size_for_direct_io(size_t size)
 }
 #endif
 
-
 static void *bindfs_init()
 {
     assert(settings.permchain != NULL);
@@ -715,7 +714,6 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
 
     long pc_ret = pathconf(real_path, _PC_NAME_MAX);
-    free(real_path);
     if (pc_ret < 0) {
         DPRINTF("pathconf failed: %s (%d)", strerror(errno), errno);
         pc_ret = NAME_MAX;
@@ -724,6 +722,17 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         // (see issue #54).
         pc_ret = NAME_MAX;
     }
+
+    // Path buffer for resolving symlinks
+    struct memory_block resolve_buf = MEMORY_BLOCK_INITIALIZER;
+    if (settings.resolve_symlinks) {
+        int len = strlen(real_path);
+        append_to_memory_block(&resolve_buf, real_path, len + 1);
+        resolve_buf.ptr[len] = '/';
+    }
+
+    free(real_path);
+    real_path = NULL;
 
     int result = 0;
     while (1) {
@@ -741,6 +750,21 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         st.st_ino = de->d_ino;
         st.st_mode = de->d_type << 12;
 
+        if (settings.resolve_symlinks && (st.st_mode & S_IFLNK) == S_IFLNK) {
+            int file_len = strlen(de->d_name) + 1;  // (include null terminator)
+            append_to_memory_block(&resolve_buf, de->d_name, file_len);
+            char *resolved = realpath(resolve_buf.ptr, NULL);
+            resolve_buf.size -= file_len;
+
+            if (resolved) {
+                if (lstat(resolved, &st) == -1) {
+                    result = -errno;
+                    break;
+                }
+                free(resolved);
+            }
+        }
+
         // See issue #28 for why we pass a 0 offset to `filler` and ignore
         // `offset`.
         //
@@ -752,6 +776,10 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             result = errno != 0 ? -errno : -EIO;
             break;
         }
+    }
+
+    if (settings.resolve_symlinks) {
+        free_memory_block(&resolve_buf);
     }
 
     closedir(dp);
