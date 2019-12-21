@@ -243,37 +243,21 @@ static int gid_cache_gid_searchcmp(const void *key, const void *entry)
 
 int user_uid(const char *username, uid_t *ret)
 {
-    struct passwd pwbuf, *pwbufp = NULL;
-    char *buf;
-    size_t buflen;
-    int res;
-
-    uid_t uid;
-    char *endptr;
-
     /* Check whether the string is a numerical UID */
-    uid = strtol(username, &endptr, 10);
+    char *endptr;
+    uid_t uid = strtol(username, &endptr, 10);
     if (*endptr == '\0') {
-        buflen = 1024;
-        buf = malloc(buflen);
-        res = getpwuid_r(uid, &pwbuf, buf, buflen, &pwbufp);
-        if (res != 0) {
-            if (res != ERANGE) { /* don't care if buffer was too small */
-                free(buf);
-                return 0;
-            }
-        }
-        free(buf);
         *ret = uid;
         return 1;
     }
 
-    /* Process user name */
-    buflen = 1024;
-    buf = malloc(buflen);
+    /* Handle as textual user name */
+    size_t buflen = 1024;
+    char *buf = malloc(buflen);
 
-    res = getpwnam_r(username, &pwbuf, buf, buflen, &pwbufp);
-    while(res == ERANGE) {
+    struct passwd pwbuf, *pwbufp = NULL;
+    int res = getpwnam_r(username, &pwbuf, buf, buflen, &pwbufp);
+    while (res == ERANGE) {
         buflen *= 2;
         buf = realloc(buf, buflen);
         res = getpwnam_r(username, &pwbuf, buf, buflen, &pwbufp);
@@ -292,37 +276,21 @@ int user_uid(const char *username, uid_t *ret)
 
 int group_gid(const char *groupname, gid_t *ret)
 {
-    struct group gbuf, *gbufp = NULL;
-    char *buf;
-    size_t buflen;
-    int res;
-
-    gid_t gid;
-    char *endptr;
-
     /* Check whether the string is a numerical GID */
-    gid = strtol(groupname, &endptr, 10);
+    char *endptr;
+    gid_t gid = strtol(groupname, &endptr, 10);
     if (*endptr == '\0') {
-        buflen = 1024;
-        buf = malloc(buflen);
-        res = getgrgid_r(gid, &gbuf, buf, buflen, &gbufp);
-        if (res != 0) {
-            if (res != ERANGE) { /* don't care if buffer was too small */
-                free(buf);
-                return 0;
-            }
-        }
-        free(buf);
         *ret = gid;
         return 1;
     }
 
-    /* Process group name */
-    buflen = 1024;
-    buf = malloc(buflen);
+    /* Handle as textual group name */
+    size_t buflen = 1024;
+    char *buf = malloc(buflen);
 
-    res = getgrnam_r(groupname, &gbuf, buf, buflen, &gbufp);
-    while(res == ERANGE) {
+    struct group gbuf, *gbufp = NULL;
+    int res = getgrnam_r(groupname, &gbuf, buf, buflen, &gbufp);
+    while (res == ERANGE) {
         buflen *= 2;
         buf = realloc(buf, buflen);
         res = getgrnam_r(groupname, &gbuf, buf, buflen, &gbufp);

@@ -108,7 +108,7 @@ end
 threads.each(&:join)
 
 if errors.empty?
-  puts "OK"
+  puts "All OK"
 else
   unless errors.empty?
     puts
@@ -119,3 +119,4 @@ else
     puts
   end
 end
+

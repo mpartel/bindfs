@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-#   Copyright 2006,2007,2008,2009,2010,2012 Martin Pärtel <martin.partel@gmail.com>
+#   Copyright 2006,2007,2008,2009,2010,2012,2019 Martin Pärtel <martin.partel@gmail.com>
 #
 #   This file is part of bindfs.
 #
@@ -64,6 +64,20 @@ testenv("-u nobody -g #{nobody_group}") do
 
     assert { File.stat('mnt/file').uid == nobody_uid }
     assert { File.stat('mnt/file').gid == nobody_gid }
+end
+
+testenv("-u #{nobody_uid} -g #{nobody_gid}", :title => "numeric UID and GID") do
+    touch('src/file')
+
+    assert { File.stat('mnt/file').uid == nobody_uid }
+    assert { File.stat('mnt/file').gid == nobody_gid }
+end
+
+testenv("-u 55544 -g 55566", :title => "nonexistent UID and GID") do
+    touch('src/file')
+
+    assert { File.stat('mnt/file').uid == 55544 }
+    assert { File.stat('mnt/file').gid == 55566 }
 end
 
 testenv("-p 0600:u+D") do
