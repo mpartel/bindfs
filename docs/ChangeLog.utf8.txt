@@ -1,3 +1,8 @@
+2019-12-21  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* No longer check that numeric UIDs and GIDs exist, since /etc/passwd etc are not always available (issue #79).
+	* Released 1.14.2
+
 2019-06-26  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Resolve symlinks in readdir() so correct attributes are returned (issue #76).
