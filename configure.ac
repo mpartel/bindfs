@@ -25,7 +25,7 @@ fi
 AM_CONDITIONAL(BUILD_OS_IS_DARWIN, [test x"$build_os" = darwin])
 
 my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=26"
-my_CFLAGS="-Wall"
+my_CFLAGS="-Wall -fno-common"
 my_LDFLAGS="-pthread"
 AC_SUBST([my_CPPFLAGS])
 AC_SUBST([my_CFLAGS])
