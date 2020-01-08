@@ -1,3 +1,8 @@
+2020-01-08  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed build with -fno-common, which is the default in GCC 10 (PR #81, thanks jengelh@!).
+	* Released 1.14.3
+
 2019-12-21  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* No longer check that numeric UIDs and GIDs exist, since /etc/passwd etc are not always available (issue #79).
