@@ -26,7 +26,7 @@
 /* When we are idle, we allow some time to be "credited" to the next writer.
  * Otherwise, the short pause between requests would "go to waste", lowering
  * the throughput when there is only one requester. */
-const double rate_limiter_idle_credit;
+extern const double rate_limiter_idle_credit;
 
 typedef struct RateLimiter {
     double rate;  /* bytes / second */
