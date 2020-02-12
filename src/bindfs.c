@@ -2393,8 +2393,9 @@ int main(int argc, char *argv[])
     }
 
     /* If the mount source and destination directories are the same
-       then don't require that the directory be empty. */
-    if (strcmp(settings.mntsrc, settings.mntdest) == 0)
+       then don't require that the directory be empty.
+       FUSE 3 removed support for -ononempty, allowing nonempty directories by default */
+    if (strcmp(settings.mntsrc, settings.mntdest) == 0 && fuse_version() < 30)
         fuse_opt_add_arg(&args, "-ononempty");
 
     /* Open mount source for chrooting in bindfs_init */

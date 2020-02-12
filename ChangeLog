@@ -1,3 +1,7 @@
+2020-02-12  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Stop adding `-ononempty` when mounting a directory on itself with FUSE 3.
+
 2020-01-08  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed build with -fno-common, which is the default in GCC 10 (PR #81, thanks jengelh@!).
