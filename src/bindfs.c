@@ -1533,6 +1533,7 @@ static void print_usage(const char *progname)
            "Information:\n"
            "  -h      --help            Print this and exit.\n"
            "  -V      --version         Print version number and exit.\n"
+           "          --fuse-version    Print version of FUSE library.\n"
            "\n"
            "File ownership:\n"
            "  -u      --force-user=...  Set file owner.\n"
@@ -1618,6 +1619,7 @@ enum OptionKey {
     OPTKEY_UNKNOWN = -1,
     OPTKEY_HELP,
     OPTKEY_VERSION,
+    OPTKEY_FUSE_VERSION,
     OPTKEY_CREATE_AS_USER,
     OPTKEY_CREATE_AS_MOUNTER,
     OPTKEY_CHOWN_NORMAL,
@@ -1656,6 +1658,11 @@ static int process_option(void *data, const char *arg, int key,
 
     case OPTKEY_VERSION:
         printf("%s\n", PACKAGE_STRING);
+        exit(0);
+
+    case OPTKEY_FUSE_VERSION:
+        printf("libfuse interface compile-time version %d.%d\n", FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION);
+        printf("libfuse interface linked version %d.%d\n", fuse_version() / 10, fuse_version() % 10);
         exit(0);
 
     case OPTKEY_CREATE_AS_USER:
@@ -2042,6 +2049,7 @@ int main(int argc, char *argv[])
     static const struct fuse_opt options[] = {
         OPT2("-h", "--help", OPTKEY_HELP),
         OPT2("-V", "--version", OPTKEY_VERSION),
+        FUSE_OPT_KEY("--fuse-version", OPTKEY_FUSE_VERSION),
 
         OPT_OFFSET3("-u %s", "--force-user=%s", "force-user=%s", user, -1),
         OPT_OFFSET3("-g %s", "--force-group=%s", "force-group=%s", group, -1),
