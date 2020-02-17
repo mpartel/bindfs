@@ -1,6 +1,5 @@
 2020-02-12  Martin Pärtel <martin dot partel at gmail dot com>
 
-	* Stop adding `-ononempty` when mounting a directory on itself with FUSE 3.
 	* Added --fuse-version.
 
 2020-01-08  Martin Pärtel <martin dot partel at gmail dot com>
