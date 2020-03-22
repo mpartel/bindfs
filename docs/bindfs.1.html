@@ -368,31 +368,34 @@ files.
 
 <dt><b>-V, --version</b> </dt>
 <dd>Displays version information and exits. 
+<p> <b>--fuse-version</b> Displays
+the version of the FUSE library interface that was seen at compile-time,
+as well as the version that bindfs currently runs with. 
 <p> </dd>
 
-<dt><b>--no-allow-other, -o no-allow-other</b>
+<dt><b>--no-allow-other, -o
+no-allow-other</b> </dt>
+<dd>Does not add <b>-o allow_other</b> to FUSE options. This causes the
+mount to be accessible only by the current user. 
+<p> (The deprecated shorthand
+<b>-n</b> is also still accepted.) 
+<p> </dd>
+
+<dt><b>--realistic-permissions, -o realistic-permissions</b>
 </dt>
-<dd>Does not add <b>-o allow_other</b> to FUSE options. This causes the mount to be
-accessible only by the current user. 
-<p> (The deprecated shorthand <b>-n</b> is also
-still accepted.) 
+<dd>Hides read/write/execute permissions for a mirrored file when the mounter
+doesn&rsquo;t have read/write/execute access to the underlying file. Useless when
+mounting as root, since root will always have full access. 
+<p> (Prior to version
+1.10 this option was the default behavior. I felt it violated the principle
+of least surprise badly enough to warrant a small break in backwards-compatibility.)
+
 <p> </dd>
 
-<dt><b>--realistic-permissions, -o realistic-permissions</b> </dt>
-<dd>Hides read/write/execute
-permissions for a mirrored file when the mounter doesn&rsquo;t have read/write/execute
-access to the underlying file. Useless when mounting as root, since root
-will always have full access. 
-<p> (Prior to version 1.10 this option was the
-default behavior. I felt it violated the principle of least surprise badly
-enough to warrant a small break in backwards-compatibility.) 
-<p> </dd>
-
-<dt><b>--ctime-from-mtime,
--o ctime-from-mtime</b> </dt>
-<dd>Recall that a unix file has three standard timestamps:
-<b>atime</b> (last access i.e. read time), <b>mtime</b> (last content modification time)
-<b>ctime</b> (last content or metadata (inode) change time) 
+<dt><b>--ctime-from-mtime, -o ctime-from-mtime</b> </dt>
+<dd>Recall that a unix file has three standard
+timestamps: <b>atime</b> (last access i.e. read time), <b>mtime</b> (last content modification
+time) <b>ctime</b> (last content or metadata (inode) change time) 
 <p> With this option,
 the ctime of each file and directory is read from its mtime. In other words,
 only content modifications (as opposed to metadata changes) will be reflected

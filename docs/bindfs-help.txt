@@ -3,6 +3,7 @@ Usage: bindfs [options] dir mountpoint
 Information:
   -h      --help            Print this and exit.
   -V      --version         Print version number and exit.
+          --fuse-version    Print version of FUSE library.
 
 File ownership:
   -u      --force-user=...  Set file owner.
