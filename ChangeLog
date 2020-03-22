@@ -1,3 +1,8 @@
+2020-03-22  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Defined _DARWIN_BETTER_REALPATH to get a non-broken realpath() on Catalina (issue #83).
+	* Released 1.14.4
+
 2020-02-12  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --fuse-version.
