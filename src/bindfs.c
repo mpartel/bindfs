@@ -42,6 +42,9 @@
 /* The new non-deprecated version of _BSD_SOURCE */
 #define _DEFAULT_SOURCE
 
+/* Fix MacOS realpath() broken around Catalina (#83) */
+#define _DARWIN_BETTER_REALPATH
+
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
