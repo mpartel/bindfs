@@ -1,3 +1,7 @@
+2020-04-13  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed tests with Ruby 2.7.1 or newer.
+
 2020-03-22  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Defined _DARWIN_BETTER_REALPATH to get a non-broken realpath() on Catalina (issue #83).

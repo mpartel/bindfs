@@ -317,8 +317,11 @@ end
 testenv("--rename-deny") do
     touch('src/file')
     mkdir('src/dir')
-    assert_exception(EPERM) { mv('mnt/file', 'mnt/file2') }
-    assert_exception(EPERM) { mv('mnt/dir', 'mnt/dir2') }
+    # We don't use FileUtils.mv because it was changed in Ruby 2.7.1 to
+    # fall back to copying on EPERM:
+    # https://github.com/ruby/ruby/commit/7d3d8e79fe9cc9f21cd4341f0a6fb2e6306688fd
+    assert_exception(EPERM) { File.rename('mnt/file', 'mnt/file2') }
+    assert_exception(EPERM) { File.rename('mnt/dir', 'mnt/dir2') }
 end
 
 root_testenv("--map=nobody/root:@#{nobody_group}/@#{root_group}") do
