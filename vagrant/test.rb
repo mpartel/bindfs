@@ -35,7 +35,7 @@ end
 
 dirs = Dir.glob('*/Vagrantfile').map { |path| File.dirname(path) }
 unless specifically_selected_vms.empty?
-  dirs = dirs.select { |dir| ARGV.include?(dir) }
+  dirs = dirs.select { |dir| specifically_selected_vms.include?(dir) }
 end
 
 def with_retries(n, options = {}, &block)
