@@ -114,7 +114,11 @@ static int rebuild_uid_cache()
         if (pw == NULL) {
             if (errno == 0) {
                 break;
+            } else if (errno == ENOENT) {  // We might have gotten some entries. This happens at least on the CentOS 8 Vagrant image (tested 2020-04-13).
+                fprintf(stderr, "Got ENOENT while rebuilding uid cache. The cache may be incomplete.\n");
+                break;
             } else {
+                perror("Failed to rebuild uid cache");
                 goto error;
             }
         }
@@ -136,7 +140,6 @@ static int rebuild_uid_cache()
 error:
     endpwent();
     clear_uid_cache();
-    DPRINTF("Failed to rebuild uid cache");
     return 0;
 }
 
@@ -160,7 +163,11 @@ static int rebuild_gid_cache()
         if (gr == NULL) {
             if (errno == 0) {
                 break;
+            } else if (errno == ENOENT) {  // We might have gotten some entries. This happens at least on the CentOS 8 Vagrant image (tested 2020-04-13).
+                fprintf(stderr, "Got ENOENT while rebuilding gid cache. The cache may be incomplete.\n");
+                break;
             } else {
+                perror("Failed to rebuild gid cache");
                 goto error;
             }
         }
@@ -194,7 +201,6 @@ static int rebuild_gid_cache()
 error:
     endgrent();
     clear_gid_cache();
-    DPRINTF("Failed to rebuild uid cache");
     return 0;
 }
 
