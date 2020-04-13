@@ -106,6 +106,8 @@ static int rebuild_uid_cache()
 
     uid_cache_size = 0;
 
+    setpwent();
+
     while (1) {
         errno = 0;
         pw = getpwent();
@@ -149,6 +151,8 @@ static int rebuild_gid_cache()
     gid_cache_size = 0;
 
     qsort(uid_cache, uid_cache_size, sizeof(struct uid_cache_entry), uid_cache_name_sortcmp);
+
+    setgrent();
 
     while (1) {
         errno = 0;
