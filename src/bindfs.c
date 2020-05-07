@@ -1546,6 +1546,8 @@ static void print_usage(const char *progname)
            "  -M      --mirror-only=... Like --mirror but disallow access for\n"
            "                            all other users.\n"
            " --map=user1/user2:...      Let user2 see files of user1 as his own.\n"
+           " --map-passwd=<passwdfile   Load uid mapping from <passwdfile>.\n"
+           " --map-group=<groupfile>    Load gid mapping from <groupfile>.\n"
            " --uid-offset=...           Set file uid = uid + offset.\n"
            " --gid-offset=...           Set file gid = gid + offset.\n"
            "\n"
@@ -1843,6 +1845,102 @@ static int parse_mirrored_users(char* mirror)
     return 1;
 }
 
+/**
+ * Reads a passwd or group file (like /etc/passwd and /etc/group) and
+ * adds all entries to the map. Useful for restoring backups
+ * where UIDs or GIDs differ.
+ **/
+static int parse_map_file(UserMap *map, UserMap *reverse_map, char *file, int as_gid)
+{
+    int result = 0;
+
+    FILE *fp = NULL;
+    size_t len = 0;
+    ssize_t read;
+    int lineno = 0;
+    char *column = NULL;
+    char *line = NULL;
+
+    uid_t uid_from, uid_to;
+    UsermapStatus status;
+
+    // Toggle between UID (passwd) and GID (group)
+    const int (*value_to_id)(const char *username, uid_t *ret);
+    const UsermapStatus (*usermap_add)(UserMap *map, uid_t from, uid_t to);
+    const char *label_name, *label_id;
+    if (as_gid) {
+        value_to_id = &group_gid;
+        usermap_add = &usermap_add_gid;
+        label_name = "group";
+        label_id = "GID";
+    } else {
+        value_to_id = &user_uid;
+        usermap_add = &usermap_add_uid;
+        label_name = "user";
+        label_id = "UID";
+    }
+
+    fp = fopen(file, "r");
+    if (fp == NULL) {
+        fprintf(stderr, "Failed to open file: %s\n", file);
+        goto exit;
+    }
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+        lineno++;
+        /**
+         * NAME::[GU]ID(:....)
+         * NAME = TO
+         * [GU]ID = FROM
+         **/
+        column = strtok(line, ":");
+        if (column == NULL) {
+            fprintf(stderr, "Unexpected end of entry in %s on line %d\n", file, lineno);
+            goto exit;
+        }
+        if (!value_to_id(column, &uid_to)) {
+            fprintf(stderr, "Warning: Ignoring invalid %s in %s on line %d: %s\n\n", label_name, file, lineno, column);
+            continue;
+        }
+
+        column = strtok(NULL, ":");
+        if (column != NULL) {
+            // Skip second column
+            column = strtok(NULL, ":");
+        }
+        if (column == NULL) {
+            fprintf(stderr, "Unexpected end of entry in %s on line %d\n", file, lineno);
+            goto exit;
+        }
+        if (!value_to_id(column, &uid_from)) {
+            fprintf(stderr, "Warning: Ignoring invalid %s in %s on line %d: %s\n\n", label_id, file, lineno, column);
+            continue;
+        }
+
+        status = usermap_add(map, uid_from, uid_to);
+        if (status != 0) {
+            fprintf(stderr, "%s\n", usermap_errorstr(status));
+            goto exit;
+        }
+        printf("%d -> %d\n", uid_from, uid_to);
+        status = usermap_add(reverse_map, uid_to, uid_from);
+        if (status != 0) {
+            fprintf(stderr, "%s\n", usermap_errorstr(status));
+            goto exit;
+        }
+    }
+
+    result = 1;
+exit:
+    if (line) {
+        free(line);
+    }
+    if (fp != NULL) {
+        fclose(fp);
+    }
+    return result;
+}
+
 static int parse_user_map(UserMap *map, UserMap *reverse_map, char *spec)
 {
     char *p = spec;
@@ -2025,6 +2123,8 @@ int main(int argc, char *argv[])
         char *mirror;
         char *mirror_only;
         char *map;
+        char *map_passwd;
+        char *map_group;
         char *read_rate;
         char *write_rate;
         char *create_for_user;
@@ -2064,6 +2164,8 @@ int main(int argc, char *argv[])
         OPT_OFFSET3("-m %s", "--mirror=%s", "mirror=%s", mirror, -1),
         OPT_OFFSET3("-M %s", "--mirror-only=%s", "mirror-only=%s", mirror_only, -1),
         OPT_OFFSET2("--map=%s", "map=%s", map, -1),
+        OPT_OFFSET2("--map-passwd=%s", "map-passwd=%s", map_passwd, -1),
+        OPT_OFFSET2("--map-group=%s", "map-group=%s", map_group, -1),
         OPT_OFFSET3("-n", "--no-allow-other", "no-allow-other", no_allow_other, -1),
 
         OPT_OFFSET2("--read-rate=%s", "read-rate=%s", read_rate, -1),
@@ -2227,7 +2329,31 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* Parse usermap */
+    /* Parse passwd */
+    if (od.map_passwd) {
+        if (getuid() != 0) {
+            fprintf(stderr, "Error: You need to be root to use --map-passwd !\n");
+            return 1;
+        }
+        if (!parse_map_file(settings.usermap, settings.usermap_reverse, od.map_passwd, 0)) {
+            /* parse_map_file printed an error */
+            return 1;
+        }
+    }
+
+    /* Parse group */
+    if (od.map_group) {
+        if (getuid() != 0) {
+            fprintf(stderr, "Error: You need to be root to use --map-group !\n");
+            return 1;
+        }
+        if (!parse_map_file(settings.usermap, settings.usermap_reverse, od.map_group, 1)) {
+            /* parse_map_file printed an error */
+            return 1;
+        }
+    }
+
+    /* Parse usermap (may overwrite values from --map-passwd and --map-group) */
     if (od.map) {
         if (getuid() != 0) {
             fprintf(stderr, "Error: You need to be root to use --map !\n");
