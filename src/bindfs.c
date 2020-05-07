@@ -1922,7 +1922,6 @@ static int parse_map_file(UserMap *map, UserMap *reverse_map, char *file, int as
             fprintf(stderr, "%s\n", usermap_errorstr(status));
             goto exit;
         }
-        printf("%d -> %d\n", uid_from, uid_to);
         status = usermap_add(reverse_map, uid_to, uid_from);
         if (status != 0) {
             fprintf(stderr, "%s\n", usermap_errorstr(status));
