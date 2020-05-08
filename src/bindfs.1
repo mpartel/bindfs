@@ -68,6 +68,22 @@ the corresponding behavior of this option.
 Requires mounting as root.
 
 .TP
+.B \-\-map-passwd=\fI<passwdfile>\fP, \-o map-passwd=...
+.PD 0
+.TP
+.B \-\-map-group=\fI<groupfile>\fP, \-o map-group=...
+Like \fB--map=...\fP, but reads the UID/GID mapping from passwd and group
+files (like \fI/etc/passwd\fP and \fI/etc/group\fP). Helpful to restore
+system backups where UIDs/GIDs differ.
+
+Example usage:
+
+bindfs --map-passwd=/mnt/orig/etc/passwd \\ --map-passwd=/mnt/orig/etc/group 
+    /mnt/orig /mnt/mapped\fP
+
+Requires mounting as root.
+
+.TP
 .B \-\-uid\-offset=..., \-o uid\-offset=...
 Works like \-\-map, but adds the given number to all file owner user IDs.
 For instance, \fB--uid-offset=100000\fP causes a file owned by user \fI123\fP
