@@ -1546,7 +1546,7 @@ static void print_usage(const char *progname)
            "  -M      --mirror-only=... Like --mirror but disallow access for\n"
            "                            all other users.\n"
            " --map=user1/user2:...      Let user2 see files of user1 as his own.\n"
-           " --map-passwd=<passwdfile   Load uid mapping from <passwdfile>.\n"
+           " --map-passwd=<passwdfile>  Load uid mapping from <passwdfile>.\n"
            " --map-group=<groupfile>    Load gid mapping from <groupfile>.\n"
            " --uid-offset=...           Set file uid = uid + offset.\n"
            " --gid-offset=...           Set file gid = gid + offset.\n"
