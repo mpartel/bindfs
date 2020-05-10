@@ -13,6 +13,8 @@ File ownership:
   -M      --mirror-only=... Like --mirror but disallow access for
                             all other users.
  --map=user1/user2:...      Let user2 see files of user1 as his own.
+ --map-passwd=<passwdfile>  Load uid mapping from <passwdfile>.
+ --map-group=<groupfile>    Load gid mapping from <groupfile>.
  --uid-offset=...           Set file uid = uid + offset.
  --gid-offset=...           Set file gid = gid + offset.
 

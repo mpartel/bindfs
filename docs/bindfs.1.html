@@ -81,187 +81,202 @@ once on the left and once on the right of a slash in the list of mappings.
 Currently, the options <b>--force-user</b>, <b>--force-group</b>, <b>--mirror</b>, <b>--create-for-*</b>, <b>--chown-*</b>
 and <b>--chgrp-*</b> override the corresponding behavior of this option. 
 <p> Requires
-mounting as root. 
+mounting as root. </dd>
+
+<dt><b>--map-passwd=<i>&lt;passwdfile&gt;</i>, -o map-passwd=<i>&lt;passwdfile&gt;</i></b> </dt>
+<dd> </dd>
+
+<dt><b>--map-group=<i>&lt;groupfile&gt;</i>,
+-o map-group=<i>&lt;groupfile&gt;</i></b> </dt>
+<dd>Like <b>--map=...</b>, but reads the UID/GID mapping from passwd
+and group files (like <i>/etc/passwd</i> and <i>/etc/group</i>). Helpful to restore system
+backups where UIDs/GIDs differ. 
+<p> Example usage: 
+<p>     bindfs --map-passwd=/mnt/orig/etc/passwd
+\ <br>
+        --map-passwd=/mnt/orig/etc/group \ <br>
+        /mnt/orig /mnt/mapped 
+<p> Requires mounting as root. 
 <p> </dd>
 
-<dt><b>--uid-offset=..., -o uid-offset=...</b> </dt>
-<dd>Works like --map, but adds the
-given number to all file owner user IDs. For instance, <b>--uid-offset=100000</b>
-causes a file owned by user <i>123</i> to be shown as owned by user <i>100123</i>. 
-<p> For
-now, this option cannot be used together with --map. Please file an issue
-with the desired semantics if you have a case for using them together. 
-<p>
-Requires mounting as root. 
+<dt><b>--uid-offset=..., -o
+uid-offset=...</b> </dt>
+<dd>Works like --map, but adds the given number to all file owner
+user IDs. For instance, <b>--uid-offset=100000</b> causes a file owned by user <i>123</i>
+to be shown as owned by user <i>100123</i>. 
+<p> For now, this option cannot be used
+together with --map. Please file an issue with the desired semantics if you
+have a case for using them together. 
+<p> Requires mounting as root. 
 <p> </dd>
 
-<dt><b>--gid-offset=..., -o gid-offset=...</b> </dt>
-<dd>Works exactly like
-<b>--uid-offset</b> but for groups. 
+<dt><b>--gid-offset=...,
+-o gid-offset=...</b> </dt>
+<dd>Works exactly like <b>--uid-offset</b> but for groups. 
 <p> 
 <p> </dd>
 </dl>
 
-<h2><a name='sect4' href='#toc4'>File Creation Policy</a></h2>
-New files and directories
-are created so they are owned by the mounter. bindfs can let this happen
-(the default for normal users), or it can try to change the owner to the
-uid/gid of the process that wants to create the file (the default for root).
- It is also possible to have bindfs try to change the owner to a particular
-user or group. 
+<h2><a name='sect4' href='#toc4'>File Creation
+Policy</a></h2>
+New files and directories are created so they are owned by the mounter.
+bindfs can let this happen (the default for normal users), or it can try
+to change the owner to the uid/gid of the process that wants to create
+the file (the default for root).  It is also possible to have bindfs try
+to change the owner to a particular user or group. 
 <p> 
 <dl>
 
-<dt><b>--create-as-user, -o create-as-user</b> </dt>
-<dd>Tries to change the owner and
-group of new files and directories to the uid and gid of the caller. This
-can work only if the mounter is root. It is also the default behavior (mimicing
-mount --bind) if the mounter is root. 
-<p> </dd>
-
-<dt><b>--create-as-mounter, -o create-as-mounter</b>
+<dt><b>--create-as-user, -o create-as-user</b>
 </dt>
-<dd>All new files and directories will be owned by the mounter. This is the
-default behavior for non-root mounters. 
+<dd>Tries to change the owner and group of new files and directories to the
+uid and gid of the caller. This can work only if the mounter is root. It
+is also the default behavior (mimicing mount --bind) if the mounter is root.
+
 <p> </dd>
 
-<dt><b>--create-for-user=<i>user</i>, -o create-for-user=...</b>
+<dt><b>--create-as-mounter, -o create-as-mounter</b> </dt>
+<dd>All new files and directories will
+be owned by the mounter. This is the default behavior for non-root mounters.
+
+<p> </dd>
+
+<dt><b>--create-for-user=<i>user</i>, -o create-for-user=...</b> </dt>
+<dd>Tries to change the owner of new
+files and directories to the user specified here.  This can work only if
+the mounter is root.  This option overrides the --create-as-user and --create-as-mounter
+options. 
+<p> </dd>
+
+<dt><b>--create-for-group=<i>group</i>, -o create-for-group=...</b> </dt>
+<dd>Tries to change the owning
+group of new files and directories to the group specified here.  This can
+work only if the mounter is root.  This option overrides the --create-as-user
+and --create-as-mounter options. 
+<p> </dd>
+
+<dt><b>--create-with-perms=<i>permissions</i>, -o create-with-perms=...</b>
 </dt>
-<dd>Tries to change the owner of new files and directories to the user specified
-here.  This can work only if the mounter is root.  This option overrides
-the --create-as-user and --create-as-mounter options. 
-<p> </dd>
-
-<dt><b>--create-for-group=<i>group</i>, -o create-for-group=...</b>
-</dt>
-<dd>Tries to change the owning group of new files and directories to the group
-specified here.  This can work only if the mounter is root.  This option
-overrides the --create-as-user and --create-as-mounter options. 
-<p> </dd>
-
-<dt><b>--create-with-perms=<i>permissions</i>,
--o create-with-perms=...</b> </dt>
-<dd>Works like --perms but is applied to the permission bits
-of new files get in the source directory. Normally the permissions of new
-files depend on the creating process&rsquo;s preferences and umask. This option
-can be used to modify those permissions or override them completely. See
-<b>PERMISSION SPECIFICATION</b> below for details. 
+<dd>Works like --perms but is applied to the permission bits of new files get
+in the source directory. Normally the permissions of new files depend on
+the creating process&rsquo;s preferences and umask. This option can be used to
+modify those permissions or override them completely. See <b>PERMISSION SPECIFICATION</b>
+below for details. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect5' href='#toc5'>Chown/Chgrp Policy</a></h2>
-The behaviour
-on chown/chgrp calls can be changed. By default they are passed through
-to the source directory even if bindfs is set to show a fake owner/group.
-A chown/chgrp call will only succeed if the user has enough mirrored permissions
-to chmod the mirrored file AND the mounter has enough permissions to chmod
-the real file. 
+The behaviour on chown/chgrp calls
+can be changed. By default they are passed through to the source directory
+even if bindfs is set to show a fake owner/group. A chown/chgrp call will
+only succeed if the user has enough mirrored permissions to chmod the mirrored
+file AND the mounter has enough permissions to chmod the real file. 
 <p> 
 <dl>
 
-<dt><b>--chown-normal, -o chown-normal</b> </dt>
-<dd>Tries to chown the underlying
-file. This is the default. 
+<dt><b>--chown-normal,
+-o chown-normal</b> </dt>
+<dd>Tries to chown the underlying file. This is the default. 
 <p> </dd>
 
-<dt><b>--chown-ignore, -o chown-ignore</b> </dt>
-<dd>Lets chown succeed
-(if the user has enough mirrored permissions) but actually does nothing.
-A combined chown/chgrp is effectively turned into a chgrp-only request. 
-<p>
-</dd>
+<dt><b>--chown-ignore,
+-o chown-ignore</b> </dt>
+<dd>Lets chown succeed (if the user has enough mirrored permissions)
+but actually does nothing. A combined chown/chgrp is effectively turned
+into a chgrp-only request. 
+<p> </dd>
 
 <dt><b>--chown-deny, -o chown-deny</b> </dt>
-<dd>Makes chown always fail with a &rsquo;permission denied&rsquo;
-error. A combined chown/chgrp request will fail as well. 
-<p> </dd>
-
-<dt><b>--chgrp-normal, -o
-chgrp-normal</b> </dt>
-<dd>Tries to chgrp the underlying file. This is the default. 
-<p> </dd>
-
-<dt><b>--chgrp-ignore,
--o chgrp-ignore</b> </dt>
-<dd>Lets chgrp succeed (if the user has enough mirrored permissions)
-but actually does nothing. A combined chown/chgrp is effectively turned
-into a chown-only request. 
-<p> </dd>
-
-<dt><b>--chgrp-deny, -o chgrp-deny</b> </dt>
-<dd>Makes chgrp always fail
+<dd>Makes chown always fail
 with a &rsquo;permission denied&rsquo; error. A combined chown/chgrp request will fail
 as well. 
+<p> </dd>
+
+<dt><b>--chgrp-normal, -o chgrp-normal</b> </dt>
+<dd>Tries to chgrp the underlying file.
+This is the default. 
+<p> </dd>
+
+<dt><b>--chgrp-ignore, -o chgrp-ignore</b> </dt>
+<dd>Lets chgrp succeed (if
+the user has enough mirrored permissions) but actually does nothing. A combined
+chown/chgrp is effectively turned into a chown-only request. 
+<p> </dd>
+
+<dt><b>--chgrp-deny,
+-o chgrp-deny</b> </dt>
+<dd>Makes chgrp always fail with a &rsquo;permission denied&rsquo; error. A combined
+chown/chgrp request will fail as well. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect6' href='#toc6'>Chmod Policy</a></h2>
-Chmod calls are forwarded to the source directory
-by default. This may cause unexpected behaviour if bindfs is altering permission
-bits. 
+Chmod calls are forwarded
+to the source directory by default. This may cause unexpected behaviour
+if bindfs is altering permission bits. 
 <p> 
 <dl>
 
 <dt><b>--chmod-normal, -o chmod-normal</b> </dt>
-<dd>Tries to chmod the underlying file. This
-will succeed if the user has the appropriate mirrored permissions to chmod
-the mirrored file AND the mounter has enough permissions to chmod the real
-file. This is the default (in order to behave like mount --bind by default).
-
+<dd>Tries
+to chmod the underlying file. This will succeed if the user has the appropriate
+mirrored permissions to chmod the mirrored file AND the mounter has enough
+permissions to chmod the real file. This is the default (in order to behave
+like mount --bind by default). 
 <p> </dd>
 
 <dt><b>--chmod-ignore, -o chmod-ignore</b> </dt>
-<dd>Lets chmod succeed (if the user has enough
-mirrored permissions) but actually does nothing. 
+<dd>Lets chmod succeed
+(if the user has enough mirrored permissions) but actually does nothing.
+
 <p> </dd>
 
-<dt><b>--chmod-deny, -o chmod-deny</b>
-</dt>
-<dd>Makes chmod always fail with a &rsquo;permission denied&rsquo; error. 
+<dt><b>--chmod-deny, -o chmod-deny</b> </dt>
+<dd>Makes chmod always fail with a &rsquo;permission denied&rsquo;
+error. 
 <p> </dd>
 
-<dt><b>--chmod-filter=<i>permissions</i>,
--o chmod-filter=...</b> </dt>
-<dd>Changes the permission bits of a chmod request before it
-is applied to the original file. Accepts the same permission syntax as --perms.
-See <b>PERMISSION SPECIFICATION</b> below for details. 
+<dt><b>--chmod-filter=<i>permissions</i>, -o chmod-filter=...</b> </dt>
+<dd>Changes the permission bits
+of a chmod request before it is applied to the original file. Accepts the
+same permission syntax as --perms. See <b>PERMISSION SPECIFICATION</b> below for
+details. 
 <p> </dd>
 
-<dt><b>--chmod-allow-x, -o chmod-allow-x</b>
-</dt>
-<dd>Allows setting and clearing the executable attribute on files (but not
-directories). When used with --chmod-ignore, chmods will only affect execute
-bits on files and changes to other bits are discarded. With --chmod-deny, all
-chmods that would change any bits except excecute bits on files will still
-fail with a &rsquo;permission denied&rsquo;. This option does nothing with --chmod-normal.
-
+<dt><b>--chmod-allow-x, -o chmod-allow-x</b> </dt>
+<dd>Allows setting and clearing the executable
+attribute on files (but not directories). When used with --chmod-ignore, chmods
+will only affect execute bits on files and changes to other bits are discarded.
+With --chmod-deny, all chmods that would change any bits except excecute bits
+on files will still fail with a &rsquo;permission denied&rsquo;. This option does nothing
+with --chmod-normal. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect7' href='#toc7'>Xattr Policy</a></h2>
-Extended attributes are mirrored by default, though not all
-underlying file systems support xattrs. 
+Extended attributes are mirrored by default,
+though not all underlying file systems support xattrs. 
 <p> 
 <dl>
 
-<dt><b>--xattr-none, -o xattr-none</b> </dt>
-<dd>Disable
-extended attributes altogether. All operations will return &rsquo;Operation not
-supported&rsquo;. 
+<dt><b>--xattr-none, -o xattr-none</b>
+</dt>
+<dd>Disable extended attributes altogether. All operations will return &rsquo;Operation
+not supported&rsquo;. 
 <p> </dd>
 
 <dt><b>--xattr-ro, -o xattr-ro</b> </dt>
 <dd>Let extended attributes be read-only. 
-<p> </dd>
+<p>
+</dd>
 
-<dt><b>--xattr-rw,
--o xattr-rw</b> </dt>
-<dd>Let extended attributes be read-write (the default). The read/write
-permissions are checked against the (possibly modified) file permissions
-inside the mount. 
+<dt><b>--xattr-rw, -o xattr-rw</b> </dt>
+<dd>Let extended attributes be read-write (the default). The
+read/write permissions are checked against the (possibly modified) file
+permissions inside the mount. 
 <p> 
 <p> </dd>
 </dl>
@@ -271,40 +286,40 @@ inside the mount.
 <p> 
 <dl>
 
-<dt><b>--delete-deny, -o delete-deny</b> </dt>
-<dd>Makes
-all file delete operations fail with a &rsquo;permission denied&rsquo;. By default, files
-can still be modified if they have write permission, and renamed if the
-directory has write permission. 
+<dt><b>--delete-deny, -o delete-deny</b>
+</dt>
+<dd>Makes all file delete operations fail with a &rsquo;permission denied&rsquo;. By default,
+files can still be modified if they have write permission, and renamed
+if the directory has write permission. 
 <p> </dd>
 
 <dt><b>--rename-deny, -o rename-deny</b> </dt>
-<dd>Makes all file
-rename/move operations <b>within the mountpoint</b> fail with a &rsquo;permission denied&rsquo;.
-Programs that move files out of a mountpoint do so by copying and deleting
-the original. 
+<dd>Makes all
+file rename/move operations <b>within the mountpoint</b> fail with a &rsquo;permission
+denied&rsquo;. Programs that move files out of a mountpoint do so by copying and
+deleting the original. 
 <p> </dd>
 </dl>
 
 <h2><a name='sect9' href='#toc9'>Rate Limits</a></h2>
-Reads and writes through the mount point can be
-throttled. Throttling works by sleeping the required amount of time on each
-read or write request. Throttling imposes one global limit on all readers/writers
-as opposed to a per-process or per-user limit. 
-<p> Currently, the implementation
-is not entirely fair. See <b>BUGS</b> below. 
+Reads and writes through the mount point
+can be throttled. Throttling works by sleeping the required amount of time
+on each read or write request. Throttling imposes one global limit on all
+readers/writers as opposed to a per-process or per-user limit. 
+<p> Currently,
+the implementation is not entirely fair. See <b>BUGS</b> below. 
 <p> 
 <dl>
 
-<dt><b>--read-rate=<i>N</i>, -o read-rate=<i>N</i></b> </dt>
-<dd>Allow at
-most <i>N</i> bytes per second to be read. <i>N</i> may have one of the following (1024-based)
-suffixes: <b>k</b>, <b>M</b>, <b>G</b>, <b>T</b>. 
+<dt><b>--read-rate=<i>N</i>, -o read-rate=<i>N</i></b>
+</dt>
+<dd>Allow at most <i>N</i> bytes per second to be read. <i>N</i> may have one of the following
+(1024-based) suffixes: <b>k</b>, <b>M</b>, <b>G</b>, <b>T</b>. 
 <p> </dd>
 
 <dt><b>--write-rate=<i>N</i>, -o write-rate=<i>N</i></b> </dt>
-<dd>Same as above, but for
-writes. 
+<dd>Same as above,
+but for writes. 
 <p> </dd>
 </dl>
 
@@ -314,8 +329,8 @@ writes.
 <dl>
 
 <dt><b>--hide-hard-links, -o hide-hard-links</b> </dt>
-<dd>Shows the hard link
-count of all files as 1. 
+<dd>Shows the
+hard link count of all files as 1. 
 <p> </dd>
 
 <dt><b>--resolve-symlinks, -o resolve-symlinks</b> </dt>
