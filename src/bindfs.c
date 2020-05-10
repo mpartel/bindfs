@@ -1845,11 +1845,11 @@ static int parse_mirrored_users(char* mirror)
     return 1;
 }
 
-/**
+/*
  * Reads a passwd or group file (like /etc/passwd and /etc/group) and
  * adds all entries to the map. Useful for restoring backups
  * where UIDs or GIDs differ.
- **/
+ */
 static int parse_map_file(UserMap *map, UserMap *reverse_map, char *file, int as_gid)
 {
     int result = 0;
@@ -1887,19 +1887,25 @@ static int parse_map_file(UserMap *map, UserMap *reverse_map, char *file, int as
     }
 
     while ((read = getline(&line, &len, fp)) != -1) {
+        // Remove newline in case someone builds a file with lines like 'a:b:123' by hand.
+        // If we left the newline, strtok would return "123\n" as the last token.
+        if (read > 0) {
+            line[read - 1] = '\0';
+        }
+
         lineno++;
-        /**
+        /*
          * NAME::[GU]ID(:....)
          * NAME = TO
          * [GU]ID = FROM
-         **/
+         */
         column = strtok(line, ":");
         if (column == NULL) {
             fprintf(stderr, "Unexpected end of entry in %s on line %d\n", file, lineno);
             goto exit;
         }
         if (!value_to_id(column, &uid_to)) {
-            fprintf(stderr, "Warning: Ignoring invalid %s in %s on line %d: %s\n\n", label_name, file, lineno, column);
+            fprintf(stderr, "Warning: Ignoring invalid %s in %s on line %d: '%s'\n", label_name, file, lineno, column);
             continue;
         }
 
@@ -1913,7 +1919,7 @@ static int parse_map_file(UserMap *map, UserMap *reverse_map, char *file, int as
             goto exit;
         }
         if (!value_to_id(column, &uid_from)) {
-            fprintf(stderr, "Warning: Ignoring invalid %s in %s on line %d: %s\n\n", label_id, file, lineno, column);
+            fprintf(stderr, "Warning: Ignoring invalid %s in %s on line %d: '%s'\n", label_id, file, lineno, column);
             continue;
         }
 

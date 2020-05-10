@@ -23,6 +23,7 @@ $LOAD_PATH << (ENV['srcdir'] || '.')
 
 require 'common.rb'
 require 'etc'
+require 'tempfile'
 
 include Errno
 
@@ -393,6 +394,26 @@ root_testenv("--map=0/1:@0/@1", :title => "--map and chown/chgrp") do
     assert { File.stat('src/file1').gid == 0 }
     assert { File.stat('mnt/file1').uid == 1 }
     assert { File.stat('mnt/file1').gid == 1 }
+end
+
+Tempfile.create('passwdfile') do |passwd_file|
+    Tempfile.create('groupfile') do |group_file|
+        passwd_file.puts("nobody:x:123:456:,,,:/tmp:/bin/false")
+        passwd_file.flush
+        group_file.puts("#{nobody_group}:x:789")
+        group_file.flush
+        root_testenv("--map-passwd=#{Shellwords.escape(passwd_file.path)} --map-group=#{Shellwords.escape(group_file.path)}") do
+            touch('src/file1')
+            chown(123, 789, 'src/file1')
+            assert { File.stat('mnt/file1').uid == nobody_uid }
+            assert { File.stat('mnt/file1').gid == nobody_gid }
+
+            touch('src/file2')
+            chown(nobody_uid, nobody_gid, 'mnt/file2')
+            assert { File.stat('src/file2').uid == 123 }
+            assert { File.stat('src/file2').gid == 789 }
+        end
+    end
 end
 
 root_testenv("--uid-offset=2") do
