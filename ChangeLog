@@ -1,3 +1,8 @@
+2020-05-10  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added --map-passwd and --map-group (PR #85 by Cybso@, thanks!)
+	* Released 1.14.6
+
 2020-04-13  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed tests with Ruby 2.7.1 or newer.
