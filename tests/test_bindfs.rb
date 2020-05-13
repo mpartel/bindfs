@@ -400,7 +400,7 @@ Tempfile.create('passwdfile') do |passwd_file|
     Tempfile.create('groupfile') do |group_file|
         passwd_file.puts("nobody:x:123:456:,,,:/tmp:/bin/false")
         passwd_file.flush
-        group_file.puts("#{nobody_group}:x:789")
+        group_file.write("#{nobody_group}:x:789")
         group_file.flush
         root_testenv("--map-passwd=#{Shellwords.escape(passwd_file.path)} --map-group=#{Shellwords.escape(group_file.path)}") do
             touch('src/file1')

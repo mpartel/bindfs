@@ -1889,7 +1889,7 @@ static int parse_map_file(UserMap *map, UserMap *reverse_map, char *file, int as
     while ((read = getline(&line, &len, fp)) != -1) {
         // Remove newline in case someone builds a file with lines like 'a:b:123' by hand.
         // If we left the newline, strtok would return "123\n" as the last token.
-        if (read > 0) {
+        if (read > 0 && line[read - 1] == '\n') {
             line[read - 1] = '\0';
         }
 
