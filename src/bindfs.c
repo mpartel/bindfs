@@ -57,6 +57,9 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
+#ifdef HAVE_SYS_FILE_H
+#include <sys/file.h>
+#endif
 #include <sys/time.h>
 #include <sys/statvfs.h>
 #include <sys/file.h>

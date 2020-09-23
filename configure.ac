@@ -32,6 +32,7 @@ AC_SUBST([my_CFLAGS])
 AC_SUBST([my_LDFLAGS])
 
 # Checks for platform-specific stuff
+AC_CHECK_HEADERS([sys/file.h])
 AC_CHECK_FUNCS([lutimes utimensat])
 AC_CHECK_FUNCS([setxattr getxattr listxattr removexattr])
 AC_CHECK_FUNCS([lsetxattr lgetxattr llistxattr lremovexattr])
