@@ -106,6 +106,13 @@
 #define A_PREFIX   "com"
 #define A_KAUTH_FILESEC_XATTR A_PREFIX ".apple.system.Security"
 #define XATTR_APPLE_PREFIX   "com.apple."
+
+// Yes, Apple asks us to copy/paste these -.-
+#define   LOCK_SH   1    /* shared lock */
+#define   LOCK_EX   2    /* exclusive lock */
+#define   LOCK_NB   4    /* don't block when locking */
+#define   LOCK_UN   8    /* unlock */
+int flock(int fd, int operation);
 #endif
 
 /* We pessimistically assume signed uid_t and gid_t in our overflow checks,
