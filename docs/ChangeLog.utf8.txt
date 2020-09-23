@@ -1,3 +1,9 @@
+2020-09-23  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added missing include for "sys/file.h".
+	* Added flock copy-pasta needed by XCode 12 (issue #88).
+	* Released 1.14.8
+
 2020-05-13  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed missing newlines bug with --map-passwd and --map-group
