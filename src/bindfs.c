@@ -217,6 +217,8 @@ static struct Settings {
 
 } settings;
 
+static bool bindfs_init_failed = false;
+
 
 
 /* PROTOTYPES */
@@ -642,6 +644,7 @@ static void *bindfs_init()
             settings.mntsrc,
             strerror(errno)
             );
+        bindfs_init_failed = true;
         fuse_exit(fuse_get_context()->fuse);
     }
 
@@ -2603,5 +2606,5 @@ int main(int argc, char *argv[])
     fuse_opt_free_args(&args);
     close(settings.mntsrc_fd);
 
-    return fuse_main_return;
+    return bindfs_init_failed ? 1 : fuse_main_return;
 }
