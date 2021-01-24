@@ -414,6 +414,11 @@ more efficent mount with \fBmount \-\-bind\fP and then \fBmount \-o remount,ro\f
 Enable debug output (implies \-f).
 
 .TP
+.B \-o fsname=\fIname\fP
+Sets the source directory name in /proc/mounts (returned by \fBmount\fP).
+This is automatically set as long as the source path has no special characters.
+
+.TP
 .B \-f
 Foreground operation.
 
