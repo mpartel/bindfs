@@ -867,6 +867,13 @@ if `uname`.strip == 'Linux'
   end
 end
 
+# Issue 94
+if `uname`.strip != 'FreeBSD'  # -o fsname is not supported on FreeBSD
+  testenv("-o fsname=_bindfs_test_123_", :title => "fsname") do
+    assert { `mount` =~ /^_bindfs_test_123_\s+on\s+/m }
+  end
+end
+
 if `uname`.strip != 'FreeBSD'  # -o dev is not supported on FreeBSD
   root_testenv("-odev") do
     system("mknod mnt/zero c 1 5")

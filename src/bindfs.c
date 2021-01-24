@@ -2155,11 +2155,14 @@ int main(int argc, char *argv[])
         char *forward_odirect;
         char *uid_offset;
         char *gid_offset;
+        char *fsname;
     } od;
 
     #define OPT2(one, two, key) \
             FUSE_OPT_KEY(one, key), \
             FUSE_OPT_KEY(two, key)
+    #define OPT_OFFSET(opt, offset, key) \
+            {opt, offsetof(struct OptionData, offset), key}
     #define OPT_OFFSET2(one, two, offset, key) \
             {one, offsetof(struct OptionData, offset), key}, \
             {two, offsetof(struct OptionData, offset), key}
@@ -2228,8 +2231,9 @@ int main(int argc, char *argv[])
         OPT2("--enable-ioctl", "enable-ioctl", OPTKEY_ENABLE_IOCTL),
         OPT_OFFSET2("--multithreaded", "multithreaded", multithreaded, -1),
         OPT_OFFSET2("--forward-odirect=%s", "forward-odirect=%s", forward_odirect, -1),
-        OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, 0),
-        OPT_OFFSET2("--gid-offset=%s", "gid-offset=%s", gid_offset, 0),
+        OPT_OFFSET2("--uid-offset=%s", "uid-offset=%s", uid_offset, -1),
+        OPT_OFFSET2("--gid-offset=%s", "gid-offset=%s", gid_offset, -1),
+        OPT_OFFSET("fsname=%s", fsname, -1),
 
         FUSE_OPT_END
     };
@@ -2535,7 +2539,11 @@ int main(int argc, char *argv[])
        (issue #47). The character blacklist is likely not complete, which is
        acceptable since this is not a security check. The aim is to avoid giving
        the user a confusing error. */
-    if (strpbrk(settings.mntsrc, ", \t\n") == NULL) {
+    if (od.fsname != NULL) {
+        char *tmp = sprintf_new("-ofsname=%s", od.fsname);
+        fuse_opt_add_arg(&args, tmp);
+        free(tmp);
+    } else if (strpbrk(settings.mntsrc, ", \t\n") == NULL) {
         char *tmp = sprintf_new("-ofsname=%s", settings.mntsrc);
         fuse_opt_add_arg(&args, tmp);
         free(tmp);
