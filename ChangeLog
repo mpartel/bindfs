@@ -1,3 +1,9 @@
+2021-01-24  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Non-zero exit code when unable to chdir into source dir (issue #93).
+	* Pass through "-o fsname" to FUSE (issue #94).
+	* Released 1.14.9
+
 2020-09-23  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added missing include for "sys/file.h".
