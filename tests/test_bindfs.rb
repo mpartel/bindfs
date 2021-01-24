@@ -396,8 +396,8 @@ root_testenv("--map=0/1:@0/@1", :title => "--map and chown/chgrp") do
     assert { File.stat('mnt/file1').gid == 1 }
 end
 
-Tempfile.create('passwdfile') do |passwd_file|
-    Tempfile.create('groupfile') do |group_file|
+Tempfile.open('passwdfile') do |passwd_file|
+    Tempfile.open('groupfile') do |group_file|
         passwd_file.puts("nobody:x:123:456:,,,:/tmp:/bin/false")
         passwd_file.flush
         group_file.write("#{nobody_group}:x:789")
