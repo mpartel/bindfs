@@ -2399,7 +2399,7 @@ static void atexit_func()
 struct fuse_args filter_special_opts(struct fuse_args *args) 
 {
     int i, j, ignore;
-    struct fuse_args new_args;
+    struct fuse_args new_args = FUSE_ARGS_INIT(0, (void*)0);
     char *tmpStr;
     
     // Copied from "libfuse/util/mount.fuse.c" (fuse-3.10.1)
@@ -2407,7 +2407,7 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
     char *ignore_opts[] = { 
         "",
         "user",
-	"nofail",
+        "nofail",
         "nouser",
         "users",
         "auto",
@@ -2417,36 +2417,31 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
     };
     
     for (i=0; i < args->argc; i++) {
-	ignore = 0;
+	    ignore = 0;
         if (strcmp(args->argv[i], "-o") == 0 && (i+1) < args->argc) {
-	    for (j = 0; ignore_opts[j]; j++) {
-		//printf("%s == %s\n", args->argv[i+1], ignore_opts[j]);
-		if (strcmp(args->argv[i+1], ignore_opts[j]) == 0) {
-		    ignore = 1;
-		    i+=1;
-		    break;
-		}
+	        for (j = 0; ignore_opts[j]; j++) {
+	    	if (strcmp(args->argv[i+1], ignore_opts[j]) == 0) {
+	    	    ignore = 1;
+	    	    i+=1;
+	    	    break;
+	    	}
+	        }
 	    }
-	}
-	else if (strncmp(args->argv[i], "-o", 2) == 0) {
-	    for (j = 0; ignore_opts[j]; j++) {
-		tmpStr = malloc( (3 + strlen(ignore_opts[j])) * sizeof(char) );
-		strcat(tmpStr, "-o"); strcat(tmpStr, ignore_opts[j]); strcat(tmpStr, "\0");
-		//printf("%s == %s\n", args->argv[i], tmpStr);
-		if (strcmp(args->argv[i], tmpStr) == 0) {
-		    ignore = 1;
-		    free(tmpStr);
-		    break;
-		}
-		free(tmpStr);
+	    else if (strncmp(args->argv[i], "-o", 2) == 0) {
+	        for (j = 0; ignore_opts[j]; j++) {
+	    	tmpStr = malloc( (3 + strlen(ignore_opts[j])) * sizeof(char) );
+	    	strcat(tmpStr, "-o"); strcat(tmpStr, ignore_opts[j]); strcat(tmpStr, "\0");
+	    	if (strcmp(args->argv[i], tmpStr) == 0) {
+	    	    ignore = 1;
+	    	    free(tmpStr);
+	    	    break;
+	    	}
+	    	free(tmpStr);
+	        }
 	    }
-	}
-	if (!ignore) {
-            //tmpStr = malloc((3 + strlen(args->argv[i+1])) * sizeof(char));
-            //strcat(tmpStr, args->argv[i]); strcat(tmpStr, args->argv[i+1]); strcat(tmpStr, "\0");
-            //fuse_opt_add_arg(&new_args, tmpStr);
-            fuse_opt_add_arg(&new_args, args->argv[i]);
-	}
+	    if (!ignore) {
+				fuse_opt_add_arg(&new_args, strdup(args->argv[i]));
+	    }
     }
     
     fuse_opt_free_args(args);
