@@ -397,50 +397,45 @@ char *tmpnam_inpath(char *src_path)
     char *res, tmp[L_tmpnam], *path, *fname, *tfname, *src_path_cpy, *src_path_cpy_1, *tmp_cpy;
     int i = 0;
     
-    src_path_cpy = (char *) malloc((strlen(src_path)) * sizeof(char)); 
+    src_path_cpy = (char *) calloc((strlen(src_path)), sizeof(char)); 
     strcpy(src_path_cpy, src_path);
     
-    src_path_cpy_1 = (char *) malloc((strlen(src_path)) * sizeof(char)); 
+    src_path_cpy_1 = (char *) calloc((strlen(src_path)), sizeof(char)); 
     strcpy(src_path_cpy_1, src_path);
     
     path = dirname(src_path_cpy);
     fname = basename(src_path_cpy_1);
     
     tmpnam(tmp);
-    tmp_cpy = (char *) malloc((strlen(tmp)) * sizeof(char));
+    tmp_cpy = (char *) calloc((strlen(tmp)), sizeof(char));
     strcpy(tmp_cpy, tmp);
     
     tfname = basename(tmp_cpy);
     
-    res = (char *) malloc( (strlen(path) + 2 + strlen(tfname) + 1 + strlen(fname) + 1) * sizeof(char));
+    res = (char *) calloc( (strlen(path) + 2 + strlen(tfname) + 1 + strlen(fname) + 1), sizeof(char));
     
     strcat(res, path);
     strcat(res, "/.");
     strcat(res, tfname);
     strcat(res, "~");
     strcat(res, fname);
-    strcat(res, "\0");
-    
-    //printf("%s\n", res);
     
     while (access( res, F_OK ) == 0 && i < 10) {
         
         tmpnam(tmp);
-        tmp_cpy = (char *) malloc((strlen(tmp)) * sizeof(char));
+        tmp_cpy = (char *) calloc((strlen(tmp)), sizeof(char));
         strcpy(tmp_cpy, tmp);
     
         tfname = basename(tmp_cpy);
     
-        res = (char *) malloc( (strlen(path) + 2 + strlen(tfname) + 1 + strlen(fname) + 1) * sizeof(char));
+        res = (char *) calloc( (strlen(path) + 2 + strlen(tfname) + 1 + strlen(fname) + 1), sizeof(char));
     
         strcat(res, path);
         strcat(res, "/.");
         strcat(res, tfname);
-    strcat(res, "~");
+        strcat(res, "~");
         strcat(res, fname);
-        strcat(res, "\0");
-        
-        //printf("%s\n", res);
+
         i++;
     }
     
@@ -2417,31 +2412,32 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
     };
     
     for (i=0; i < args->argc; i++) {
-	    ignore = 0;
+        ignore = 0;
         if (strcmp(args->argv[i], "-o") == 0 && (i+1) < args->argc) {
-	        for (j = 0; ignore_opts[j]; j++) {
-	    	if (strcmp(args->argv[i+1], ignore_opts[j]) == 0) {
-	    	    ignore = 1;
-	    	    i+=1;
-	    	    break;
-	    	}
-	        }
-	    }
-	    else if (strncmp(args->argv[i], "-o", 2) == 0) {
-	        for (j = 0; ignore_opts[j]; j++) {
-	    	tmpStr = malloc( (3 + strlen(ignore_opts[j])) * sizeof(char) );
-	    	strcat(tmpStr, "-o"); strcat(tmpStr, ignore_opts[j]); strcat(tmpStr, "\0");
-	    	if (strcmp(args->argv[i], tmpStr) == 0) {
-	    	    ignore = 1;
-	    	    free(tmpStr);
-	    	    break;
-	    	}
-	    	free(tmpStr);
-	        }
-	    }
-	    if (!ignore) {
-				fuse_opt_add_arg(&new_args, strdup(args->argv[i]));
-	    }
+            for (j = 0; ignore_opts[j]; j++) {
+                if (strcmp(args->argv[i+1], ignore_opts[j]) == 0) {
+                    ignore = 1;
+                    i+=1;
+                    break;
+                }
+            }
+        }
+        else if (strncmp(args->argv[i], "-o", 2) == 0) {
+            for (j = 0; ignore_opts[j]; j++) {
+                tmpStr = (char*) calloc( (3 + strlen(ignore_opts[j])), sizeof(char) );
+                strcat(tmpStr, "-o"); 
+                strcat(tmpStr, ignore_opts[j]);
+                if (strcmp(args->argv[i], tmpStr) == 0) {
+                    ignore = 1;
+                    free(tmpStr);
+                    break;
+                }
+                free(tmpStr);
+            }
+        }
+        if (!ignore) {
+                fuse_opt_add_arg(&new_args, strdup(args->argv[i]));
+        }
     }
     
     fuse_opt_free_args(args);
