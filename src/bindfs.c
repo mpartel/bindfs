@@ -78,6 +78,12 @@
 #include <sys/xattr.h>
 #endif
 
+#ifdef HAVE_FUSE_3
+#ifndef __NR_renameat2
+#include <libgen.h> // For dirname(), basename()
+#endif
+#endif
+
 #ifdef __linux__
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -228,6 +234,13 @@ static int is_mirroring_enabled();
 /* Checks whether the uid is to be the mirrored owner of all files. */
 static int is_mirrored_user(uid_t uid);
 
+#ifdef HAVE_FUSE_3
+#ifndef __NR_renameat2
+/* Returns the path to a temporary file inside the same directory as src_path */
+char *tmpnam_inpath(char *src_path);
+#endif
+#endif
+
 /* Processes the virtual path to a real path. Always free() the result. */
 static char *process_path(const char *path, bool resolve_symlinks);
 
@@ -251,27 +264,62 @@ static size_t round_up_buffer_size_for_direct_io(size_t size);
 #endif
 
 /* FUSE callbacks */
+#ifdef HAVE_FUSE_3
+static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg);
+#else
 static void *bindfs_init();
+#endif
 static void bindfs_destroy(void *private_data);
+#ifdef HAVE_FUSE_3
+static int bindfs_getattr(const char *path, struct stat *stbuf,
+                           struct fuse_file_info *fi);
+#else
 static int bindfs_getattr(const char *path, struct stat *stbuf);
 static int bindfs_fgetattr(const char *path, struct stat *stbuf,
                            struct fuse_file_info *fi);
+#endif
 static int bindfs_readlink(const char *path, char *buf, size_t size);
+#ifdef HAVE_FUSE_3
+static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+                          off_t offset, struct fuse_file_info *fi, enum fuse_readdir_flags flags);
+#else
 static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi);
+#endif
 static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev);
 static int bindfs_mkdir(const char *path, mode_t mode);
 static int bindfs_unlink(const char *path);
 static int bindfs_rmdir(const char *path);
 static int bindfs_symlink(const char *from, const char *to);
+#ifdef HAVE_FUSE_3
+static int bindfs_rename(const char *from, const char *to, unsigned int flags);
+#else
 static int bindfs_rename(const char *from, const char *to);
+#endif
 static int bindfs_link(const char *from, const char *to);
+#ifdef HAVE_FUSE_3
+static int bindfs_chmod(const char *path, mode_t mode, struct fuse_file_info *fi);
+#else
 static int bindfs_chmod(const char *path, mode_t mode);
+#endif
+#ifdef HAVE_FUSE_3
+static int bindfs_chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_info *fi);
+#else
 static int bindfs_chown(const char *path, uid_t uid, gid_t gid);
+#endif
+#ifdef HAVE_FUSE_3
+static int bindfs_truncate(const char *path, off_t size,
+                            struct fuse_file_info *fi);
+#else
 static int bindfs_truncate(const char *path, off_t size);
 static int bindfs_ftruncate(const char *path, off_t size,
                             struct fuse_file_info *fi);
+#endif
+#ifdef HAVE_FUSE_3
+static int bindfs_utimens(const char *path, const struct timespec tv[2], struct fuse_file_info *fi);
+#else
 static int bindfs_utimens(const char *path, const struct timespec tv[2]);
+#endif
 static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *fi);
 static int bindfs_open(const char *path, struct fuse_file_info *fi);
 static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
@@ -281,9 +329,15 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        struct flock *lock);
 static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op);
+#ifdef HAVE_FUSE_3
+static int bindfs_ioctl(const char *path, unsigned int cmd, void *arg,
+                        struct fuse_file_info *fi, unsigned int flags,
+                        void *data);
+#else
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
                         void *data);
+#endif
 static int bindfs_statfs(const char *path, struct statvfs *stbuf);
 static int bindfs_release(const char *path, struct fuse_file_info *fi);
 static int bindfs_fsync(const char *path, int isdatasync,
@@ -304,6 +358,15 @@ static void setup_signal_handling();
 static void signal_handler(int sig);
 
 static void atexit_func();
+
+/* 
+Ignore some options (starting with -o) 
+like "mount.fuse" would do in "libfuse/util/mount.fuse.c" 
+
+Why? Because some of those options like "nofail"
+are special ones interpreted by systemd in /etc/fstab
+*/
+struct fuse_args filter_special_opts(struct fuse_args *args);
 
 static int is_mirroring_enabled()
 {
@@ -326,6 +389,70 @@ static int is_mirrored_user(uid_t uid)
     return 0;
 }
 
+#ifdef HAVE_FUSE_3
+#ifndef __NR_renameat2
+char *tmpnam_inpath(char *src_path) 
+{
+    
+    char *res, tmp[L_tmpnam], *path, *fname, *tfname, *src_path_cpy, *src_path_cpy_1, *tmp_cpy;
+    int i = 0;
+    
+    src_path_cpy = (char *) malloc((strlen(src_path)) * sizeof(char)); 
+    strcpy(src_path_cpy, src_path);
+    
+    src_path_cpy_1 = (char *) malloc((strlen(src_path)) * sizeof(char)); 
+    strcpy(src_path_cpy_1, src_path);
+    
+    path = dirname(src_path_cpy);
+    fname = basename(src_path_cpy_1);
+    
+    tmpnam(tmp);
+    tmp_cpy = (char *) malloc((strlen(tmp)) * sizeof(char));
+    strcpy(tmp_cpy, tmp);
+    
+    tfname = basename(tmp_cpy);
+    
+    res = (char *) malloc( (strlen(path) + 2 + strlen(tfname) + 1 + strlen(fname) + 1) * sizeof(char));
+    
+    strcat(res, path);
+    strcat(res, "/.");
+    strcat(res, tfname);
+    strcat(res, "~");
+    strcat(res, fname);
+    strcat(res, "\0");
+    
+    //printf("%s\n", res);
+    
+    while (access( res, F_OK ) == 0 && i < 10) {
+        
+        tmpnam(tmp);
+        tmp_cpy = (char *) malloc((strlen(tmp)) * sizeof(char));
+        strcpy(tmp_cpy, tmp);
+    
+        tfname = basename(tmp_cpy);
+    
+        res = (char *) malloc( (strlen(path) + 2 + strlen(tfname) + 1 + strlen(fname) + 1) * sizeof(char));
+    
+        strcat(res, path);
+        strcat(res, "/.");
+        strcat(res, tfname);
+    strcat(res, "~");
+        strcat(res, fname);
+        strcat(res, "\0");
+        
+        //printf("%s\n", res);
+        i++;
+    }
+    
+    if (access( res, F_OK ) == 0) {
+        return NULL;
+    }
+    
+    return res;
+    
+}
+#endif
+#endif
 
 static char *process_path(const char *path, bool resolve_symlinks)
 {
@@ -630,8 +757,18 @@ static size_t round_up_buffer_size_for_direct_io(size_t size)
 }
 #endif
 
+#ifdef HAVE_FUSE_3
+static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
+#else
 static void *bindfs_init()
-{
+#endif
+{   
+    #ifdef HAVE_FUSE_3
+    (void) conn;
+    cfg->use_ino = 1;
+    cfg->readdir_ino = 1;
+    #endif
+    
     assert(settings.permchain != NULL);
     assert(settings.mntsrc_fd > 0);
 
@@ -655,7 +792,12 @@ static void bindfs_destroy(void *private_data)
 {
 }
 
+#ifdef HAVE_FUSE_3
+static int bindfs_getattr(const char *path, struct stat *stbuf,
+                           struct fuse_file_info *fi)
+#else
 static int bindfs_getattr(const char *path, struct stat *stbuf)
+#endif
 {
     int res;
     char *real_path;
@@ -674,6 +816,7 @@ static int bindfs_getattr(const char *path, struct stat *stbuf)
     return res;
 }
 
+#ifndef HAVE_FUSE_3
 static int bindfs_fgetattr(const char *path, struct stat *stbuf,
                            struct fuse_file_info *fi)
 {
@@ -692,6 +835,7 @@ static int bindfs_fgetattr(const char *path, struct stat *stbuf,
     free(real_path);
     return res;
 }
+#endif
 
 static int bindfs_readlink(const char *path, char *buf, size_t size)
 {
@@ -715,8 +859,13 @@ static int bindfs_readlink(const char *path, char *buf, size_t size)
     return 0;
 }
 
+#ifdef HAVE_FUSE_3
+static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+                          off_t offset, struct fuse_file_info *fi, enum fuse_readdir_flags flags)
+#else
 static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi)
+#endif
 {
     char *real_path = process_path(path, true);
     if (real_path == NULL) {
@@ -788,7 +937,11 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         // consider it an error if it does. It is undocumented whether it sets
         // errno in that case, so we zero it first and set it ourself if it
         // doesn't.
+        #ifdef HAVE_FUSE_3
+        if (filler(buf, de->d_name, &st, 0, ((flags & FUSE_READDIR_PLUS) ? 0 : FUSE_FILL_DIR_PLUS)) != 0) {
+        #else
         if (filler(buf, de->d_name, &st, 0) != 0) {
+        #endif
             result = errno != 0 ? -errno : -EIO;
             break;
         }
@@ -892,7 +1045,11 @@ static int bindfs_symlink(const char *from, const char *to)
     return res;
 }
 
+#ifdef HAVE_FUSE_3
+static int bindfs_rename(const char *from, const char *to, unsigned int flags)
+#else
 static int bindfs_rename(const char *from, const char *to)
+#endif
 {
     int res;
     char *real_from, *real_to;
@@ -910,7 +1067,90 @@ static int bindfs_rename(const char *from, const char *to)
         return -errno;
     }
 
+    #ifdef HAVE_FUSE_3
+    
+    #ifdef __NR_renameat2
+    
+    res = syscall(__NR_renameat2, AT_FDCWD, real_from, AT_FDCWD, real_to, flags); 
+    
+    #else //__NR_renameat2
+    
+    if (flags == 0) {
+        res = rename(real_from, real_to);
+    }
+    else if (flags == RENAME_NOREPLACE && access( real_to, F_OK ) != 0) {
+        res = rename(real_from, real_to); 
+    }
+    else if (flags == RENAME_EXCHANGE && access( real_from, F_OK ) == 0 && access( real_to, F_OK ) == 0) {
+        char *tmp_from, *tmp_to;
+        int r, tmp_errno;
+        
+        tmp_from = tmpnam_inpath(real_from);
+        if (tmp_from) {
+            r = rename(real_from, tmp_from);
+            if (r == -1) {
+                res = r;
+            }
+            else {
+                tmp_to = tmpnam_inpath(real_to);
+                if (tmp_to) {
+                    r = rename(real_to, tmp_to);
+                    tmp_errno = errno;
+                    if (r == -1) {
+                        rename(tmp_from, real_from);
+                        res = r;
+                        errno = tmp_errno;
+                    }
+                    else {
+                        r = rename(tmp_from, real_to);
+                        tmp_errno = errno;
+                        if (r == -1) {
+                            rename(tmp_from, real_from);
+                            rename(tmp_to, real_to);
+                            res = r;
+                            errno = tmp_errno;
+                        }
+                        else {
+                            r = rename(tmp_to, real_from);
+                            tmp_errno = errno;
+                            if (r == -1) {
+                                rename(tmp_from, real_from);
+                                rename(tmp_to, real_to);
+                                res = r;
+                                errno = tmp_errno;
+                            }
+                        }
+                    }
+                }
+                else {
+                    rename(tmp_from, real_from);
+                    res = -1;
+                    errno = EAGAIN;
+                }
+        
+                free(tmp_to);
+            }
+        }
+        else {
+            res = -1;
+            errno = EAGAIN;
+        }
+        
+        free(tmp_from);
+    }
+    else {
+        res = -1;
+        errno = EINVAL;
+    }
+    
+    #endif //__NR_renameat2
+    
+    #else //HAVE_FUSE_3
+    
     res = rename(real_from, real_to);
+    
+    #endif //HAVE_FUSE_3
+    
     free(real_from);
     free(real_to);
     if (res == -1)
@@ -943,7 +1183,11 @@ static int bindfs_link(const char *from, const char *to)
     return 0;
 }
 
+#ifdef HAVE_FUSE_3
+static int bindfs_chmod(const char *path, mode_t mode, struct fuse_file_info *fi)
+#else
 static int bindfs_chmod(const char *path, mode_t mode)
+#endif
 {
     int file_execute_only = 0;
     struct stat st;
@@ -1006,7 +1250,11 @@ static int bindfs_chmod(const char *path, mode_t mode)
     }
 }
 
+#ifdef HAVE_FUSE_3
+static int bindfs_chown(const char *path, uid_t uid, gid_t gid, struct fuse_file_info *fi)
+#else
 static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
+#endif
 {
     int res;
     char *real_path;
@@ -1057,7 +1305,12 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
     return 0;
 }
 
+#ifdef HAVE_FUSE_3
+static int bindfs_truncate(const char *path, off_t size,
+                            struct fuse_file_info *fi)
+#else
 static int bindfs_truncate(const char *path, off_t size)
+#endif
 {
     int res;
     char *real_path;
@@ -1074,6 +1327,7 @@ static int bindfs_truncate(const char *path, off_t size)
     return 0;
 }
 
+#ifndef HAVE_FUSE_3
 static int bindfs_ftruncate(const char *path, off_t size,
                             struct fuse_file_info *fi)
 {
@@ -1086,8 +1340,13 @@ static int bindfs_ftruncate(const char *path, off_t size,
 
     return 0;
 }
+#endif
 
+#ifdef HAVE_FUSE_3
+static int bindfs_utimens(const char *path, const struct timespec ts[2], struct fuse_file_info *fi)
+#else
 static int bindfs_utimens(const char *path, const struct timespec ts[2])
+#endif
 {
     int res;
     char *real_path;
@@ -1269,9 +1528,15 @@ static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op)
     return 0;
 }
 
+#ifdef HAVE_FUSE_3
+static int bindfs_ioctl(const char *path, unsigned int cmd, void *arg,
+                        struct fuse_file_info *fi, unsigned int flags,
+                        void *data)
+#else
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
                         void *data)
+#endif
 {
     int res = ioctl(fi->fh, cmd, data);
     if (res == -1) {
@@ -1503,7 +1768,9 @@ static struct fuse_operations bindfs_oper = {
     .init       = bindfs_init,
     .destroy    = bindfs_destroy,
     .getattr    = bindfs_getattr,
+    #ifndef HAVE_FUSE_3
     .fgetattr   = bindfs_fgetattr,
+    #endif
     /* no access() since we always use -o default_permissions */
     .readlink   = bindfs_readlink,
     .readdir    = bindfs_readdir,
@@ -1517,13 +1784,15 @@ static struct fuse_operations bindfs_oper = {
     .chmod      = bindfs_chmod,
     .chown      = bindfs_chown,
     .truncate   = bindfs_truncate,
+    #ifndef HAVE_FUSE_3
     .ftruncate  = bindfs_ftruncate,
+    #endif
     .utimens    = bindfs_utimens,
     .create     = bindfs_create,
     .open       = bindfs_open,
     .read       = bindfs_read,
     .write      = bindfs_write,
-#ifdef HAVE_FUSE_29
+#if defined(HAVE_FUSE_29) || defined(HAVE_FUSE_3)
     .lock       = bindfs_lock,
     .flock      = bindfs_flock,
 #endif
@@ -2127,6 +2396,63 @@ static void atexit_func()
     settings.mirrored_members = NULL;
 }
 
+struct fuse_args filter_special_opts(struct fuse_args *args) 
+{
+    int i, j, ignore;
+    struct fuse_args new_args;
+    char *tmpStr;
+    
+    // Copied from "libfuse/util/mount.fuse.c" (fuse-3.10.1)
+    // but not as const char, because needs to be modified later
+    char *ignore_opts[] = { 
+        "",
+        "user",
+	"nofail",
+        "nouser",
+        "users",
+        "auto",
+        "noauto",
+        "_netdev",
+        NULL
+    };
+    
+    for (i=0; i < args->argc; i++) {
+	ignore = 0;
+        if (strcmp(args->argv[i], "-o") == 0 && (i+1) < args->argc) {
+	    for (j = 0; ignore_opts[j]; j++) {
+		//printf("%s == %s\n", args->argv[i+1], ignore_opts[j]);
+		if (strcmp(args->argv[i+1], ignore_opts[j]) == 0) {
+		    ignore = 1;
+		    i+=1;
+		    break;
+		}
+	    }
+	}
+	else if (strncmp(args->argv[i], "-o", 2) == 0) {
+	    for (j = 0; ignore_opts[j]; j++) {
+		tmpStr = malloc( (3 + strlen(ignore_opts[j])) * sizeof(char) );
+		strcat(tmpStr, "-o"); strcat(tmpStr, ignore_opts[j]); strcat(tmpStr, "\0");
+		//printf("%s == %s\n", args->argv[i], tmpStr);
+		if (strcmp(args->argv[i], tmpStr) == 0) {
+		    ignore = 1;
+		    free(tmpStr);
+		    break;
+		}
+		free(tmpStr);
+	    }
+	}
+	if (!ignore) {
+            //tmpStr = malloc((3 + strlen(args->argv[i+1])) * sizeof(char));
+            //strcat(tmpStr, args->argv[i]); strcat(tmpStr, args->argv[i+1]); strcat(tmpStr, "\0");
+            //fuse_opt_add_arg(&new_args, tmpStr);
+            fuse_opt_add_arg(&new_args, args->argv[i]);
+	}
+    }
+    
+    fuse_opt_free_args(args);
+    return new_args;
+}
+
 int main(int argc, char *argv[])
 {
     struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
@@ -2528,8 +2854,10 @@ int main(int argc, char *argv[])
     fuse_opt_add_arg(&args, "-odefault_permissions");
 
     /* We want to mirror inodes. */
+    #ifndef HAVE_FUSE_3
     fuse_opt_add_arg(&args, "-ouse_ino");
     fuse_opt_add_arg(&args, "-oreaddir_ino");
+    #endif
 
     /* Show the source dir in the first field on /etc/mtab, to be consistent
        with "real" filesystems.
@@ -2579,7 +2907,7 @@ int main(int argc, char *argv[])
         bindfs_oper.removexattr = NULL;
     }
 
-#ifdef HAVE_FUSE_29
+#if defined(HAVE_FUSE_29) || defined(HAVE_FUSE_3)
     /* Check that lock forwarding is not enabled in single-threaded mode. */
     if (settings.enable_lock_forwarding && !od.multithreaded) {
         fprintf(stderr, "To use --enable-lock-forwarding, you must use "
@@ -2605,6 +2933,9 @@ int main(int argc, char *argv[])
     if (!settings.enable_ioctl) {
         bindfs_oper.ioctl = NULL;
     }
+
+    /* Remove/Ignore some special -o options */
+    args = filter_special_opts(&args);
 
     /* fuse_main will daemonize by fork()'ing. The signal handler will persist. */
     setup_signal_handling();
