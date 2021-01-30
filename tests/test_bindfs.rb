@@ -462,18 +462,20 @@ testenv("", :title => "preserves inode numbers") do
     assert { File.stat('mnt/dir').ino == File.stat('src/dir').ino }
 end
 
-testenv("", :title => "preserves readdir inode numbers") do
-    touch('src/file')
-    mkdir('src/dir')
+unless $have_fuse_3  # TODO: re-enable after working around https://github.com/libfuse/libfuse/issues/583
+    testenv("", :title => "preserves readdir inode numbers") do
+        touch('src/file')
+        mkdir('src/dir')
 
-    inodes = {}
-    for line in `#{$tests_dir}/readdir_inode mnt`.split("\n").reject(&:empty?)
-        inode, name = line.split(" ")
-        inodes[name] = inode.to_i
+        inodes = {}
+        for line in `#{$tests_dir}/readdir_inode mnt`.split("\n").reject(&:empty?)
+            inode, name = line.split(" ")
+            inodes[name] = inode.to_i
+        end
+
+        assert { inodes['file'] == File.stat('src/file').ino }
+        assert { inodes['dir'] == File.stat('src/dir').ino }
     end
-
-    assert { inodes['file'] == File.stat('src/file').ino }
-    assert { inodes['dir'] == File.stat('src/dir').ino }
 end
 
 root_testenv("", :title => "setgid directories") do

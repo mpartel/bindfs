@@ -933,7 +933,9 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         // errno in that case, so we zero it first and set it ourself if it
         // doesn't.
         #ifdef HAVE_FUSE_3
-        if (filler(buf, de->d_name, &st, 0, ((flags & FUSE_READDIR_PLUS) ? 0 : FUSE_FILL_DIR_PLUS)) != 0) {
+        // TODO: FUSE_FILL_DIR_PLUS doesn't work with offset==0: https://github.com/libfuse/libfuse/issues/583
+        //       Work around this by implementing the offset!=1 mode. Be careful - it's quite error-prone!
+        if (filler(buf, de->d_name, &st, 0, FUSE_FILL_DIR_PLUS) != 0) {
         #else
         if (filler(buf, de->d_name, &st, 0) != 0) {
         #endif
