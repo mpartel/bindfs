@@ -330,7 +330,7 @@ static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        struct flock *lock);
 static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op);
 #ifdef HAVE_FUSE_3
-static int bindfs_ioctl(const char *path, unsigned int cmd, void *arg,
+static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
                         void *data);
 #else
@@ -1459,7 +1459,7 @@ static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op)
 }
 
 #ifdef HAVE_FUSE_3
-static int bindfs_ioctl(const char *path, unsigned int cmd, void *arg,
+static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
                         void *data)
 #else
