@@ -1,0 +1,25 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "roboxes/debian10"
+
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder "../../", "/bindfs",
+    type: "rsync",
+    rsync__auto: false,
+    rsync__exclude: ["vagrant"],
+    rsync__args: ["-av", "--delete-after"]
+
+  config.vm.provider "virtualbox" do |v|
+    v.name = "bindfs-debian10"
+  end
+
+  config.vm.provision "shell", reboot: true, inline: <<-SHELL
+    apt-get update
+    DEBIAN_FRONTEND='noninteractive' apt-get dist-upgrade -y -o Dpkg::Options::="--force-confdef"
+    apt-get install -y fuse3 libfuse3-dev build-essential pkg-config ruby valgrind
+    apt-get clean
+    echo user_allow_other > /etc/fuse.conf
+  SHELL
+end
