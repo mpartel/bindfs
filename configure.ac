@@ -12,8 +12,10 @@ AC_ARG_ENABLE([debug-output],
     [AS_HELP_STRING([--enable-debug-output], [enable debug output])])
 AC_ARG_WITH([core-foundation],
     AS_HELP_STRING([--with-core-foundation], [link against Core Foundation (OS X only) @<:@default=no@:>@]))
+AC_ARG_WITH([fuse2],
+    [AS_HELP_STRING([--with-fuse2], [link against libfuse 2.x (default: autodetect, preferring 3.x)])])
 AC_ARG_WITH([fuse3],
-    [AS_HELP_STRING([--with-fuse3], [link against libfuse 3.x (if not set, libfuse 2.x is used)])])
+    [AS_HELP_STRING([--with-fuse3], [link against libfuse 3.x (default: autodetect, preferring 3.x)])])
 
 if test x"$enable_debug_output" == "xyes" ; then
     AC_DEFINE([BINDFS_DEBUG], [1], [Define to 1 to enable debugging messages])
@@ -55,26 +57,36 @@ AC_COMPILE_IFELSE(
 
 # Check for fuse
 
-AS_IF([test "x$with_fuse3" == "xyes"],
-    [PKG_CHECK_MODULES([fuse3], [fuse3 >= 3.4.0],
-        [
-         AC_DEFINE([HAVE_FUSE_3], [1], [Have FUSE >= 3.0]) 
-         AC_DEFINE([FUSE_USE_VERSION], [34], [FUSE API VERSION = 3.4])
-        ],
-	[
-	 AC_MSG_ERROR([fuse3 not found!], [1]) 
-	]
-    )],
+AC_DEFUN([CHECK_FUSE2],
     [PKG_CHECK_MODULES([fuse], [fuse >= 2.9.0],
         [
-	 AC_DEFINE([HAVE_FUSE_29], [1], [Have FUSE >= 2.9.0])
-	 AC_DEFINE([FUSE_USE_VERSION], [26], [FUSE API VERSION = 2.6])
-	],
+            AC_DEFINE([HAVE_FUSE_29], [1], [Have FUSE >= 2.9.0])
+            AC_DEFINE([FUSE_USE_VERSION], [26], [FUSE API VERSION = 2.6])
+        ],
         [PKG_CHECK_MODULES([fuse], [fuse >= 2.8.0],
-	    [
-	     AC_DEFINE([FUSE_USE_VERSION], [26], [FUSE API VERSION = 2.6])
-	    ]
-	)]
+            [
+                AC_DEFINE([FUSE_USE_VERSION], [26], [FUSE API VERSION = 2.6])
+            ],
+            [$1]
+        )]
+    )]
+)
+
+AC_DEFUN([CHECK_FUSE3],
+    [PKG_CHECK_MODULES([fuse3], [fuse3 >= 3.4.0],
+        [
+            AC_DEFINE([HAVE_FUSE_3], [1], [Have FUSE >= 3.0])
+            AC_DEFINE([FUSE_USE_VERSION], [34], [FUSE API VERSION = 3.4])
+        ],
+        [$1]
+    )]
+)
+
+AS_IF([test "x$with_fuse2" == "xyes"],
+    [CHECK_FUSE2([AC_MSG_ERROR([FUSE 2 not found])])],
+    [AS_IF([test "x$with_fuse3" == "xyes"],
+        [CHECK_FUSE3([AC_MSG_ERROR([FUSE 3 not found])])],
+        [CHECK_FUSE3([CHECK_FUSE2([AC_MSG_ERROR([FUSE not found])])])]
     )]
 )
 
