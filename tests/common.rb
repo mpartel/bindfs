@@ -213,9 +213,12 @@ def nonroot_testenv(bindfs_args, options = {}, &block)
 end
 
 def umount_cmd
-    if `which fusermount`.strip.empty?
-    then 'umount'
-    else 'fusermount -uz'
+    if !`which fusermount3`.strip.empty?
+        'fusermount3 -uz'
+    elsif !`which fusermount`.strip.empty?
+        'fusermount -uz'
+    else
+        'umount'
     end
 end
 
