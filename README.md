@@ -20,8 +20,8 @@ use-cases need `user_allow_other` to be defined in `/etc/fuse.conf`.
 
 ## Installation ##
 
-Make sure FUSE 2.6.0 or above is installed (https://github.com/libfuse/libfuse).
-FUSE 3 is not yet supported.
+[FUSE](https://github.com/libfuse/libfuse) 2.8.0 or above is required.
+FUSE 3 is supported.
 
 Download a [release](https://bindfs.org/downloads/) or clone this repository.
 
@@ -34,7 +34,7 @@ Then compile and install as usual:
 If you want the mounts made by non-root users to be visible to other users,
 you may have to add the line `user_allow_other` to `/etc/fuse.conf`.
 
-In Linux-based OSes, you may have to add your user to the `fuse` group.
+On some systems, you may have to add your user to the `fuse` group.
 
 
 ## Usage ##
@@ -42,7 +42,7 @@ In Linux-based OSes, you may have to add your user to the `fuse` group.
 See the `bindfs --help` or the man-page for instructions and examples.
 
 
-## OS X note ##
+## MacOS note ##
 
 The following extra options may be useful under osxfuse:
 
@@ -56,13 +56,10 @@ See https://github.com/osxfuse/osxfuse/wiki/Mount-options for details.
 [![Build Status](https://travis-ci.org/mpartel/bindfs.svg?branch=master)](https://travis-ci.org/mpartel/bindfs)
 
 Bindfs comes with a (somewhat brittle and messy) test suite.
-The test suite has two kinds of tests: those that have to be run as root and
-those that have to be run as non-root. To run all of the tests, do
-`make check` both as root and as non-root.
+Some tests must be run as root, and some tests only work as non-root.
 
-The test suite requires Ruby 1.8.7+. If you're using [RVM](https://rvm.io/)
-then you may need to use `rvmsudo` instead of plain `sudo` to run the root
-tests.
+You can run run the tests with `./test-all.sh`.
+It requires Ruby and `sudo`, and it uses `valgrind` if installed.
 
 ### Vagrant test runner ###
 
