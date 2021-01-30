@@ -761,7 +761,13 @@ static void *bindfs_init()
     #ifdef HAVE_FUSE_3
     (void) conn;
     cfg->use_ino = 1;
-    cfg->readdir_ino = 1;
+
+    // Disable caches so changes in base FS are visible immediately.
+    // Especially the attribute cache must be disabled when different users
+    // might see different file attributes, such as when mirroring users.
+    cfg->entry_timeout = 0;
+    cfg->attr_timeout = 0;
+    cfg->negative_timeout = 0;
     #endif
 
     assert(settings.permchain != NULL);
@@ -2335,8 +2341,7 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
     char *tmpStr, *tmpStr2, *ptr;
 
     // Copied from "libfuse/util/mount.fuse.c" (fuse-3.10.1)
-    // but not as const char, because needs to be modified later
-    char *ignore_opts[] = {
+    const char *ignore_opts[] = {
         "",
         "user",
         "nofail",
@@ -2858,11 +2863,11 @@ int main(int argc, char *argv[])
     /* We want the kernel to do our access checks for us based on what getattr gives it. */
     fuse_opt_add_arg(&args, "-odefault_permissions");
 
+    // With FUSE 3 we set this in bindfs_init
+#ifndef HAVE_FUSE_3
     /* We want to mirror inodes. */
-    #ifndef HAVE_FUSE_3
     fuse_opt_add_arg(&args, "-ouse_ino");
-    fuse_opt_add_arg(&args, "-oreaddir_ino");
-    #endif
+#endif
 
     /* Show the source dir in the first field on /etc/mtab, to be consistent
        with "real" filesystems.
@@ -2882,11 +2887,14 @@ int main(int argc, char *argv[])
         free(tmp);
     }
 
+    // With FUSE 3, we disable caches in bindfs_init
+#ifndef HAVE_FUSE_3
     /* We need to disable the attribute cache whenever two users
        can see different attributes. For now, only mirroring can do that. */
     if (is_mirroring_enabled()) {
         fuse_opt_add_arg(&args, "-oattr_timeout=0");
     }
+#endif
 
     /* If the mount source and destination directories are the same
        then don't require that the directory be empty.
