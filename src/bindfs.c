@@ -757,13 +757,13 @@ static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
 #else
 static void *bindfs_init()
 #endif
-{   
+{
     #ifdef HAVE_FUSE_3
     (void) conn;
     cfg->use_ino = 1;
     cfg->readdir_ino = 1;
     #endif
-    
+
     assert(settings.permchain != NULL);
     assert(settings.mntsrc_fd > 0);
 
@@ -1362,7 +1362,7 @@ static int bindfs_utimens(const char *path, const struct timespec ts[2])
 #else
 #error "No symlink-compatible utime* function available."
 #endif
- 
+
     free(real_path);
     if (res == -1)
         return -errno;
@@ -1496,7 +1496,7 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 #ifdef __linux__
     if (source_buf != buf) {
         munmap(source_buf, mmap_size);
-    } 
+    }
 #endif
 
     return res;
@@ -2391,15 +2391,15 @@ static void atexit_func()
     settings.mirrored_members = NULL;
 }
 
-struct fuse_args filter_special_opts(struct fuse_args *args) 
+struct fuse_args filter_special_opts(struct fuse_args *args)
 {
     int i, j, ignore;
     struct fuse_args new_args = FUSE_ARGS_INIT(0, (void*)0);
     char *tmpStr, *tmpStr2, *ptr;
-    
+
     // Copied from "libfuse/util/mount.fuse.c" (fuse-3.10.1)
     // but not as const char, because needs to be modified later
-    char *ignore_opts[] = { 
+    char *ignore_opts[] = {
         "",
         "user",
         "nofail",
@@ -2410,13 +2410,13 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
         "_netdev",
         NULL
     };
-    
+
     for (i=0; i < args->argc; i++) {
         ignore = 0;
-        
+
         /* If current element is exactly "-o" modify/check the following element */
         if (strcmp(args->argv[i], "-o") == 0 && (i+1) < args->argc) {
-            
+
             /* remove ignored option from a comma seperated list */
             if (strchr(args->argv[i+1], ',') != NULL) {
                 tmpStr = (char*) calloc(strlen(args->argv[i+1]), sizeof(char));
@@ -2446,9 +2446,9 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
                     i+=1;
                 }
             }
-            
+
             /* ignore this and the following element if it has exactly the ignored option */
-            else {                
+            else {
                 for (j = 0; ignore_opts[j]; j++) {
                     if (strcmp(args->argv[i+1], ignore_opts[j]) == 0) {
                         ignore = 1;
@@ -2458,10 +2458,10 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
                 }
             }
         }
-        
+
         /* else if element starts with "-o" */
         else if (strncmp(args->argv[i], "-o", 2) == 0) {
-            
+
             /* remove ignored option from a comma seperated list */
             if (strchr(args->argv[i], ',') != NULL) {
                     tmpStr = (char*) calloc(strlen(args->argv[i]), sizeof(char));
@@ -2495,12 +2495,12 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
                         ignore = 1;
                     }
             }
-            
+
             /* ignore this element if it has exactly the ignored option */
             else {
                 for (j = 0; ignore_opts[j]; j++) {
                     tmpStr = (char*) calloc( (3 + strlen(ignore_opts[j])), sizeof(char) );
-                    strcat(tmpStr, "-o"); 
+                    strcat(tmpStr, "-o");
                     strcat(tmpStr, ignore_opts[j]);
                     if (strcmp(args->argv[i], tmpStr) == 0) {
                         ignore = 1;
@@ -2515,9 +2515,9 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
                 fuse_opt_add_arg(&new_args, strdup(args->argv[i]));
         }
     }
-    
+
     fuse_opt_free_args(args);
-    
+
     return new_args;
 }
 
@@ -3001,7 +3001,7 @@ int main(int argc, char *argv[])
     if (!settings.enable_ioctl) {
         bindfs_oper.ioctl = NULL;
     }
-    
+
     /* Remove/Ignore some special -o options */
     args = filter_special_opts(&args);
 
