@@ -52,3 +52,7 @@ tests/internals/*.trs
 vagrant/*/*.log
 vagrant/*/.vagrant
 
+# IDEs
+
+/.idea
+/.vscode
