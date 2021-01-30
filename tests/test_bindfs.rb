@@ -27,7 +27,12 @@ require 'tempfile'
 
 include Errno
 
-$have_fuse_29 = Proc.new do
+$have_fuse_3 = Proc.new do
+  system("pkg-config --exists fuse3")
+  $?.success?
+end.call
+
+$have_fuse_29 = !$have_fuse_3 && Proc.new do
   v = `pkg-config --modversion fuse`.split('.')
   raise "failed to get FUSE version with pkg-config" if v.size < 2
   v = v.map(&:to_i)
@@ -701,7 +706,7 @@ testenv("", :title => "many files in a directory") do
   assert { Dir.entries('mnt/dir').sort == expected_entries.sort }
 end
 
-if $have_fuse_29
+if $have_fuse_29 || $have_fuse_3
   testenv("--enable-lock-forwarding --multithreaded", :title => "lock forwarding") do
     File.write('src/file', 'some contents for fcntl lockng')
     # (this test passes with an empty file as well, but this way is clearer)
@@ -751,7 +756,7 @@ end # have_fuse_29
 #
 # This test is also disabled for old (FUSE < 2.9) systems.
 # TODO: figure out why it doesn't work.
-if $have_fuse_29
+if $have_fuse_29 || $have_fuse_3
   root_testenv("--enable-ioctl", :title => "append-only ioctl", :valgrind => false) do
     touch('mnt/file')
     system('chattr +a mnt/file')
