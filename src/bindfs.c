@@ -1062,90 +1062,25 @@ static int bindfs_rename(const char *from, const char *to)
         return -errno;
     }
 
-    #ifdef HAVE_FUSE_3
-    
-    #ifdef __NR_renameat2
-    
-    res = syscall(__NR_renameat2, AT_FDCWD, real_from, AT_FDCWD, real_to, flags); 
-    
-    #else //__NR_renameat2
-    
+#ifdef HAVE_FUSE_3
+
     if (flags == 0) {
         res = rename(real_from, real_to);
-    }
-    else if (flags == RENAME_NOREPLACE && access( real_to, F_OK ) != 0) {
-        res = rename(real_from, real_to); 
-    }
-    else if (flags == RENAME_EXCHANGE && access( real_from, F_OK ) == 0 && access( real_to, F_OK ) == 0) {
-        char *tmp_from, *tmp_to;
-        int r, tmp_errno;
-        
-        tmp_from = tmpnam_inpath(real_from);
-        if (tmp_from) {
-            r = rename(real_from, tmp_from);
-            if (r == -1) {
-                res = r;
-            }
-            else {
-                tmp_to = tmpnam_inpath(real_to);
-                if (tmp_to) {
-                    r = rename(real_to, tmp_to);
-                    tmp_errno = errno;
-                    if (r == -1) {
-                        rename(tmp_from, real_from);
-                        res = r;
-                        errno = tmp_errno;
-                    }
-                    else {
-                        r = rename(tmp_from, real_to);
-                        tmp_errno = errno;
-                        if (r == -1) {
-                            rename(tmp_from, real_from);
-                            rename(tmp_to, real_to);
-                            res = r;
-                            errno = tmp_errno;
-                        }
-                        else {
-                            r = rename(tmp_to, real_from);
-                            tmp_errno = errno;
-                            if (r == -1) {
-                                rename(tmp_from, real_from);
-                                rename(tmp_to, real_to);
-                                res = r;
-                                errno = tmp_errno;
-                            }
-                        }
-                    }
-                }
-                else {
-                    rename(tmp_from, real_from);
-                    res = -1;
-                    errno = EAGAIN;
-                }
-        
-                free(tmp_to);
-            }
-        }
-        else {
-            res = -1;
-            errno = EAGAIN;
-        }
-        
-        free(tmp_from);
-    }
-    else {
+    } else {
+#ifdef __NR_renameat2
+        res = syscall(__NR_renameat2, AT_FDCWD, real_from, AT_FDCWD, real_to, flags);
+#else // __NR_renameat2
         res = -1;
         errno = EINVAL;
+#endif // __NR_renameat2
     }
-    
-    #endif //__NR_renameat2
-    
-    #else //HAVE_FUSE_3
-    
+
+#else  // HAVE_FUSE_3
+
     res = rename(real_from, real_to);
-    
-    #endif //HAVE_FUSE_3
-    
+
+#endif // HAVE_FUSE_3
+
     free(real_from);
     free(real_to);
     if (res == -1)
