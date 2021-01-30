@@ -1,4 +1,4 @@
-AC_INIT([bindfs],[1.14.9],[martin.partel@gmail.com])
+AC_INIT([bindfs],[1.15.0],[martin.partel@gmail.com])
 
 AM_INIT_AUTOMAKE([foreign serial-tests])
 AC_CONFIG_HEADERS([config.h])
@@ -12,6 +12,8 @@ AC_ARG_ENABLE([debug-output],
     [AS_HELP_STRING([--enable-debug-output], [enable debug output])])
 AC_ARG_WITH([core-foundation],
     AS_HELP_STRING([--with-core-foundation], [link against Core Foundation (OS X only) @<:@default=no@:>@]))
+AC_ARG_WITH([fuse3],
+    [AS_HELP_STRING([--with-fuse3], [link against libfuse 3.x (if not set, libfuse 2.x is used)])])
 
 if test x"$enable_debug_output" == "xyes" ; then
     AC_DEFINE([BINDFS_DEBUG], [1], [Define to 1 to enable debugging messages])
@@ -24,7 +26,7 @@ fi
 
 AM_CONDITIONAL(BUILD_OS_IS_DARWIN, [test x"$build_os" = darwin])
 
-my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=26"
+my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64"
 my_CFLAGS="-Wall -fno-common"
 my_LDFLAGS="-pthread"
 AC_SUBST([my_CPPFLAGS])
@@ -52,9 +54,29 @@ AC_COMPILE_IFELSE(
 )
 
 # Check for fuse
-PKG_CHECK_MODULES([fuse], [fuse >= 2.9.0],
-    [AC_DEFINE([HAVE_FUSE_29], [1], [Have FUSE >= 2.9.0])],
-    [PKG_CHECK_MODULES([fuse], [fuse >= 2.8.0])])
+
+AS_IF([test "x$with_fuse3" == "xyes"],
+    [PKG_CHECK_MODULES([fuse3], [fuse3 >= 3.4.0],
+        [
+         AC_DEFINE([HAVE_FUSE_3], [1], [Have FUSE >= 3.0]) 
+         AC_DEFINE([FUSE_USE_VERSION], [34], [FUSE API VERSION = 3.4])
+        ],
+	[
+	 AC_MSG_ERROR([fuse3 not found!], [1]) 
+	]
+    )],
+    [PKG_CHECK_MODULES([fuse], [fuse >= 2.9.0],
+        [
+	 AC_DEFINE([HAVE_FUSE_29], [1], [Have FUSE >= 2.9.0])
+	 AC_DEFINE([FUSE_USE_VERSION], [26], [FUSE API VERSION = 2.6])
+	],
+        [PKG_CHECK_MODULES([fuse], [fuse >= 2.8.0],
+	    [
+	     AC_DEFINE([FUSE_USE_VERSION], [26], [FUSE API VERSION = 2.6])
+	    ]
+	)]
+    )]
+)
 
 AC_CONFIG_FILES([Makefile \
     src/Makefile \
