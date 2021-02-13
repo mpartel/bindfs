@@ -18,6 +18,8 @@
 #   along with bindfs.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+Dir.chdir(File.dirname(__FILE__))
+
 # if we are being run by make check it will set srcdir and we should use it
 $LOAD_PATH << (ENV['srcdir'] || '.')
 
@@ -890,6 +892,14 @@ if `uname`.strip != 'FreeBSD'  # -o dev is not supported on FreeBSD
     assert { data.chars.to_a[1] == "\0" }
     assert { data.chars.to_a[2] == "\0" }
   end
+end
+
+# PR #95
+testenv("-ouser -onofail,nouser,delete-deny -o users -o auto,rename-deny,noauto -o chmod-deny,_netdev", :title => "filtering special options") do
+  touch('src/file')
+  assert_exception(EPERM) { rm('mnt/file') }
+  assert_exception(EPERM) { File.rename('mnt/file', 'mnt/file2') }
+  assert_exception(EPERM) { chmod(0777, 'mnt/file') }
 end
 
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
