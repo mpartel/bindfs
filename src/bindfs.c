@@ -2360,7 +2360,7 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
 
             /* remove ignored option from a comma separated list */
             if (strchr(args->argv[i+1], ',') != NULL) {
-                char *tmpStr = (char*) calloc(strlen(args->argv[i+1]), sizeof(char));
+                char *tmpStr = (char*) calloc(strlen(args->argv[i+1]) + 1, sizeof(char));
                 char *ptr = strtok(args->argv[i+1], ",");
                 while (ptr != NULL) {
                     ignore = false;
@@ -2377,7 +2377,7 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
                     ptr = strtok(NULL, ",");
                 }
                 if (strlen(tmpStr) > 0) {
-                    args->argv[i+1] = (char*) calloc(strlen(tmpStr), sizeof(char));
+                    args->argv[i+1] = (char*) calloc(strlen(tmpStr) + 1, sizeof(char));
                     strcpy(args->argv[i+1], tmpStr);
                     free(tmpStr);
                     ignore = false;
@@ -2405,10 +2405,10 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
 
             /* remove ignored option from a comma seperated list */
             if (strchr(args->argv[i], ',') != NULL) {
-                char *tmpStr = (char*) calloc(strlen(args->argv[i]), sizeof(char));
-                char *tmpStr2 = (char*) calloc(strlen(args->argv[i])-2, sizeof(char));
+                char *tmpStr = (char*) calloc(strlen(args->argv[i]) + 1, sizeof(char));
+                char *tmpStr2 = (char*) calloc(strlen(args->argv[i]) + 1 - 2, sizeof(char));
                 // remove first 2 chars from args->argv[i] and save this to tmpStr2
-                memmove(tmpStr2, args->argv[i]+2, strlen(args->argv[i])-2);
+                memcpy(tmpStr2, args->argv[i] + 2, strlen(args->argv[i]) - 2);
                 char *ptr = strtok(tmpStr2, ",");
                 while (ptr != NULL) {
                     ignore = false;
@@ -2425,7 +2425,7 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
                     ptr = strtok(NULL, ",");
                 }
                 if (strlen(tmpStr) > 0) {
-                    args->argv[i] = (char*) calloc(strlen(tmpStr)+2, sizeof(char));
+                    args->argv[i] = (char*) calloc(2 + strlen(tmpStr) + 1, sizeof(char));
                     strcat(args->argv[i], "-o");
                     strcat(args->argv[i], tmpStr);
                     free(tmpStr);
@@ -2440,7 +2440,7 @@ struct fuse_args filter_special_opts(struct fuse_args *args)
             /* ignore this element if it has exactly the ignored option */
             else {
                 for (int j = 0; ignore_opts[j]; j++) {
-                    char* tmpStr = (char*) calloc(3 + strlen(ignore_opts[j]), sizeof(char));
+                    char* tmpStr = (char*) calloc(2 + strlen(ignore_opts[j]) + 1, sizeof(char));
                     strcat(tmpStr, "-o");
                     strcat(tmpStr, ignore_opts[j]);
                     if (strcmp(args->argv[i], tmpStr) == 0) {
