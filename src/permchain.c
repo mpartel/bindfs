@@ -18,6 +18,7 @@
 */
 
 #include "permchain.h"
+#include <alloca.h>
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
