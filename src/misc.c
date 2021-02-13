@@ -135,6 +135,102 @@ const char *my_dirname(char *path)
     }
 }
 
+static char **dup_argv(int argc, const char * const *argv, struct arena *arena)
+{
+    char **pointer_list = arena_malloc(arena, (argc + 1) * sizeof(char*));
+    char **next_ptr = pointer_list;
+
+    for (int i = 0; i < argc; ++i) {
+        int len = strlen(argv[i]);
+        char *str = arena_malloc(arena, len + 1);
+        memcpy(str, argv[i], len + 1);
+        *next_ptr = str;
+        ++next_ptr;
+    }
+    *next_ptr = NULL;
+
+    return pointer_list;
+}
+
+/* Converts all ("-o", "...") into ("-o..."). */
+static void merge_o_args(
+    int *argc,
+    char **argv,
+    struct arena *arena
+)
+{
+    int i = 0;
+    while (i < *argc) {
+        char *arg = argv[i];
+        if (strcmp(arg, "-o") == 0) {
+            if (i + 1 < *argc) {
+                char *merged = arena_malloc(arena, 2 + strlen(argv[i + 1]) + 1);
+                merged[0] = '-';
+                merged[1] = 'o';
+                strcpy(&merged[2], argv[i + 1]);
+                argv[i] = merged;
+
+                for (int j = i + 1; j < *argc - 1; ++j) {
+                    argv[j] = argv[j + 1];
+                }
+            }
+            --*argc;
+        }
+        ++i;
+    }
+}
+
+void filter_o_opts(
+    bool (*keep)(const char* opt),
+    int orig_argc,
+    const char * const *orig_argv,
+    int *new_argc,
+    char ***new_argv,
+    struct arena* arena
+)
+{
+    int argc = orig_argc;
+    char **argv = dup_argv(argc, orig_argv, arena);
+
+    merge_o_args(&argc, argv, arena);
+
+    for (int i = 0; i < argc; i++) {
+        char *arg = argv[i];
+        if (strncmp(arg, "-o", 2) == 0) {
+            char *filtered = arena_malloc(arena, strlen(arg) + 1);
+            char *filtered_end = filtered;
+
+            const char *tok = strtok(arg + 2, ",");
+            while (tok != NULL) {
+                size_t tok_len = strlen(tok);
+                if ((*keep)(tok)) {
+                    if (filtered_end == filtered) {
+                        *(filtered_end++) = '-';
+                        *(filtered_end++) = 'o';
+                    } else {
+                        *(filtered_end++) = ',';
+                    }
+                    memcpy(filtered_end, tok, tok_len + 1);
+                    filtered_end += tok_len;  // We'll overwrite the null terminator if we append more.
+                }
+                tok = strtok(NULL, ",");
+            }
+
+            if (filtered != filtered_end) {
+                argv[i] = filtered;
+            } else {
+                for (int j = i; j < argc - 1; ++j) {
+                    argv[j] = argv[j + 1];
+                }
+                --argc;
+            }
+        }
+    }
+
+    *new_argc = argc;
+    *new_argv = argv;
+}
+
 void grow_array_impl(void **array, int *capacity, int member_size)
 {
     int new_cap = *capacity;
@@ -170,7 +266,8 @@ int parse_byte_count(const char *str, double *result)
     return 1;
 }
 
-void init_memory_block(struct memory_block *a, int initial_capacity)
+
+void init_memory_block(struct memory_block *a, size_t initial_capacity)
 {
     a->size = 0;
     a->capacity = initial_capacity;
@@ -181,9 +278,9 @@ void init_memory_block(struct memory_block *a, int initial_capacity)
     }
 }
 
-void grow_memory_block(struct memory_block *a, int amount)
+void grow_memory_block(struct memory_block *a, size_t amount)
 {
-    int new_cap;
+    size_t new_cap;
 
     a->size += amount;
     if (a->size >= a->capacity) {
@@ -204,9 +301,9 @@ void grow_memory_block(struct memory_block *a, int amount)
     }
 }
 
-int append_to_memory_block(struct memory_block *a, void *src, int src_size)
+int append_to_memory_block(struct memory_block *a, const void *src, size_t src_size)
 {
-    int dest = a->size;
+    size_t dest = a->size;
     grow_memory_block(a, src_size);
     memcpy(&a->ptr[dest], src, src_size);
     return dest;

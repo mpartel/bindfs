@@ -2,8 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  #config.vm.box = "freebsd/FreeBSD-11.0-STABLE"  # doesn't set base_mac so can't use NAT networking :(
-  config.vm.box = "bento/freebsd-10.3"
+  config.vm.box = "roboxes/freebsd12"
 
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "../../", "/bindfs",
@@ -13,12 +12,12 @@ Vagrant.configure("2") do |config|
     rsync__args: ["-av", "--delete-after"]
 
   config.vm.provider "virtualbox" do |v|
-    v.name = "bindfs-freebsd10_3"
+    v.name = "bindfs-freebsd12"
   end
 
   config.vm.provision "shell", inline: <<-SHELL
     pkg update
-    pkg install -y fusefs-libs pkgconf ruby valgrind
+    pkg install -y fusefs-libs pkgconf ruby
 
     kldload fuse.ko
     echo 'fuse_load="YES"' >> /boot/loader.conf

@@ -296,7 +296,9 @@ testenv("--chmod-deny --chmod-allow-x") do
 
     assert_exception(EPERM) { chmod(0777, 'mnt/file') }
     assert_exception(EPERM) { chmod(0000, 'mnt/file') }
-    assert_exception(EPERM) { chmod(01700, 'mnt/file') } # sticky bit
+    if `uname`.strip != 'FreeBSD'  # FreeBSD doesn't let us set the sticky bit on files
+      assert_exception(EPERM) { chmod(01700, 'mnt/file') } # sticky bit
+    end
 
     chmod(0611, 'mnt/file') # chmod that only changes x-bits should work
     assert { File.stat('src/file').mode & 07777 == 00611 }
@@ -895,7 +897,7 @@ if `uname`.strip != 'FreeBSD'  # -o dev is not supported on FreeBSD
 end
 
 # PR #95
-testenv("-ouser -onofail,nouser,delete-deny -o users -o auto,rename-deny,noauto -o chmod-deny,_netdev", :title => "filtering special options") do
+testenv("-ouser -onofail,nouser,,,delete-deny -o users -o auto,rename-deny,noauto -o chmod-deny,_netdev,,", :title => "filtering special options") do
   touch('src/file')
   assert_exception(EPERM) { rm('mnt/file') }
   assert_exception(EPERM) { File.rename('mnt/file', 'mnt/file2') }

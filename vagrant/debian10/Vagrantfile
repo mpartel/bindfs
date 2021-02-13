@@ -16,8 +16,8 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.provision "shell", reboot: true, inline: <<-SHELL
+    export DEBIAN_FRONTEND='noninteractive'
     apt-get update
-    DEBIAN_FRONTEND='noninteractive' apt-get dist-upgrade -y -o Dpkg::Options::="--force-confdef"
     apt-get install -y fuse3 libfuse3-dev build-essential pkg-config ruby valgrind
     apt-get clean
     echo user_allow_other > /etc/fuse.conf

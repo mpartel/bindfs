@@ -1,9 +1,4 @@
 
-/* For atoll and lutimes */
-#define _BSD_SOURCE
-/* The new non-deprecated version of _BSD_SOURCE */
-#define _DEFAULT_SOURCE
-
 #include <config.h>
 #include <stdlib.h>
 #include <stdio.h>

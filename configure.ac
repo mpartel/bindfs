@@ -28,8 +28,14 @@ fi
 
 AM_CONDITIONAL(BUILD_OS_IS_DARWIN, [test x"$build_os" = darwin])
 
-my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64"
-my_CFLAGS="-Wall -fno-common"
+# _XOPEN_SOURCE is >= 500 for pread/pwrite; >= 700 for utimensat.
+# __BSD_VISIBLE is for flock() on FreeBSD. It otherwise gets hidden by _XOPEN_SOURCE.
+# _BSD_SOURCE is for stat() nanosecond precision and lutimes().
+# _DEFAULT_SOURCE is the new non-deprecated version of _BSD_SOURCE.
+# _DARWIN_BETTER_REALPATH fixes MacOS realpath() broken around Catalina (#83).
+my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -D_XOPEN_SOURCE=700 -D__BSD_VISIBLE=1 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_DARWIN_BETTER_REALPATH"
+
+my_CFLAGS="-Wall -fno-common -std=c99"
 my_LDFLAGS="-pthread"
 AC_SUBST([my_CPPFLAGS])
 AC_SUBST([my_CFLAGS])

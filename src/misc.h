@@ -20,6 +20,10 @@
 #ifndef INC_BINDFS_MISC_H
 #define INC_BINDFS_MISC_H
 
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include "arena.h"
 
 /* Counts the number of times ch occurs in s. */
 int count_chars(const char *s, char ch);
@@ -49,6 +53,17 @@ const char *my_basename(const char *path);
    Otherwise, returns ".". */
 const char *my_dirname(char *path);
 
+/* Filters arguments in comma-separated lists prefixed by '-o'.
+ * Allocates 'new_argv' and its strings, as well as some temporary data, into 'arena'. */
+void filter_o_opts(
+    bool (*keep)(const char* opt),
+    int argc,
+    const char * const *argv,
+    int *new_argc,
+    char ***new_argv,
+    struct arena *arena
+);
+
 /* Reallocs `*array` (may be NULL) to be at least one larger
    than `*capacity` (may be 0) and stores the new capacity
    in `*capacity`. */
@@ -62,15 +77,15 @@ int parse_byte_count(const char *str, double *result);
    growing it and appending to it. */
 struct memory_block {
     char *ptr;
-    int size;
-    int capacity;
+    size_t size;
+    size_t capacity;
 };
 
 #define MEMORY_BLOCK_INITIALIZER { NULL, 0, 0 }
 
-void init_memory_block(struct memory_block *a, int initial_capacity);
-void grow_memory_block(struct memory_block *a, int amount);
-int append_to_memory_block(struct memory_block *a, void *src, int src_size);
+void init_memory_block(struct memory_block *a, size_t initial_capacity);
+void grow_memory_block(struct memory_block *a, size_t amount);
+int append_to_memory_block(struct memory_block *a, const void *src, size_t src_size);
 void free_memory_block(struct memory_block *a);
 
 #define MEMORY_BLOCK_GET(a, offset) (&(a).ptr[(offset)])
