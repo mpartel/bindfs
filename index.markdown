@@ -61,6 +61,7 @@ Bug reports, pull requests, comments and ideas are very welcome. Developement ta
 
 ### Known issues
 
+* When using FUSE 3, libfuse 3.10.2 or newer is recommended to avoid a [bug with readdir](https://github.com/libfuse/libfuse/issues/583), though it only seems to affect a few applications.
 * Hard-linking a domain socket does not preserve its identity.
 * inotify events are not triggered ([#7](https://github.com/mpartel/bindfs/issues/7)).
 * There may be issues with namespaces ([#10](https://github.com/mpartel/bindfs/issues/10)).
