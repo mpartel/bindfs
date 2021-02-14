@@ -33,6 +33,10 @@ $have_fuse_3 = Proc.new do
   system("pkg-config --exists fuse3")
   $?.success?
 end.call
+$have_fuse_3_readdir_bug = $have_fuse_3 && Proc.new do
+  system("pkg-config --max-version=3.10.1 fuse3")
+  $?.success?
+end.call
 
 $have_fuse_29 = !$have_fuse_3 && Proc.new do
   v = `pkg-config --modversion fuse`.split('.')
@@ -466,7 +470,7 @@ testenv("", :title => "preserves inode numbers") do
     assert { File.stat('mnt/dir').ino == File.stat('src/dir').ino }
 end
 
-unless $have_fuse_3  # TODO: re-enable after working around https://github.com/libfuse/libfuse/issues/583
+unless $have_fuse_3_readdir_bug  # https://github.com/libfuse/libfuse/issues/583
     testenv("", :title => "preserves readdir inode numbers") do
         touch('src/file')
         mkdir('src/dir')
