@@ -49,7 +49,7 @@ There is an extensive [HowTo on Ubuntu Forums](http://ubuntuforums.org/showthrea
 
 ## About
 
-bindfs is developed and tested primarily on Ubuntu Linux with [FUSE](https://github.com/libfuse/libfuse), but it's been reported to work reasonably well on Mac OS X with [osxfuse](http://osxfuse.github.io/) and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
+bindfs is developed and tested primarily on Linux with [FUSE](https://github.com/libfuse/libfuse) 2 and 3, but it has been reported to work reasonably well on Mac OS X with [osxfuse](http://osxfuse.github.io/) and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
 
 All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
@@ -62,7 +62,7 @@ Bug reports, pull requests, comments and ideas are very welcome. Developement ta
 ### Known issues
 
 * Hard-linking a domain socket does not preserve its identity.
-* inotify events are not triggered since FUSE doesn't provide an API for this ([#7](https://github.com/mpartel/bindfs/issues/7)).
+* inotify events are not triggered ([#7](https://github.com/mpartel/bindfs/issues/7)).
 * There may be issues with namespaces ([#10](https://github.com/mpartel/bindfs/issues/10)).
 * Multi-threading is disabled by default because it has been seen triggering a race where one user may see attributes meant to be shown to another. If you use bindfs so that all users should see the same permissions and owners then you can enable multithreading by giving `--multithreaded`.
 * Some distros unmount all FUSE filesystems when the network goes down ([#72](https://github.com/mpartel/bindfs/issues/72) & [https://bugs.gentoo.org/679106](https://bugs.gentoo.org/679106))
