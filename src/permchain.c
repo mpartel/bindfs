@@ -18,7 +18,6 @@
 */
 
 #include "permchain.h"
-#include <alloca.h>
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
@@ -67,7 +66,7 @@ static int add_chmod_rule_to_permchain(const char *start, const char *end,
     int ret = -1;
 
     int len = end - start;
-    char *buf = alloca((len + 1) * sizeof(char));
+    char *buf = malloc((len + 1) * sizeof(char));
     const char *p = buf;
 
     enum {LHS, RHS} state = LHS;
@@ -143,6 +142,7 @@ error:
         permchain_cat(pc, newpc);
     else
         permchain_destroy(newpc);
+    free(buf);
     return ret;
 }
 
