@@ -21,7 +21,9 @@ use-cases need `user_allow_other` to be defined in `/etc/fuse.conf`.
 ## Installation ##
 
 [FUSE](https://github.com/libfuse/libfuse) 2.8.0 or above is required.
-FUSE 3 is supported.
+FUSE 3 is supported. When using FUSE 3, libfuse 3.10.2 or newer is
+recommended to avoid a [bug with readdir](https://github.com/libfuse/libfuse/issues/583),
+though it only seems to affect a few applications.
 
 Download a [release](https://bindfs.org/downloads/) or clone this repository.
 
