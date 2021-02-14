@@ -116,7 +116,7 @@ const char *my_dirname(char *path)
     } else if (strcmp(path, "/") == 0) {
         return "/";
     } else {
-        int len = strlen(path);
+        size_t len = strlen(path);
         char *p = path + len - 1;
         while (p > path) {
             if (*p == '/') {
@@ -141,7 +141,7 @@ static char **dup_argv(int argc, const char * const *argv, struct arena *arena)
     char **next_ptr = pointer_list;
 
     for (int i = 0; i < argc; ++i) {
-        int len = strlen(argv[i]);
+        size_t len = strlen(argv[i]);
         char *str = arena_malloc(arena, len + 1);
         memcpy(str, argv[i], len + 1);
         *next_ptr = str;

@@ -65,4 +65,4 @@ void rate_limiter_suite()
     sleeps_correct_amount();
 }
 
-TEST_MAIN(rate_limiter_suite);
+TEST_MAIN(rate_limiter_suite)

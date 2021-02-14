@@ -244,4 +244,4 @@ static void test_internal_suite() {
     filter_o_opts_suite();
 }
 
-TEST_MAIN(test_internal_suite);
+TEST_MAIN(test_internal_suite)
