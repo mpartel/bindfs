@@ -1,3 +1,8 @@
+2021-02-14  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Support for libfuse3 - huge thanks to @McBane87 (PR #95)
+	* Released 1.15.0
+
 2021-01-24  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Non-zero exit code when unable to chdir into source dir (issue #93).
