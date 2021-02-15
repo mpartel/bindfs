@@ -330,7 +330,7 @@ int user_belongs_to_group(uid_t uid, gid_t gid)
 
         pthread_rwlock_wrlock(&cache_lock);
         if (cache_rebuild_requested) {
-            DPRINTF("Building user/group cache");
+            DPRINTF("%s", "Building user/group cache");
             cache_rebuild_requested = 0;
             rebuild_cache();
         }

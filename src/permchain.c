@@ -34,9 +34,9 @@ struct permchain {
     char flags; /* see 'PC_' constants above. */
     mode_t mask; /* which permissions to apply to */
     union {
-        char operands[16]; /* a subset of rwxXDstugo */
-        unsigned int octal;
-    };
+        char as_operands[16]; /* a subset of rwxXDstugo */
+        unsigned int as_octal;
+    } mode;
     struct permchain *next;
 };
 
@@ -45,7 +45,7 @@ struct permchain *permchain_create()
     struct permchain *pc = malloc(sizeof(struct permchain));
     pc->mask = 0000;
     pc->op = '\0';
-    memset(pc->operands, '\0', sizeof(pc->operands));
+    memset(pc->mode.as_operands, '\0', sizeof(pc->mode.as_operands));
     pc->next = NULL;
     pc->flags = PC_FLAGS_DEFAULT;
     return pc;
@@ -71,7 +71,7 @@ static int add_chmod_rule_to_permchain(const char *start, const char *end,
 
     enum {LHS, RHS} state = LHS;
     struct permchain *newpc = permchain_create();
-    char *operands_ptr = newpc->operands;
+    char *operands_ptr = newpc->mode.as_operands;
 
     newpc->flags = 0; /* Reset to PC_FLAGS_DEFAULT in the end if not modified */
 
@@ -122,7 +122,7 @@ static int add_chmod_rule_to_permchain(const char *start, const char *end,
             case 'u':
             case 'g':
             case 'o':
-                if (!strchr(newpc->operands, *p)) {
+                if (!strchr(newpc->mode.as_operands, *p)) {
                     *(operands_ptr++) = *p;
                 }
                 break;
@@ -159,7 +159,7 @@ static int add_octal_rule_to_permchain(const char *start, const char *end,
 
     newpc->mask = 0777;
     newpc->op = 'o';
-    newpc->octal = mode;
+    newpc->mode.as_octal = mode;
 
     permchain_cat(pc, newpc);
     return 0;
@@ -231,9 +231,9 @@ mode_t permchain_apply(struct permchain *pc, mode_t tgtmode)
     while (pc != NULL) {
         #if BINDFS_DEBUG
         if (pc->op == 'o')
-            DPRINTF("STAT MODE: %o, op = %c %o", tgtmode, pc->op, pc->octal);
+            DPRINTF("STAT MODE: %o, op = %c %o", tgtmode, pc->op, pc->mode.as_octal);
         else
-            DPRINTF("STAT MODE: %o, op = %c%s", tgtmode, pc->op, pc->operands);
+            DPRINTF("STAT MODE: %o, op = %c%s", tgtmode, pc->op, pc->mode.as_operands);
         #endif
 
         if (pc->op == '\0') {
@@ -253,7 +253,7 @@ mode_t permchain_apply(struct permchain *pc, mode_t tgtmode)
 
             mode = 0000;
 
-            for (p = pc->operands; *p != '\0'; ++p) {
+            for (p = pc->mode.as_operands; *p != '\0'; ++p) {
                 switch (*p) {
                 case 'r':
                     mode |= 0444;
@@ -303,7 +303,7 @@ mode_t permchain_apply(struct permchain *pc, mode_t tgtmode)
             tgtmode &= ~0777 | ~mode;
             break;
         case 'o':
-            tgtmode = (tgtmode & ~0777) | pc->octal;
+            tgtmode = (tgtmode & ~0777) | pc->mode.as_octal;
             break;
         default:
             assert(0);
