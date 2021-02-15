@@ -1,3 +1,8 @@
+2021-02-15  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed build on old compilers by adhering more strictly to C99.
+	* Released 1.15.1
+
 2021-02-14  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Support for libfuse3 - huge thanks to @McBane87 (PR #95)
