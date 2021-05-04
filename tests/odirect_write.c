@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
         }
         if (res != buf_size) {
             // Too lazy to write a loop here unless it turns out to be necessary.
-            fprintf(stderr, "Failed to write exactly %ld bytes", amt_read);
+            fprintf(stderr, "Failed to write exactly %lu bytes", (unsigned long)amt_read);
         }
     }
 

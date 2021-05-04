@@ -221,13 +221,6 @@ static int is_mirroring_enabled();
 /* Checks whether the uid is to be the mirrored owner of all files. */
 static int is_mirrored_user(uid_t uid);
 
-#ifdef HAVE_FUSE_3
-#ifndef __NR_renameat2
-/* Returns the path to a temporary file inside the same directory as src_path */
-char *tmpnam_inpath(char *src_path);
-#endif
-#endif
-
 /* Processes the virtual path to a real path. Always free() the result. */
 static char *process_path(const char *path, bool resolve_symlinks);
 
@@ -376,66 +369,6 @@ static int is_mirrored_user(uid_t uid)
     }
     return 0;
 }
-
-#ifdef HAVE_FUSE_3
-#ifndef __NR_renameat2
-char *tmpnam_inpath(char *src_path) 
-{
-    
-    char *res, tmp[L_tmpnam], *path, *fname, *tfname, *src_path_cpy, *src_path_cpy_1, *tmp_cpy;
-    int i = 0;
-    
-    src_path_cpy = (char *) calloc((strlen(src_path)), sizeof(char)); 
-    strcpy(src_path_cpy, src_path);
-    
-    src_path_cpy_1 = (char *) calloc((strlen(src_path)), sizeof(char)); 
-    strcpy(src_path_cpy_1, src_path);
-    
-    path = dirname(src_path_cpy);
-    fname = basename(src_path_cpy_1);
-    
-    tmpnam(tmp);
-    tmp_cpy = (char *) calloc((strlen(tmp)), sizeof(char));
-    strcpy(tmp_cpy, tmp);
-    
-    tfname = basename(tmp_cpy);
-    
-    res = (char *) calloc( (strlen(path) + 2 + strlen(tfname) + 1 + strlen(fname) + 1), sizeof(char));
-    
-    strcat(res, path);
-    strcat(res, "/.");
-    strcat(res, tfname);
-    strcat(res, "~");
-    strcat(res, fname);
-    
-    while (access( res, F_OK ) == 0 && i < 10) {
-        
-        tmpnam(tmp);
-        tmp_cpy = (char *) calloc((strlen(tmp)), sizeof(char));
-        strcpy(tmp_cpy, tmp);
-    
-        tfname = basename(tmp_cpy);
-    
-        res = (char *) calloc( (strlen(path) + 2 + strlen(tfname) + 1 + strlen(fname) + 1), sizeof(char));
-    
-        strcat(res, path);
-        strcat(res, "/.");
-        strcat(res, tfname);
-        strcat(res, "~");
-        strcat(res, fname);
-
-        i++;
-    }
-    
-    if (access( res, F_OK ) == 0) {
-        return NULL;
-    }
-    
-    return res;
-    
-}
-#endif
-#endif
 
 static char *process_path(const char *path, bool resolve_symlinks)
 {
