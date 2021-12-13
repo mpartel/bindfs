@@ -10,4 +10,4 @@ if which valgrind > /dev/null; then
     sudo ./test_bindfs.rb --valgrind
 else
     echo "Valgrind not installed. Not running tests with Valgrind."
-end
+fi
