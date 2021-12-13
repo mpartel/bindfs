@@ -79,8 +79,11 @@ threads = dirs.map do |dir|
             raise "vagrant up failed"
           end
         end
-        unless run_and_log.call "vagrant rsync"
-          raise "vagrant rsync failed"
+        # There's some kind of race here, at least with Alpine 3.15
+        with_retries(5, sleep: 2.0, sleep_jitter: 0.5) do
+            unless run_and_log.call "vagrant rsync"
+              raise "vagrant rsync failed"
+            end
         end
         unless run_and_log.call "vagrant ssh -c 'cd /bindfs && sudo rm -Rf tests/tmp_test_bindfs && ./configure && make distclean && ./configure && make && make check && sudo make check'"
           mutex.synchronize do
