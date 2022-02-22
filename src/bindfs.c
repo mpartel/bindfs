@@ -64,11 +64,7 @@
 #include <sys/xattr.h>
 #endif
 
-#ifdef HAVE_FUSE_3
-#ifndef __NR_renameat2
 #include <libgen.h> // For dirname(), basename()
-#endif
-#endif
 
 #ifdef __linux__
 #include <sys/mman.h>
@@ -90,6 +86,7 @@
 #include "rate_limiter.h"
 #include "userinfo.h"
 #include "usermap.h"
+#include "filter.h"
 
 /* Apple Structs */
 #ifdef __APPLE__
@@ -135,6 +132,8 @@ static struct Settings {
 
     RateLimiter *read_limiter;
     RateLimiter *write_limiter;
+
+    FileFilter *filefilter;
 
     enum CreatePolicy {
         CREATE_AS_USER,
@@ -370,6 +369,58 @@ static int is_mirrored_user(uid_t uid)
     return 0;
 }
 
+/* For "read" ops, mode should not be defined, it will be retrieved from
+ * existing file. For "write" ops, desired mode is specified, but if file
+ * exists, patterns will be matched against mode of existing file.
+ *
+ * Also, for handling "two-way" ops, mode of existing file can be returned. */
+static int filefilter_check(const char *path, mode_t mode, mode_t *f_mode)
+{
+    char *path_copy;
+    char *fn;
+    struct stat st;
+    enum { NEW, EXISTING, OVERWRITE } which;
+
+    if (!settings.filefilter)
+        return 0;
+
+    path_copy = strdup(path);
+    fn = basename(path_copy);
+
+    if (lstat(path,&st) == -1) {
+        if (errno == ENOENT) {
+            which = NEW;
+        } else { /* is it possible? */
+            errno = EIO;
+            goto out;
+            };
+    } else {
+        /* To protect hidden files from overwriting (say, we have
+         * 'p:testfifo' policy and do 'mv regular_file testfifo'),
+         * we should check mode of existing files on write operations,
+         * not desired mode for new file */
+        which = mode ? OVERWRITE : EXISTING;
+        mode = st.st_mode;
+    };
+
+    mode &= S_IFMT;
+
+    /* Return retrieved mode of probed file for some two-way
+     * ops, like link and rename */
+    if (f_mode)
+        memcpy(f_mode,&mode,sizeof(mode_t));
+
+    if (filefilter_find_match(settings.filefilter,fn,mode) == filefilter_status_found) {
+        errno = (which == NEW || which == OVERWRITE) ? EPERM : ENOENT;
+        goto out;
+    };
+
+    errno = 0;
+out:
+    free(path_copy);
+    return errno ? -1 : 0;
+}
+
 static char *process_path(const char *path, bool resolve_symlinks)
 {
     if (path == NULL) { /* possible? */
@@ -564,6 +615,9 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
     if (real_path == NULL)
         return -errno;
 
+    if (filefilter_check(real_path,0,NULL) == -1)
+        return -errno;
+
     if (settings.resolve_symlinks) {
         if (lstat(real_path, &st) == -1) {
             free(real_path);
@@ -728,6 +782,9 @@ static int bindfs_getattr(const char *path, struct stat *stbuf)
     if (real_path == NULL)
         return -errno;
 
+    if (filefilter_check(real_path,0,NULL) == -1)
+        return -errno;
+
     if (lstat(real_path, stbuf) == -1) {
         free(real_path);
         return -errno;
@@ -749,6 +806,9 @@ static int bindfs_fgetattr(const char *path, struct stat *stbuf,
     if (real_path == NULL)
         return -errno;
 
+    if (filefilter_check(real_path,0,NULL) == -1)
+        return -errno;
+
     if (fstat(fi->fh, stbuf) == -1) {
         free(real_path);
         return -errno;
@@ -766,6 +826,9 @@ static int bindfs_readlink(const char *path, char *buf, size_t size)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if (filefilter_check(real_path,0,NULL) == -1)
         return -errno;
 
     /* No need to check for access to the link itself, since symlink
@@ -837,6 +900,11 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         st.st_ino = de->d_ino;
         st.st_mode = de->d_type << 12;
 
+        /* skip filling of matched names */
+        if (settings.filefilter &&
+            (filefilter_find_match(settings.filefilter,de->d_name,st.st_mode) == filefilter_status_found))
+                continue;
+
         if (settings.resolve_symlinks && (st.st_mode & S_IFLNK) == S_IFLNK) {
             int file_len = strlen(de->d_name) + 1;  // (include null terminator)
             append_to_memory_block(&resolve_buf, de->d_name, file_len);
@@ -844,6 +912,8 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             resolve_buf.size -= file_len;
 
             if (resolved) {
+                if (filefilter_check(resolved,0,NULL) == -1)
+                    continue;
                 if (lstat(resolved, &st) == -1) {
                     result = -errno;
                     break;
@@ -889,6 +959,9 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
     if (real_path == NULL)
         return -errno;
 
+    if (filefilter_check(real_path,mode&S_IFMT,NULL) == -1)
+        return -errno;
+
     mode = permchain_apply(settings.create_permchain, mode);
 
     if (S_ISFIFO(mode))
@@ -915,6 +988,9 @@ static int bindfs_mkdir(const char *path, mode_t mode)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if (filefilter_check(real_path,S_IFDIR,NULL) == -1)
         return -errno;
 
     mode |= S_IFDIR; /* tell permchain_apply this is a directory */
@@ -956,6 +1032,11 @@ static int bindfs_symlink(const char *from, const char *to)
     if (real_to == NULL)
         return -errno;
 
+    if (filefilter_check(from,0,NULL) == -1)
+        return -errno;
+    if (filefilter_check(real_to,S_IFLNK,NULL) == -1)
+        return -errno;
+
     res = symlink(from, real_to);
     if (res == -1) {
         free(real_to);
@@ -990,6 +1071,12 @@ static int bindfs_rename(const char *from, const char *to)
         free(real_from);
         return -errno;
     }
+
+    mode_t mode_from;
+    if (filefilter_check(real_from,0,&mode_from) == -1)
+        return -errno;
+    if (filefilter_check(real_to,mode_from,NULL) == -1)
+        return -errno;
 
 #ifdef HAVE_FUSE_3
 
@@ -1033,6 +1120,12 @@ static int bindfs_link(const char *from, const char *to)
         return -errno;
     }
 
+    mode_t mode_from;
+    if (filefilter_check(real_from,0,&mode_from) == -1)
+        return -errno;
+    if (filefilter_check(real_to,mode_from,NULL) == -1)
+        return -errno;
+
     res = link(real_from, real_to);
     free(real_from);
     free(real_to);
@@ -1055,6 +1148,9 @@ static int bindfs_chmod(const char *path, mode_t mode)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if (filefilter_check(real_path,0,NULL) == -1)
         return -errno;
 
     if (settings.chmod_allow_x) {
@@ -1155,6 +1251,9 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         if (real_path == NULL)
             return -errno;
 
+        if (filefilter_check(real_path,0,NULL) == -1)
+            return -errno;
+
         res = lchown(real_path, uid, gid);
         free(real_path);
         if (res == -1)
@@ -1176,6 +1275,9 @@ static int bindfs_truncate(const char *path, off_t size)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if (filefilter_check(real_path,0,NULL) == -1)
         return -errno;
 
     res = truncate(real_path, size);
@@ -1214,6 +1316,9 @@ static int bindfs_utimens(const char *path, const struct timespec ts[2])
     if (real_path == NULL)
         return -errno;
 
+    if (filefilter_check(real_path,0,NULL) == -1)
+        return -errno;
+
 #ifdef HAVE_UTIMENSAT
     res = utimensat(settings.mntsrc_fd, real_path, ts, AT_SYMLINK_NOFOLLOW);
 #elif HAVE_LUTIMES
@@ -1242,6 +1347,9 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if (filefilter_check(real_path,S_IFREG,NULL) == -1)
         return -errno;
 
     mode |= S_IFREG; /* tell permchain_apply this is a regular file */
@@ -1278,6 +1386,13 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
         return -errno;
 
     int flags = fi->flags;
+    mode_t mode = 0;
+
+    if (flags&O_CREAT)
+        mode = S_IFREG;
+    if (filefilter_check(real_path,mode,NULL) == -1)
+        return -errno;
+
 #ifdef __linux__
     if (!settings.forward_odirect) {
         flags &= ~O_DIRECT;
@@ -1413,6 +1528,9 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
     if (real_path == NULL)
         return -errno;
 
+    if (filefilter_check(real_path,0,NULL) == -1)
+        return -errno;
+
     res = statvfs(real_path, stbuf);
     free(real_path);
     if (res == -1)
@@ -1475,6 +1593,9 @@ static int bindfs_setxattr(const char *path, const char *name, const char *value
     if (real_path == NULL)
         return -errno;
 
+    if (filefilter_check(real_path,0,NULL) == -1)
+        return -errno;
+
 #if defined(__APPLE__)
     if (!strncmp(name, XATTR_APPLE_PREFIX, sizeof(XATTR_APPLE_PREFIX) - 1)) {
         flags &= ~(XATTR_NOSECURITY);
@@ -1517,6 +1638,9 @@ static int bindfs_getxattr(const char *path, const char *name, char *value,
     if (real_path == NULL)
         return -errno;
 
+    if (filefilter_check(real_path,0,NULL) == -1)
+        return -errno;
+
 #if defined(__APPLE__)
     if (strcmp(name, A_KAUTH_FILESEC_XATTR) == 0) {
         char new_name[MAXPATHLEN];
@@ -1546,6 +1670,10 @@ static int bindfs_listxattr(const char *path, char* list, size_t size)
     real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
+
+    if (filefilter_check(real_path,0,NULL) == -1) {
+        return -errno;
+    }
 
 #if defined(__APPLE__)
     ssize_t res = listxattr(real_path, list, size, XATTR_NOFOLLOW);
@@ -1598,6 +1726,9 @@ static int bindfs_removexattr(const char *path, const char *name)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if (filefilter_check(real_path,0,NULL) == -1)
         return -errno;
 
 #if defined(__APPLE__)
@@ -1702,6 +1833,9 @@ static void print_usage(const char *progname)
            "  --create-for-user=...     New files owned by specified user. *\n"
            "  --create-for-group=...    New files owned by specified group. *\n"
            "  --create-with-perms=...   Alter permissions of new files.\n"
+           "\n"
+           "File filtering policy:\n"
+           "  --file-filter=*.png/...   Hide files in underlying dir.\n"
            "\n"
            "Chown policy:\n"
            "  --chown-normal            Try to chown the original files (the default).\n"
@@ -2174,6 +2308,105 @@ fail:
     return 0;
 }
 
+static int parse_file_filter(FileFilter *filter, char *spec)
+{
+    char *p;
+    enum { FN,SLASH,MODE } cpos;
+    FFType type;
+    FFStatus ret;
+    char *fn = NULL;
+    char *sl_p,*col_p;
+    int fn_pos = 0;
+    char next;
+
+    if (strlen(spec) < 1) {
+        fprintf(stderr,"Pattern string not specified\n");
+        return 0;
+    };
+
+    fn = malloc(PATH_MAX);
+    fn_pos = 0;
+
+    for (p = spec, cpos = SLASH; *p; p++) {
+        next = *(p+1);
+
+        if (cpos == SLASH) {
+            if (p == spec && *p != '/')
+                p--;
+
+            sl_p = strchr(p+1,'/');
+            col_p = strchr(p+1,':');
+
+            if (col_p && ( (!sl_p && col_p) || (sl_p > col_p) )) {
+                type = 0;
+                cpos = MODE;
+                continue;
+            } else {
+                type = FFT_ANY;
+                cpos = FN;
+                continue;
+            };
+        };
+
+        if (cpos == MODE) {
+            switch(*p) {
+            case 'a': type = FFT_ANY; break;
+            case 's': type |= FFT_SCK; break;
+            case 'l': type |= FFT_LNK; break;
+            case 'r': type |= FFT_REG; break;
+            case 'b': type |= FFT_BLK; break;
+            case 'd': type |= FFT_DIR; break;
+            case 'c': type |= FFT_CHR; break;
+            case 'p': type |= FFT_PIP; break;
+
+            case ':':
+                if (next == '/' || next == '\0') {
+                    fprintf(stderr,"Invalid syntax: matching pattern not specified after mode specifier\n");
+                    goto fail;
+                };
+                cpos = FN;
+                continue;
+                break;
+            default:
+                fprintf(stderr,"Invalid syntax: '%c' is not a valid mode token\n",*p);
+                goto fail;
+                break;
+            };
+        };
+
+        if (cpos == FN) {
+            if (fn_pos >= PATH_MAX-1) {
+                fprintf(stderr,"Filename pattern too long\n");
+                goto fail;
+            };
+            if (*p == '/' || *p == '\0') {
+                fprintf(stderr,"Empty filename pattern\n");
+                goto fail;
+            };
+
+            fn[fn_pos++] = *p;
+            if (next == '/' || next == '\0') {
+                fn[fn_pos] = '\0';
+                if ((ret = filefilter_add(settings.filefilter,fn,type)) != filefilter_status_ok) {
+                    fprintf(stderr,"Inserting filter spec '%s' failed: %s\n",fn,ffstatus_str(ret));
+                    goto fail;
+                };
+                fn_pos = 0;
+                free(fn);
+                fn = malloc(PATH_MAX);
+                cpos = SLASH;
+                continue;
+            };
+        };
+    }
+
+    free(fn);
+    return 1;
+fail:
+    free(fn);
+    return 0;
+}
+
 static void maybe_stdout_stderr_to_file()
 {
     /* TODO: make this a command line option. */
@@ -2243,6 +2476,8 @@ static void atexit_func()
     settings.usermap = NULL;
     usermap_destroy(settings.usermap_reverse);
     settings.usermap_reverse = NULL;
+    filefilter_destroy(settings.filefilter);
+    settings.filefilter = NULL;
     permchain_destroy(settings.permchain);
     settings.permchain = NULL;
     permchain_destroy(settings.create_permchain);
@@ -2313,6 +2548,7 @@ int main(int argc, char *argv[])
         char *map;
         char *map_passwd;
         char *map_group;
+        char *file_filter;
         char *read_rate;
         char *write_rate;
         char *create_for_user;
@@ -2357,6 +2593,7 @@ int main(int argc, char *argv[])
         OPT_OFFSET2("--map=%s", "map=%s", map, -1),
         OPT_OFFSET2("--map-passwd=%s", "map-passwd=%s", map_passwd, -1),
         OPT_OFFSET2("--map-group=%s", "map-group=%s", map_group, -1),
+        OPT_OFFSET2("--file-filter=%s", "file-filter=%s", file_filter, -1),
         OPT_OFFSET3("-n", "--no-allow-other", "no-allow-other", no_allow_other, -1),
 
         OPT_OFFSET2("--read-rate=%s", "read-rate=%s", read_rate, -1),
@@ -2417,6 +2654,7 @@ int main(int argc, char *argv[])
     settings.permchain = permchain_create();
     settings.usermap = usermap_create();
     settings.usermap_reverse = usermap_create();
+    settings.filefilter = filefilter_create();
     settings.read_limiter = NULL;
     settings.write_limiter = NULL;
     settings.new_uid = -1;
@@ -2589,6 +2827,13 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Error: Value of --gid-offset must be an integer.\n");
             return 1;
         }
+    }
+
+    if (od.file_filter) {
+        if (!parse_file_filter(settings.filefilter,od.file_filter)) {
+            /* parse_file_filter() returned an error */
+            return 1;
+        };
     }
 
     if (od.forward_odirect) {
