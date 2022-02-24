@@ -4,6 +4,7 @@
 #include <config.h>
 #include <sys/stat.h>
 
+#define FF_FN_LIMIT 8192
 #define MODET_TO_BITMASK(m) ( 1 << (m>>12) )
 
 struct FileFilter;

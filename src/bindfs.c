@@ -2324,7 +2324,11 @@ static int parse_file_filter(FileFilter *filter, char *spec)
         return 0;
     };
 
-    fn = malloc(PATH_MAX);
+    /* Glob pattern might be longer than NAME_MAX, so don't use it
+     * as a limit. But in the other side, ARG_MAX on Linux is 2MB,
+     * which might be expensive to alloc on, e.g., embedded systems,
+     * so let's define some "reasonable" value */
+    fn = malloc(FF_FN_LIMIT);
     fn_pos = 0;
 
     for (p = spec, cpos = SLASH; *p; p++) {
@@ -2375,7 +2379,7 @@ static int parse_file_filter(FileFilter *filter, char *spec)
         };
 
         if (cpos == FN) {
-            if (fn_pos >= PATH_MAX-1) {
+            if (fn_pos >= FF_FN_LIMIT-1) {
                 fprintf(stderr,"Filename pattern too long\n");
                 goto fail;
             };
@@ -2393,7 +2397,7 @@ static int parse_file_filter(FileFilter *filter, char *spec)
                 };
                 fn_pos = 0;
                 free(fn);
-                fn = malloc(PATH_MAX);
+                fn = malloc(FF_FN_LIMIT);
                 cpos = SLASH;
                 continue;
             };
