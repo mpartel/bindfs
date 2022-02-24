@@ -63,7 +63,7 @@ FFStatus filefilter_add(FileFilter *f, char *spec, FFType type)
     while(f->name[++pos] != NULL) {
         if (strcmp(f->name[pos],newname) == 0)
             return filefilter_status_dupfound;
-    };
+    }
     f->name = (char**)realloc(f->name, sizeof(char*)*(pos+2));
     f->type = (FFType*)realloc(f->type, sizeof(FFType)*(pos+2));
     f->has_wildcard = (char*)realloc(f->has_wildcard, sizeof(char)*(pos+2));
@@ -93,7 +93,7 @@ FFStatus filefilter_add(FileFilter *f, char *spec, FFType type)
         f->has_wildcard[pos] = 1;
     } else {
         f->has_wildcard[pos] = 0;
-    };
+    }
 
     return filefilter_status_ok;
 }
@@ -105,10 +105,10 @@ FFStatus filefilter_find_match(FileFilter *f, char *fn, mode_t type)
 
     if (strlen(fn) == 0) {
         return filefilter_status_incorrect_name;
-    };
+    }
     if (!(type_b&FFT_ANY)) {
         return filefilter_status_incorrect_mode;
-    };
+    }
 
     while(f->name[++pos] != NULL) {
         if (!(f->type[pos]&type_b))
@@ -119,8 +119,8 @@ FFStatus filefilter_find_match(FileFilter *f, char *fn, mode_t type)
         } else {
             if (strcmp(f->name[pos],fn) == 0)
                 return filefilter_status_found;
-        };
-    };
+        }
+    }
 
     return filefilter_status_notfound;
 }

@@ -395,7 +395,7 @@ static int filefilter_check(const char *path, mode_t mode, mode_t *f_mode)
         } else { /* is it possible? */
             errno = EIO;
             goto out;
-            };
+            }
     } else {
         /* To protect hidden files from overwriting (say, we have
          * 'p:testfifo' policy and do 'mv regular_file testfifo'),
@@ -403,7 +403,7 @@ static int filefilter_check(const char *path, mode_t mode, mode_t *f_mode)
          * not desired mode for new file */
         which = mode ? OVERWRITE : EXISTING;
         mode = st.st_mode;
-    };
+    }
 
     mode &= S_IFMT;
 
@@ -415,7 +415,7 @@ static int filefilter_check(const char *path, mode_t mode, mode_t *f_mode)
     if (filefilter_find_match(settings.filefilter,fn,mode) == filefilter_status_found) {
         errno = (which == NEW || which == OVERWRITE) ? EPERM : ENOENT;
         goto out;
-    };
+    }
 
     errno = 0;
 out:
@@ -2397,7 +2397,7 @@ static int parse_file_filter(FileFilter *filter, char *spec)
     if (strlen(spec) < 1) {
         fprintf(stderr,"Pattern string not specified\n");
         return 0;
-    };
+    }
 
     /* Glob pattern might be longer than NAME_MAX, so don't use it
      * as a limit. But in the other side, ARG_MAX on Linux is 2MB,
@@ -2424,8 +2424,8 @@ static int parse_file_filter(FileFilter *filter, char *spec)
                 type = FFT_ANY;
                 cpos = FN;
                 continue;
-            };
-        };
+            }
+        }
 
         if (cpos == MODE) {
             switch(*p) {
@@ -2442,7 +2442,7 @@ static int parse_file_filter(FileFilter *filter, char *spec)
                 if (next == '/' || next == '\0') {
                     fprintf(stderr,"Invalid syntax: matching pattern not specified after mode specifier\n");
                     goto fail;
-                };
+                }
                 cpos = FN;
                 continue;
                 break;
@@ -2450,18 +2450,18 @@ static int parse_file_filter(FileFilter *filter, char *spec)
                 fprintf(stderr,"Invalid syntax: '%c' is not a valid mode token\n",*p);
                 goto fail;
                 break;
-            };
-        };
+            }
+        }
 
         if (cpos == FN) {
             if (fn_pos >= FF_FN_LIMIT-1) {
                 fprintf(stderr,"Filename pattern too long\n");
                 goto fail;
-            };
+            }
             if (*p == '/' || *p == '\0') {
                 fprintf(stderr,"Empty filename pattern\n");
                 goto fail;
-            };
+            }
 
             fn[fn_pos++] = *p;
             if (next == '/' || next == '\0') {
@@ -2469,14 +2469,14 @@ static int parse_file_filter(FileFilter *filter, char *spec)
                 if ((ret = filefilter_add(settings.filefilter,fn,type)) != filefilter_status_ok) {
                     fprintf(stderr,"Inserting filter spec '%s' failed: %s\n",fn,ffstatus_str(ret));
                     goto fail;
-                };
+                }
                 fn_pos = 0;
                 free(fn);
                 fn = malloc(FF_FN_LIMIT);
                 cpos = SLASH;
                 continue;
-            };
-        };
+            }
+        }
     }
 
     free(fn);
