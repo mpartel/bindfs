@@ -148,9 +148,9 @@ See \fB\%PERMISSION \%SPECIFICATION\fP below for details.
 .B \-\-file-filter=\fIr:*.png/hiddenfile/d:dir2/...\fP, -o file-filter=...
 Takes a slash-separated list of file names which will be hidden
 in target filesystem. Files will not appear in directories, any
-access operation will fail with \fIENOENT\fP, any write operation
-(create, link, rename, ...) will fail with \fIEPERM\fP, even if
-specified file not exist. If \fI\-\-resolve\-symlinks\fP specified,
+access operation will fail with \fBENOENT\fP, any write operation
+(create, link, rename, ...) will fail with \fBEPERM\fP, even if
+specified file not exist. If \fB\-\-resolve\-symlinks\fP specified,
 symlinks referenced to a hidden files will also be hidden.
 
 Files can be specified as a POSIX wildcards (see \fBglob\fP(7) for
@@ -168,8 +168,8 @@ terminated with a colon:
     \fBp\fP    named pipe (FIFO)
     e.g. \fIr:file/d:dir/slrbcp:notdir/...\fP
 
-If  a type tokens not specified, any file types will be matched.
-If a filename contains a colon, type token part must  be  specified
+If a type tokens not specified, any file types will be matched.
+If a filename contains a colon, type token part must be specified
 to distinguish specifier parts, e.g. \fIa:pci:0000:00:00/...\fP,
 where \fIa\fP is an "any type" specifier and \fIpci:0000:00:00\fP is
 a file name.
