@@ -2919,7 +2919,11 @@ int main(int argc, char *argv[])
         }
     }
     if (settings.delete_filtered && !od.file_filter) {
-        fprintf(stderr,"Error: --delete-filter must be used only with --file-filter specified\n");
+        fprintf(stderr, "Error: --delete-filtered must be used only with --file-filter specified\n");
+        return 1;
+    }
+    if (settings.delete_filtered && settings.delete_deny) {
+        fprintf(stderr, "Error: --delete-filtered is incompatible with --delete-deny\n");
         return 1;
     }
 
