@@ -389,6 +389,11 @@ otherwise thread-safe, there is currently a race condition that may pose
 a security risk for some use cases. See \fB\%BUGS\fP below.
 
 .TP
+.B \-\-direct\-io, \-o direct\-io
+Forces each read/write operation to be forwarded 1:1 to the underlying FS,
+disabling batching and caching by the kernel.
+
+.TP
 .B \-\-forward\-odirect=\fIalignment\fP, \-o forward\-odirect=\fIalignment\fP
 Enable experimental \fBO_DIRECT\fP forwarding, with all read/write requests rounded
 to the given alignment (in bytes). By default, the \fBO_DIRECT\fP flag is

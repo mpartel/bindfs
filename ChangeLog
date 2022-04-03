@@ -1,3 +1,7 @@
+2022-04-03  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added --direct-io (issue #110, thanks @DUOLabs333)
+
 2021-02-15  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed build on old compilers by adhering more strictly to C99.

@@ -203,6 +203,8 @@ static struct Settings {
 #ifdef __linux__
     int forward_odirect;
     size_t odirect_alignment;
+
+    bool direct_io;
 #endif
 
     uid_t uid_offset;
@@ -689,6 +691,7 @@ static void *bindfs_init()
     cfg->entry_timeout = 0;
     cfg->attr_timeout = 0;
     cfg->negative_timeout = 0;
+    cfg->direct_io = settings.direct_io;
     #endif
 
     assert(settings.permchain != NULL);
@@ -1283,6 +1286,9 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
         flags &= ~O_DIRECT;
     }
 #endif
+#ifndef HAVE_FUSE_3  // With FUSE 3, we set this in bindfs_init
+    fi->direct_io = settings.direct_io;
+#endif
 
     fd = open(real_path, flags);
     free(real_path);
@@ -1790,7 +1796,8 @@ enum OptionKey {
     OPTKEY_ENABLE_IOCTL,
     OPTKEY_HIDE_HARD_LINKS,
     OPTKEY_RESOLVE_SYMLINKS,
-    OPTKEY_BLOCK_DEVICES_AS_FILES
+    OPTKEY_BLOCK_DEVICES_AS_FILES,
+    OPTKEY_DIRECT_IO
 };
 
 static int process_option(void *data, const char *arg, int key,
@@ -1898,7 +1905,9 @@ static int process_option(void *data, const char *arg, int key,
     case OPTKEY_BLOCK_DEVICES_AS_FILES:
         settings.block_devices_as_files = 1;
         return 0;
-
+    case OPTKEY_DIRECT_IO:
+        settings.direct_io = true;
+        return 0;
     case OPTKEY_NONOPTION:
         if (!settings.mntsrc) {
             if (strncmp(arg, "/proc/", strlen("/proc/")) == 0) {
@@ -2388,6 +2397,7 @@ int main(int argc, char *argv[])
 
         OPT2("--delete-deny", "delete-deny", OPTKEY_DELETE_DENY),
         OPT2("--rename-deny", "rename-deny", OPTKEY_RENAME_DENY),
+        OPT2("--direct-io", "direct-io", OPTKEY_DIRECT_IO),
 
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
         OPT2("--resolve-symlinks", "resolve-symlinks", OPTKEY_RESOLVE_SYMLINKS),
@@ -2455,6 +2465,7 @@ int main(int argc, char *argv[])
 #ifdef __linux__
     settings.forward_odirect = 0;
     settings.odirect_alignment = 0;
+    settings.direct_io = false;
 #endif
 
     atexit(&atexit_func);
