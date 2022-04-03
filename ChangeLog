@@ -1,6 +1,7 @@
 2022-04-03  Martin Pärtel <martin dot partel at gmail dot com>
 
-	* Added --direct-io (issue #110, thanks @DUOLabs333)
+	* Added --no-direct-io and enabled FUSE's direct_io by default
+	  (issue #110, thanks @DUOLabs333)
 
 2021-02-15  Martin Pärtel <martin dot partel at gmail dot com>
 

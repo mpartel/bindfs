@@ -11,9 +11,7 @@ bindfs \(hy mount \-\-bind in user\-space
 
 .SH DESCRIPTION
 A FUSE filesystem for mirroring the contents of a directory to another
-directory. Additionally, one can change the permissions
-of files in the mirrored directory.
-
+directory, with changes to permissions and other features.
 
 .SH FILE OWNERSHIP
 .TP
@@ -389,9 +387,12 @@ otherwise thread-safe, there is currently a race condition that may pose
 a security risk for some use cases. See \fB\%BUGS\fP below.
 
 .TP
-.B \-\-direct\-io, \-o direct\-io
-Forces each read/write operation to be forwarded 1:1 to the underlying FS,
-disabling batching and caching by the kernel.
+.B \-\-no\-direct\-io, \-o no\-direct\-io
+
+By default, each read/write operation is forwarded 1:1 to the underlying FS,
+disabling batching and caching by the kernel. Specify this option for default
+FUSE behaviour, which may be more performant with some applications but
+incompatible with others.
 
 .TP
 .B \-\-forward\-odirect=\fIalignment\fP, \-o forward\-odirect=\fIalignment\fP
