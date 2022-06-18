@@ -6,7 +6,7 @@ if [ -z "$1" ]; then
 fi
 
 VERSION="$1"
-REPO_URL="git://github.com/mpartel/bindfs.git"
+REPO_URL="git@github.com:mpartel/bindfs"
 
 umask 0022
 
