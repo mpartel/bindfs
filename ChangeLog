@@ -1,3 +1,7 @@
+2022-06-18  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Released 1.16.0
+
 2022-04-03  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --no-direct-io and enabled FUSE's direct_io by default
