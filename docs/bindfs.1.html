@@ -21,79 +21,77 @@ bindfs - mount --bind in user-space
 <p> 
 <h2><a name='sect2' href='#toc2'>Description</a></h2>
 A FUSE filesystem for mirroring the contents of a directory
-to another directory. Additionally, one can change the permissions of files
-in the mirrored directory. 
+to another directory, with changes to permissions and other features. 
 <p> 
-<p> 
-<h2><a name='sect3' href='#toc3'>File Ownership</a></h2>
+<h2><a name='sect3' href='#toc3'>File
+Ownership</a></h2>
 
 <dl>
 
 <dt><b>-u, --force-user, -o force-user=...</b> </dt>
-<dd>Makes
-all files owned by the specified user. Also causes chown on the mounted
-filesystem to always fail. 
+<dd>Makes all files owned by the specified
+user. Also causes chown on the mounted filesystem to always fail. 
 <p> </dd>
 
-<dt><b>-g, --force-group=<i>group</i>, -o force-group=...</b> </dt>
-<dd>Makes all
-files owned by the specified group. Also causes chgrp on the mounted filesystem
-to always fail. 
+<dt><b>-g, --force-group=<i>group</i>,
+-o force-group=...</b> </dt>
+<dd>Makes all files owned by the specified group. Also causes
+chgrp on the mounted filesystem to always fail. 
 <p> </dd>
 
-<dt><b>-p, --perms=<i>permissions</i>, -o perms=...</b> </dt>
-<dd>Takes a comma- or colon-separated
-list of chmod-like permission specifications to be applied to the permission
-bits in order. See <b>PERMISSION SPECIFICATION</b> below for details. 
-<p> This only
-affects how the permission bits of existing files are altered when shown
-in the mounted directory. You can use --create-with-perms to change the permissions
-that newly created files get in the source directory. 
-<p> Note that, as usual,
-the root user isn&rsquo;t bound by the permissions set here. You can get a truly
-read-only mount by using <b>-r</b>. 
+<dt><b>-p, --perms=<i>permissions</i>, -o
+perms=...</b> </dt>
+<dd>Takes a comma- or colon-separated list of chmod-like permission specifications
+to be applied to the permission bits in order. See <b>PERMISSION SPECIFICATION</b>
+below for details. 
+<p> This only affects how the permission bits of existing
+files are altered when shown in the mounted directory. You can use --create-with-perms
+to change the permissions that newly created files get in the source directory.
+
+<p> Note that, as usual, the root user isn&rsquo;t bound by the permissions set here.
+You can get a truly read-only mount by using <b>-r</b>. 
 <p> </dd>
 
-<dt><b>-m, --mirror=<i>user1:user2:...</i>, -o mirror=...</b> </dt>
-<dd>Takes a comma-
-or colon-separated list of users who will see themselves as the owners of
-all files. Users who are not listed here will still be able to access the
-mount if the permissions otherwise allow them to. 
-<p> You can also give a group
-name prefixed with an &rsquo;@&rsquo; to mirror all members of a group. This will not
-change which group the files are shown to have. 
+<dt><b>-m, --mirror=<i>user1:user2:...</i>,
+-o mirror=...</b> </dt>
+<dd>Takes a comma- or colon-separated list of users who will see themselves
+as the owners of all files. Users who are not listed here will still be
+able to access the mount if the permissions otherwise allow them to. 
+<p> You
+can also give a group name prefixed with an &rsquo;@&rsquo; to mirror all members of
+a group. This will not change which group the files are shown to have. 
 <p> </dd>
 
-<dt><b>-M, --mirror-only=<i>user1:user2:...</i>,
--o mirror-only=...</b> </dt>
-<dd>Like <b>--mirror</b> but disallows access for all other users (except
-root). 
+<dt><b>-M,
+--mirror-only=<i>user1:user2:...</i>, -o mirror-only=...</b> </dt>
+<dd>Like <b>--mirror</b> but disallows access
+for all other users (except root). 
 <p> </dd>
 
-<dt><b>--map=<i>user1/user2:@group1/@group2:...</i>, -o map=...</b> </dt>
-<dd>Given a mapping <i>user1/user2</i>,
-all files owned by user1 are shown as owned by user2. When user2 creates
-files, they are chowned to user1 in the underlying directory. When files
-are chowned to user2, they are chowned to user1 in the underlying directory.
-Works similarly for groups. 
-<p> A single user or group may appear no more than
-once on the left and once on the right of a slash in the list of mappings.
-Currently, the options <b>--force-user</b>, <b>--force-group</b>, <b>--mirror</b>, <b>--create-for-*</b>, <b>--chown-*</b>
-and <b>--chgrp-*</b> override the corresponding behavior of this option. 
-<p> Requires
-mounting as root. </dd>
+<dt><b>--map=<i>user1/user2:@group1/@group2:...</i>, -o
+map=...</b> </dt>
+<dd>Given a mapping <i>user1/user2</i>, all files owned by user1 are shown as
+owned by user2. When user2 creates files, they are chowned to user1 in the
+underlying directory. When files are chowned to user2, they are chowned
+to user1 in the underlying directory. Works similarly for groups. 
+<p> A single
+user or group may appear no more than once on the left and once on the
+right of a slash in the list of mappings. Currently, the options <b>--force-user</b>,
+<b>--force-group</b>, <b>--mirror</b>, <b>--create-for-*</b>, <b>--chown-*</b> and <b>--chgrp-*</b> override the corresponding
+behavior of this option. 
+<p> Requires mounting as root. </dd>
 
-<dt><b>--map-passwd=<i>&lt;passwdfile&gt;</i>, -o map-passwd=<i>&lt;passwdfile&gt;</i></b> </dt>
+<dt><b>--map-passwd=<i>&lt;passwdfile&gt;</i>,
+-o map-passwd=<i>&lt;passwdfile&gt;</i></b> </dt>
 <dd> </dd>
 
-<dt><b>--map-group=<i>&lt;groupfile&gt;</i>,
--o map-group=<i>&lt;groupfile&gt;</i></b> </dt>
-<dd>Like <b>--map=...</b>, but reads the UID/GID mapping from passwd
-and group files (like <i>/etc/passwd</i> and <i>/etc/group</i>). Helpful to restore system
-backups where UIDs/GIDs differ. 
+<dt><b>--map-group=<i>&lt;groupfile&gt;</i>, -o map-group=<i>&lt;groupfile&gt;</i></b> </dt>
+<dd>Like <b>--map=...</b>,
+but reads the UID/GID mapping from passwd and group files (like <i>/etc/passwd</i>
+and <i>/etc/group</i>). Helpful to restore system backups where UIDs/GIDs differ.
+
 <p> Example usage: 
-<p>     bindfs --map-passwd=/mnt/orig/etc/passwd
-\ <br>
+<p>     bindfs --map-passwd=/mnt/orig/etc/passwd \ <br>
         --map-passwd=/mnt/orig/etc/group \ <br>
         /mnt/orig /mnt/mapped 
 <p> Requires mounting as root. 
@@ -456,14 +454,22 @@ to be otherwise thread-safe, there is currently a race condition that may
 pose a security risk for some use cases. See <b>BUGS</b> below. 
 <p> </dd>
 
-<dt><b>--forward-odirect=<i>alignment</i>,
--o forward-odirect=<i>alignment</i></b> </dt>
-<dd>Enable experimental <b>O_DIRECT</b> forwarding, with
-all read/write requests rounded to the given alignment (in bytes). By default,
-the <b>O_DIRECT</b> flag is not forwarded to the underlying FS. See <i><b>open</b>(2)</i> for
-details about <b>O_DIRECT</b>. 
-<p> Only works on Linux. Ignored on other platforms.
+<dt><b>--no-direct-io, -o no-direct-io</b>
+</dt>
+<dd>
+<p> By default, each read/write operation is forwarded 1:1 to the underlying
+FS, disabling batching and caching by the kernel. Specify this option for
+default FUSE behaviour, which may be more performant with some applications
+but incompatible with others. 
+<p> </dd>
 
+<dt><b>--forward-odirect=<i>alignment</i>, -o forward-odirect=<i>alignment</i></b>
+</dt>
+<dd>Enable experimental <b>O_DIRECT</b> forwarding, with all read/write requests rounded
+to the given alignment (in bytes). By default, the <b>O_DIRECT</b> flag is not
+forwarded to the underlying FS. See <i><b>open</b>(2)</i> for details about <b>O_DIRECT</b>. 
+<p>
+Only works on Linux. Ignored on other platforms. 
 <p> </dd>
 </dl>
 
@@ -472,43 +478,44 @@ details about <b>O_DIRECT</b>.
 <dl>
 
 <dt><b>-o <i>options</b> </i></dt>
-<dd>Fuse options. 
+<dd>Fuse
+options. 
 <p> </dd>
 
 <dt><b>-r, -o ro</b> </dt>
-<dd>Make the mount strictly read-only.
-This even prevents root from writing to it. If this is all you need, then
-(since Linux 2.6.26) you can get a more efficent mount with <b>mount --bind</b> and
-then <b>mount -o remount,ro</b>. 
+<dd>Make the mount strictly read-only. This even prevents root
+from writing to it. If this is all you need, then (since Linux 2.6.26) you
+can get a more efficent mount with <b>mount --bind</b> and then <b>mount -o remount,ro</b>.
+
 <p> </dd>
 
 <dt><b>-d, -o debug</b> </dt>
 <dd>Enable debug output (implies -f). 
 <p> </dd>
 
-<dt><b>-o
-fsname=<i>name</i></b> </dt>
-<dd>Sets the source directory name in /proc/mounts (returned by
-<b>mount</b>). This is automatically set as long as the source path has no special
-characters. 
+<dt><b>-o fsname=<i>name</i></b> </dt>
+<dd>Sets the source
+directory name in /proc/mounts (returned by <b>mount</b>). This is automatically
+set as long as the source path has no special characters. 
 <p> </dd>
 
 <dt><b>-f</b> </dt>
-<dd>Foreground operation. 
+<dd>Foreground
+operation. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect13' href='#toc13'>Permission Specification</a></h2>
-The <b>-p</b> option
-takes a comma- or colon-separated list of either octal numeric permission
-bits or symbolic representations of permission bit operations. The symbolic
-representation is based on that of the  <i><b>chmod</b>(1)</i> command. setuid, setgid
-and sticky bits are ignored. 
-<p> This program extends the chmod symbolic representation
-with the following operands: 
-<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but
-applies only to directories (not to executables).<br>
+The <b>-p</b> option takes a comma- or colon-separated
+list of either octal numeric permission bits or symbolic representations
+of permission bit operations. The symbolic representation is based on that
+of the  <i><b>chmod</b>(1)</i> command. setuid, setgid and sticky bits are ignored. 
+<p> This
+program extends the chmod symbolic representation with the following operands:
+
+<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but applies only to directories (not
+to executables).<br>
  
 <p> &lsquo;<b>d</b>&rsquo; and &lsquo;<b>f</b>&rsquo; (left hand side)     Makes this directive only apply to directories
 (d) or files (f).<br>
