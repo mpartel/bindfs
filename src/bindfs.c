@@ -1695,6 +1695,8 @@ static void print_usage(const char *progname)
            " --map=user1/user2:...      Let user2 see files of user1 as his own.\n"
            " --map-passwd=<passwdfile>  Load uid mapping from <passwdfile>.\n"
            " --map-group=<groupfile>    Load gid mapping from <groupfile>.\n"
+           " --map-passwd-rev=<passwdfile>  Load reversed uid mapping from <passwdfile>.\n"
+           " --map-group-rev=<groupfile>    Load reversed gid mapping from <groupfile>.\n"
            " --uid-offset=...           Set file uid = uid + offset.\n"
            " --gid-offset=...           Set file gid = gid + offset.\n"
            "\n"
@@ -2322,6 +2324,8 @@ int main(int argc, char *argv[])
         char *map;
         char *map_passwd;
         char *map_group;
+        char *map_passwd_rev;
+        char *map_group_rev;
         char *read_rate;
         char *write_rate;
         char *create_for_user;
@@ -2366,6 +2370,8 @@ int main(int argc, char *argv[])
         OPT_OFFSET2("--map=%s", "map=%s", map, -1),
         OPT_OFFSET2("--map-passwd=%s", "map-passwd=%s", map_passwd, -1),
         OPT_OFFSET2("--map-group=%s", "map-group=%s", map_group, -1),
+        OPT_OFFSET2("--map-passwd-rev=%s", "map-passwd=%s", map_passwd_rev, -1),
+        OPT_OFFSET2("--map-group-rev=%s", "map-group=%s", map_group_rev, -1),
         OPT_OFFSET3("-n", "--no-allow-other", "no-allow-other", no_allow_other, -1),
 
         OPT_OFFSET2("--read-rate=%s", "read-rate=%s", read_rate, -1),
@@ -2544,6 +2550,17 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (od.map_passwd_rev) {
+        if (getuid() != 0) {
+            fprintf(stderr, "Error: You need to be root to use --map-passwd-rev !\n");
+            return 1;
+        }
+        if (!parse_map_file(settings.usermap_reverse, settings.usermap, od.map_passwd_rev, 0)) {
+            /* parse_map_file printed an error */
+            return 1;
+        }
+    }
+
     /* Parse group */
     if (od.map_group) {
         if (getuid() != 0) {
@@ -2556,6 +2573,16 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (od.map_group_rev) {
+        if (getuid() != 0) {
+            fprintf(stderr, "Error: You need to be root to use --map-group-rev !\n");
+            return 1;
+        }
+        if (!parse_map_file(settings.usermap_reverse, settings.usermap, od.map_group_rev, 1)) {
+            /* parse_map_file printed an error */
+            return 1;
+        }
+    }
     /* Parse usermap (may overwrite values from --map-passwd and --map-group) */
     if (od.map) {
         if (getuid() != 0) {
