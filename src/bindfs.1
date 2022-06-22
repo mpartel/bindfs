@@ -140,6 +140,47 @@ them completely.
 See \fB\%PERMISSION \%SPECIFICATION\fP below for details.
 
 
+.SH FILE FILTERING POLICY
+
+.TP
+.B \-\-file-filter=\fIr:*.png/hiddenfile/d:dir2/...\fP, -o file-filter=...
+Takes a slash-separated list of file names which will be hidden
+in target filesystem. Files will not appear in directories, any
+access operation will fail with \fBENOENT\fP, any write operation
+(create, link, rename, ...) will fail with \fBEPERM\fP, even if
+specified file not exist. If \fB\-\-resolve\-symlinks\fP specified,
+symlinks referenced to a hidden files will also be hidden.
+
+Files can be specified as a POSIX wildcards (see \fBglob\fP(7) for
+details). Optionally, only certain file types might be matched, as
+specified with the following tokens which preceded filename and
+terminated with a colon:
+
+    \fBa\fP    any file (this is a default)
+    \fBs\fP    socket
+    \fBl\fP    symbolic link
+    \fBr\fP    regular file
+    \fBb\fP    block device
+    \fBc\fP    character device
+    \fBd\fP    directory
+    \fBp\fP    named pipe (FIFO)
+    e.g. \fIr:file/d:dir/slrbcp:notdir/...\fP
+
+If a type tokens not specified, any file types will be matched.
+If a filename contains a colon, type token part must be specified
+to distinguish specifier parts, e.g. \fIa:pci:0000:00:00/...\fP,
+where \fIa\fP is an "any type" specifier and \fIpci:0000:00:00\fP is
+a file name.
+
+.TP
+.B \-\-delete\-filtered
+When removing a directory, also transparently remove hidden with
+\fB\-\-file\-filter\fP files in it. If this option not active,
+such directories won't remove with \fBENOTEMPTY\fP error. If a directory
+contains hidden directories, they will be deleted recursively, as with
+\fBrm -rf\fP command. If \fB\-\-resolve\-symlinks\fP is active, hidden
+files in resolved directories will not be removed.
+
 .SH CHOWN/CHGRP POLICY
 The behaviour on chown/chgrp calls can be changed. By default they are passed
 through to the source directory even if bindfs is set to show
