@@ -2370,8 +2370,8 @@ int main(int argc, char *argv[])
         OPT_OFFSET2("--map=%s", "map=%s", map, -1),
         OPT_OFFSET2("--map-passwd=%s", "map-passwd=%s", map_passwd, -1),
         OPT_OFFSET2("--map-group=%s", "map-group=%s", map_group, -1),
-        OPT_OFFSET2("--map-passwd-rev=%s", "map-passwd=%s", map_passwd_rev, -1),
-        OPT_OFFSET2("--map-group-rev=%s", "map-group=%s", map_group_rev, -1),
+        OPT_OFFSET2("--map-passwd-rev=%s", "map-passwd-rev=%s", map_passwd_rev, -1),
+        OPT_OFFSET2("--map-group-rev=%s", "map-group-rev=%s", map_group_rev, -1),
         OPT_OFFSET3("-n", "--no-allow-other", "no-allow-other", no_allow_other, -1),
 
         OPT_OFFSET2("--read-rate=%s", "read-rate=%s", read_rate, -1),
