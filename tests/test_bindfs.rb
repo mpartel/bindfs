@@ -839,9 +839,10 @@ if `uname`.strip == 'Linux' &&
     `unshare --help`.include?("--user")
   root_testenv("--gid-offset=10000", :title => "setgid and gid-offset") do
     system("chmod g+s src")
-    system("unshare --map-root-user --user mkdir mnt/dir")
-    assert { File.stat("src/dir").gid == 0 }
-    assert { File.stat("mnt/dir").gid == 10000 }
+    if system("unshare --map-root-user --user mkdir mnt/dir")
+      assert { File.stat("src/dir").gid == 0 }
+      assert { File.stat("mnt/dir").gid == 10000 }
+    end
   end
 end
 
