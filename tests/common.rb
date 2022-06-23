@@ -108,15 +108,15 @@ def testenv(bindfs_args, options = {}, &block)
     mntdir = options[:mntdir_name]
 
     begin
-        Dir.mkdir TESTDIR_NAME
+        FileUtils.mkdir_p TESTDIR_NAME
     rescue Exception => ex
         fail!("ERROR creating testdir at #{TESTDIR_NAME}", ex)
     end
 
     begin
         Dir.chdir TESTDIR_NAME
-        Dir.mkdir srcdir
-        Dir.mkdir mntdir
+        FileUtils.mkdir_p srcdir
+        FileUtils.mkdir_p mntdir
     rescue Exception => ex
         fail!("ERROR preparing testdir at #{TESTDIR_NAME}", ex)
     end
