@@ -428,6 +428,7 @@ Tempfile.open('passwdfile') do |passwd_file|
             assert { File.stat('src/file2').gid == 789 }
         end
 
+        # Pull Request 113
         root_testenv("--map-passwd-rev=#{Shellwords.escape(passwd_file.path)} --map-group-rev=#{Shellwords.escape(group_file.path)}") do
             touch('src/file1')
             chown(nobody_uid, nobody_gid, 'src/file1')
