@@ -415,6 +415,7 @@ Tempfile.open('passwdfile') do |passwd_file|
         passwd_file.flush
         group_file.write("#{nobody_group}:x:789")
         group_file.flush
+
         root_testenv("--map-passwd=#{Shellwords.escape(passwd_file.path)} --map-group=#{Shellwords.escape(group_file.path)}") do
             touch('src/file1')
             chown(123, 789, 'src/file1')
@@ -425,6 +426,18 @@ Tempfile.open('passwdfile') do |passwd_file|
             chown(nobody_uid, nobody_gid, 'mnt/file2')
             assert { File.stat('src/file2').uid == 123 }
             assert { File.stat('src/file2').gid == 789 }
+        end
+
+        root_testenv("--map-passwd-rev=#{Shellwords.escape(passwd_file.path)} --map-group-rev=#{Shellwords.escape(group_file.path)}") do
+            touch('src/file1')
+            chown(nobody_uid, nobody_gid, 'src/file1')
+            assert { File.stat('mnt/file1').uid == 123 }
+            assert { File.stat('mnt/file1').gid == 789 }
+
+            touch('src/file2')
+            chown(123, 789, 'mnt/file2')
+            assert { File.stat('src/file2').uid == nobody_uid }
+            assert { File.stat('src/file2').gid == nobody_gid }
         end
     end
 end
