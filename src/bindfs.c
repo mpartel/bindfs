@@ -691,7 +691,9 @@ static void *bindfs_init()
     cfg->entry_timeout = 0;
     cfg->attr_timeout = 0;
     cfg->negative_timeout = 0;
+#ifdef __linux__
     cfg->direct_io = settings.direct_io;
+#endif
     #endif
 
     assert(settings.permchain != NULL);
@@ -1285,9 +1287,9 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
     if (!settings.forward_odirect) {
         flags &= ~O_DIRECT;
     }
-#endif
 #ifndef HAVE_FUSE_3  // With FUSE 3, we set this in bindfs_init
     fi->direct_io = settings.direct_io;
+#endif
 #endif
 
     fd = open(real_path, flags);
@@ -1907,9 +1909,11 @@ static int process_option(void *data, const char *arg, int key,
     case OPTKEY_BLOCK_DEVICES_AS_FILES:
         settings.block_devices_as_files = 1;
         return 0;
+#ifdef __linux__
     case OPTKEY_NO_DIRECT_IO:
         settings.direct_io = false;
         return 0;
+#endif
     case OPTKEY_NONOPTION:
         if (!settings.mntsrc) {
             if (strncmp(arg, "/proc/", strlen("/proc/")) == 0) {
@@ -2403,7 +2407,9 @@ int main(int argc, char *argv[])
 
         OPT2("--delete-deny", "delete-deny", OPTKEY_DELETE_DENY),
         OPT2("--rename-deny", "rename-deny", OPTKEY_RENAME_DENY),
+#ifdef __linux__
         OPT2("--no-direct-io", "no-direct-io", OPTKEY_NO_DIRECT_IO),
+#endif
 
         OPT2("--hide-hard-links", "hide-hard-links", OPTKEY_HIDE_HARD_LINKS),
         OPT2("--resolve-symlinks", "resolve-symlinks", OPTKEY_RESOLVE_SYMLINKS),
