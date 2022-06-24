@@ -1754,7 +1754,7 @@ static void print_usage(const char *progname)
            "  --block-devices-as-files  Show block devices as regular files.\n"
            "  --multithreaded           Enable multithreaded mode. See man page\n"
            "                            for security issue with current implementation.\n"
-           "  --forward-odirect=...      Forward O_DIRECT (it's cleared by default).\n"
+           "  --forward-odirect=...     Forward O_DIRECT (it's cleared by default).\n"
            "\n"
            "FUSE options:\n"
            "  -o opt[,opt,...]          Mount options.\n"
