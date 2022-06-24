@@ -1,3 +1,10 @@
+2022-06-24  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added --map-{passwd,group}-rev
+	  (PR #113 by @sshilovsky, thanks!)
+	* Fixed build on FreeBSD
+	* Released 1.16.1
+
 2022-06-18  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Released 1.16.0
