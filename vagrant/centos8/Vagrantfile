@@ -16,6 +16,11 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.provision "shell", inline: <<-SHELL
+    # CentOS 8 is EOL
+    # https://www.cyberithub.com/solved-failed-to-download-metadata-for-repo-appstream/
+    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
     yum install -y fuse fuse-devel gcc make pkg-config ruby valgrind
     echo user_allow_other > /etc/fuse.conf
   SHELL
