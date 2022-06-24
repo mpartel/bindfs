@@ -79,7 +79,8 @@ user or group may appear no more than once on the left and once on the
 right of a slash in the list of mappings. Currently, the options <b>--force-user</b>,
 <b>--force-group</b>, <b>--mirror</b>, <b>--create-for-*</b>, <b>--chown-*</b> and <b>--chgrp-*</b> override the corresponding
 behavior of this option. 
-<p> Requires mounting as root. </dd>
+<p> Requires mounting as root. 
+<p> </dd>
 
 <dt><b>--map-passwd=<i>&lt;passwdfile&gt;</i>,
 -o map-passwd=<i>&lt;passwdfile&gt;</i></b> </dt>
@@ -87,12 +88,33 @@ behavior of this option.
 
 <dt><b>--map-group=<i>&lt;groupfile&gt;</i>, -o map-group=<i>&lt;groupfile&gt;</i></b> </dt>
 <dd>Like <b>--map=...</b>,
-but reads the UID/GID mapping from passwd and group files (like <i>/etc/passwd</i>
-and <i>/etc/group</i>). Helpful to restore system backups where UIDs/GIDs differ.
-
+but reads the UID (GID) mapping from passwd (group) file (like <i>/etc/passwd</i>
+and <i>/etc/group</i>). Maps UID (GID) provided in the <i>&lt;passwdfile&gt;</i> (<i>&lt;groupfile&gt;</i>) to
+its corresponding user (group) name. Helpful to restore system backups where
+UIDs and GIDs differ. 
 <p> Example usage: 
-<p>     bindfs --map-passwd=/mnt/orig/etc/passwd \ <br>
-        --map-passwd=/mnt/orig/etc/group \ <br>
+<p>     bindfs --map-passwd=/mnt/orig/etc/passwd
+\ <br>
+        --map-group=/mnt/orig/etc/group \ <br>
+        /mnt/orig /mnt/mapped 
+<p> Requires mounting as root. 
+<p> </dd>
+
+<dt><b>--map-passwd-rev=<i>&lt;passwdfile&gt;</i>,
+-o map-passwd-rev=<i>&lt;passwdfile&gt;</i></b> </dt>
+<dd> </dd>
+
+<dt><b>--map-group-rev=<i>&lt;groupfile&gt;</i>, -o map-group-rev=<i>&lt;groupfile&gt;</i></b>
+</dt>
+<dd>Reversed variant of <b>--map-passwd</b> and <b>--map-group</b>. Like <b>--map=...</b>, but reads the UID
+(GID) mapping from passwd (group) files (like <i>/etc/passwd</i> and <i>/etc/group</i>).
+Maps user (group) name provided in the <i>&lt;passwdfile&gt;</i> (<i>&lt;groupfile&gt;</i>) to its corresponding
+UID (GID). Helpful to create compatible chroot environments where UIDs and
+GIDs differ. 
+<p> Example usage: 
+<p>     bindfs --map-passwd-rev=/mnt/mapped/etc/passwd
+\ <br>
+        --map-group-rev=/mnt/mapped/etc/group \ <br>
         /mnt/orig /mnt/mapped 
 <p> Requires mounting as root. 
 <p> </dd>

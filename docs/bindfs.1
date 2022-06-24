@@ -64,21 +64,44 @@ Currently, the options \fB--force-user\fP, \fB--force-group\fP, \fB--mirror\fP,
 the corresponding behavior of this option.
 
 Requires mounting as root.
+
 .TP
 .B \-\-map-passwd=\fI<passwdfile>\fP, \-o map-passwd=\fI<passwdfile>\fP
 .PD 0
 .TP
 .B \-\-map-group=\fI<groupfile>\fP, \-o map-group=\fI<groupfile>\fP
-Like \fB--map=...\fP, but reads the UID/GID mapping from passwd and group
-files (like \fI/etc/passwd\fP and \fI/etc/group\fP). Helpful to restore
-system backups where UIDs/GIDs differ.
+Like \fB--map=...\fP, but reads the UID (GID) mapping from passwd (group) file
+(like \fI/etc/passwd\fP and \fI/etc/group\fP). Maps UID (GID) provided in the
+\fI<passwdfile>\fP (\fI<groupfile>\fP) to its corresponding user (group) name.
+Helpful to restore system backups where UIDs and GIDs differ.
 
 Example usage:
 
 \&    bindfs --map-passwd=/mnt/orig/etc/passwd \\
 .br
-\&        \--map-passwd=/mnt/orig/etc/group \\
-.br  
+\&        \--map-group=/mnt/orig/etc/group \\
+.br
+\&        /mnt/orig /mnt/mapped
+
+Requires mounting as root.
+
+.TP
+.B \-\-map-passwd-rev=\fI<passwdfile>\fP, \-o map-passwd-rev=\fI<passwdfile>\fP
+.PD 0
+.TP
+.B \-\-map-group-rev=\fI<groupfile>\fP, \-o map-group-rev=\fI<groupfile>\fP
+Reversed variant of \fB--map-passwd\fP and \fB--map-group\fP. Like
+\fB--map=...\fP, but reads the UID (GID) mapping from passwd (group) files
+(like \fI/etc/passwd\fP and \fI/etc/group\fP). Maps user (group) name provided
+in the \fI<passwdfile>\fP (\fI<groupfile>\fP) to its corresponding UID (GID).
+Helpful to create compatible chroot environments where UIDs and GIDs differ.
+
+Example usage:
+
+\&    bindfs --map-passwd-rev=/mnt/mapped/etc/passwd \\
+.br
+\&        \--map-group-rev=/mnt/mapped/etc/group \\
+.br
 \&        /mnt/orig /mnt/mapped
 
 Requires mounting as root.

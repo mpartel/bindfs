@@ -13,8 +13,10 @@ File ownership:
   -M      --mirror-only=... Like --mirror but disallow access for
                             all other users.
  --map=user1/user2:...      Let user2 see files of user1 as his own.
- --map-passwd=<passwdfile>  Load uid mapping from <passwdfile>.
- --map-group=<groupfile>    Load gid mapping from <groupfile>.
+ --map-passwd=...           Load uid mapping from passwd-like file.
+ --map-group=...            Load gid mapping from group-like file.
+ --map-passwd-rev=...       Load reversed uid mapping from  passwd-like file.
+ --map-group-rev=...        Load reversed gid mapping from group-like file.
  --uid-offset=...           Set file uid = uid + offset.
  --gid-offset=...           Set file gid = gid + offset.
 
@@ -72,7 +74,7 @@ Miscellaneous:
   --block-devices-as-files  Show block devices as regular files.
   --multithreaded           Enable multithreaded mode. See man page
                             for security issue with current implementation.
-  --forward-odirect=...      Forward O_DIRECT (it's cleared by default).
+  --forward-odirect=...     Forward O_DIRECT (it's cleared by default).
 
 FUSE options:
   -o opt[,opt,...]          Mount options.
