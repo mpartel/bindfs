@@ -29,6 +29,7 @@ Download a [release](https://bindfs.org/downloads/) or clone this repository.
 
 Then compile and install as usual:
 
+    ./autogen.sh  # Only needed if you cloned the repo.
     ./configure
     make
     make install
