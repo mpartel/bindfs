@@ -410,12 +410,17 @@ otherwise thread-safe, there is currently a race condition that may pose
 a security risk for some use cases. See \fB\%BUGS\fP below.
 
 .TP
+.B \-\-direct\-io, \-o direct\-io
+
+Forwards each read/write operation 1:1 to the underlying FS,
+disabling batching and caching by the kernel. Some applications may
+require this, however it may be incompatible with other applications,
+as currently it has issues with \fBmmap\fP(2) calls, at least.
+
+.TP
 .B \-\-no\-direct\-io, \-o no\-direct\-io
 
-By default, each read/write operation is forwarded 1:1 to the underlying FS,
-disabling batching and caching by the kernel. Specify this option for default
-FUSE behaviour, which may be more performant with some applications but
-incompatible with others.
+This option is provided in case the default changes in the future.
 
 .TP
 .B \-\-forward\-odirect=\fIalignment\fP, \-o forward\-odirect=\fIalignment\fP

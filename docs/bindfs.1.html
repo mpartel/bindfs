@@ -476,22 +476,29 @@ to be otherwise thread-safe, there is currently a race condition that may
 pose a security risk for some use cases. See <b>BUGS</b> below. 
 <p> </dd>
 
-<dt><b>--no-direct-io, -o no-direct-io</b>
+<dt><b>--direct-io, -o direct-io</b>
 </dt>
 <dd>
-<p> By default, each read/write operation is forwarded 1:1 to the underlying
-FS, disabling batching and caching by the kernel. Specify this option for
-default FUSE behaviour, which may be more performant with some applications
-but incompatible with others. 
+<p> Forwards each read/write operation 1:1 to the underlying FS, disabling
+batching and caching by the kernel. Some applications may require this,
+however it may be incompatible with other applications, as currently it
+has issues with <i><b>mmap</b>(2)</i> calls, at least. 
 <p> </dd>
 
-<dt><b>--forward-odirect=<i>alignment</i>, -o forward-odirect=<i>alignment</i></b>
-</dt>
-<dd>Enable experimental <b>O_DIRECT</b> forwarding, with all read/write requests rounded
-to the given alignment (in bytes). By default, the <b>O_DIRECT</b> flag is not
-forwarded to the underlying FS. See <i><b>open</b>(2)</i> for details about <b>O_DIRECT</b>. 
-<p>
-Only works on Linux. Ignored on other platforms. 
+<dt><b>--no-direct-io, -o no-direct-io</b> </dt>
+<dd>
+<p> This
+option is provided in case the default changes in the future. 
+<p> </dd>
+
+<dt><b>--forward-odirect=<i>alignment</i>,
+-o forward-odirect=<i>alignment</i></b> </dt>
+<dd>Enable experimental <b>O_DIRECT</b> forwarding, with
+all read/write requests rounded to the given alignment (in bytes). By default,
+the <b>O_DIRECT</b> flag is not forwarded to the underlying FS. See <i><b>open</b>(2)</i> for
+details about <b>O_DIRECT</b>. 
+<p> Only works on Linux. Ignored on other platforms.
+
 <p> </dd>
 </dl>
 
@@ -500,44 +507,43 @@ Only works on Linux. Ignored on other platforms.
 <dl>
 
 <dt><b>-o <i>options</b> </i></dt>
-<dd>Fuse
-options. 
+<dd>Fuse options. 
 <p> </dd>
 
 <dt><b>-r, -o ro</b> </dt>
-<dd>Make the mount strictly read-only. This even prevents root
-from writing to it. If this is all you need, then (since Linux 2.6.26) you
-can get a more efficent mount with <b>mount --bind</b> and then <b>mount -o remount,ro</b>.
-
+<dd>Make the mount strictly read-only.
+This even prevents root from writing to it. If this is all you need, then
+(since Linux 2.6.26) you can get a more efficent mount with <b>mount --bind</b> and
+then <b>mount -o remount,ro</b>. 
 <p> </dd>
 
 <dt><b>-d, -o debug</b> </dt>
 <dd>Enable debug output (implies -f). 
 <p> </dd>
 
-<dt><b>-o fsname=<i>name</i></b> </dt>
-<dd>Sets the source
-directory name in /proc/mounts (returned by <b>mount</b>). This is automatically
-set as long as the source path has no special characters. 
+<dt><b>-o
+fsname=<i>name</i></b> </dt>
+<dd>Sets the source directory name in /proc/mounts (returned by
+<b>mount</b>). This is automatically set as long as the source path has no special
+characters. 
 <p> </dd>
 
 <dt><b>-f</b> </dt>
-<dd>Foreground
-operation. 
+<dd>Foreground operation. 
 <p> 
 <p> </dd>
 </dl>
 
 <h2><a name='sect13' href='#toc13'>Permission Specification</a></h2>
-The <b>-p</b> option takes a comma- or colon-separated
-list of either octal numeric permission bits or symbolic representations
-of permission bit operations. The symbolic representation is based on that
-of the  <i><b>chmod</b>(1)</i> command. setuid, setgid and sticky bits are ignored. 
-<p> This
-program extends the chmod symbolic representation with the following operands:
-
-<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but applies only to directories (not
-to executables).<br>
+The <b>-p</b> option
+takes a comma- or colon-separated list of either octal numeric permission
+bits or symbolic representations of permission bit operations. The symbolic
+representation is based on that of the  <i><b>chmod</b>(1)</i> command. setuid, setgid
+and sticky bits are ignored. 
+<p> This program extends the chmod symbolic representation
+with the following operands: 
+<p> &lsquo;<b>D</b>&rsquo; (right hand side)     Works like <b>X</b> but
+applies only to directories (not to executables).<br>
  
 <p> &lsquo;<b>d</b>&rsquo; and &lsquo;<b>f</b>&rsquo; (left hand side)     Makes this directive only apply to directories
 (d) or files (f).<br>
