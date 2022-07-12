@@ -1,3 +1,9 @@
+2022-07-12  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Reverted change in 1.16.0 that made direct_io the default.
+	  It turned out to be more problematic than not having it.
+	  (issue #117, thanks @DUOLabs333 and @Misterio77)
+
 2022-06-24  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added --map-{passwd,group}-rev

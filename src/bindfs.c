@@ -1801,6 +1801,7 @@ enum OptionKey {
     OPTKEY_HIDE_HARD_LINKS,
     OPTKEY_RESOLVE_SYMLINKS,
     OPTKEY_BLOCK_DEVICES_AS_FILES,
+    OPTKEY_DIRECT_IO,
     OPTKEY_NO_DIRECT_IO
 };
 
@@ -1910,6 +1911,9 @@ static int process_option(void *data, const char *arg, int key,
         settings.block_devices_as_files = 1;
         return 0;
 #ifdef __linux__
+    case OPTKEY_DIRECT_IO:
+        settings.direct_io = true;
+        return 0;
     case OPTKEY_NO_DIRECT_IO:
         settings.direct_io = false;
         return 0;
@@ -2408,6 +2412,7 @@ int main(int argc, char *argv[])
         OPT2("--delete-deny", "delete-deny", OPTKEY_DELETE_DENY),
         OPT2("--rename-deny", "rename-deny", OPTKEY_RENAME_DENY),
 #ifdef __linux__
+        OPT2("--direct-io", "direct-io", OPTKEY_DIRECT_IO),
         OPT2("--no-direct-io", "no-direct-io", OPTKEY_NO_DIRECT_IO),
 #endif
 
@@ -2477,7 +2482,7 @@ int main(int argc, char *argv[])
 #ifdef __linux__
     settings.forward_odirect = 0;
     settings.odirect_alignment = 0;
-    settings.direct_io = true;
+    settings.direct_io = false;
 #endif
 
     atexit(&atexit_func);
