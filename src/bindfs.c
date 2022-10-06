@@ -709,7 +709,11 @@ static void *bindfs_init()
             strerror(errno)
             );
         bindfs_init_failed = true;
+#ifdef __OpenBSD__
+        exit(1);
+#else
         fuse_exit(fuse_get_context()->fuse);
+#endif
     }
 
     return NULL;
@@ -1663,7 +1667,9 @@ static struct fuse_operations bindfs_oper = {
     .lock       = bindfs_lock,
     .flock      = bindfs_flock,
 #endif
+#ifndef __OpenBSD__
     .ioctl      = bindfs_ioctl,
+#endif
     .statfs     = bindfs_statfs,
     .release    = bindfs_release,
     .fsync      = bindfs_fsync,
@@ -2825,10 +2831,17 @@ int main(int argc, char *argv[])
     }
 #endif
 
+#ifdef __OpenBSD__
+    if (settings.enable_ioctl) {
+        fprintf(stderr, "--enable-ioctl not supported on OpenBSD\n");
+        return 1;
+    }
+#else
     /* Remove the ioctl implementation unless the user has enabled it */
     if (!settings.enable_ioctl) {
         bindfs_oper.ioctl = NULL;
     }
+#endif
 
     /* Remove/Ignore some special -o options */
     args = filter_special_opts(&args);

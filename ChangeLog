@@ -1,3 +1,7 @@
+2022-10-06  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Basic OpenBSD support. The test suite does not pass yet.
+
 2022-07-12  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Reverted change in 1.16.0 that made direct_io the default.
