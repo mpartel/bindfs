@@ -82,6 +82,7 @@ threads = dirs.map do |dir|
         unless run_and_log.call "vagrant rsync"
           raise "vagrant rsync failed"
         end
+        # TODO: on OpenBSD, run tests as root only: https://undeadly.org/cgi?action=article;sid=20160715125022
         unless run_and_log.call "vagrant ssh -c 'cd /bindfs && sudo rm -Rf tests/tmp_test_bindfs && ./configure && make distclean && ./configure && make && make check && sudo make check'"
           mutex.synchronize do
             errors << "VM #{dir} tests failed."
