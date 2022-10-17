@@ -2,6 +2,7 @@
 
 	* Fixed --resolve-symlinks when mountpoint name starts
 	  with source dir name (issue #122, thanks @1-eric)
+	* Released 1.17.1
 
 2022-10-06  Martin Pärtel <martin dot partel at gmail dot com>
 
