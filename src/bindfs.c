@@ -393,10 +393,10 @@ static char *process_path(const char *path, bool resolve_symlinks)
                    we want to be able to operate on broken symlinks. */
                 return strdup(path);
             }
-        } else if (strncmp(result, settings.mntdest, settings.mntdest_len) == 0) {
+        } else if (path_starts_with(result, settings.mntdest, settings.mntdest_len)) {
             /* Recursive call. We cannot handle this without deadlocking,
                especially in single-threaded mode. */
-            DPRINTF("Denying recursive access to mountpoint `%s'", result);
+            DPRINTF("Denying recursive access to mountpoint \"%s\" at \"%s\"", settings.mntdest, result);
             free(result);
             errno = EPERM;
             return NULL;

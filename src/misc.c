@@ -135,6 +135,45 @@ const char *my_dirname(char *path)
     }
 }
 
+static const char* find_last_char_between(const char* start, const char* end, char ch) {
+    assert(start != NULL && end != NULL);
+    const char* p = end - 1;
+    while (p >= start) {
+        if (*p == ch) {
+            return p;
+        }
+        --p;
+    }
+    return NULL;
+}
+
+bool path_starts_with(const char *path, const char* prefix, size_t prefix_len)
+{
+    size_t path_len = strlen(path);
+    while (prefix_len > 0 && prefix[prefix_len - 1] == '/') {
+        --prefix_len;
+    }
+    while (path_len > 0 && path[path_len - 1] == '/') {
+        --path_len;
+    }
+
+    if (strncmp(path, prefix, prefix_len) == 0) {
+        // We still need to check that the last path component of
+        // 'path' does not simply start with the last path component of 'prefix'.
+        const char* prefix_slash = find_last_char_between(prefix, prefix + prefix_len, '/');
+        const char* prefix_part = prefix_slash ? prefix_slash + 1 : prefix;
+        size_t prefix_part_len = (prefix + prefix_len - prefix_part);
+
+        const char* path_part = path + (prefix_part - prefix);
+        const char* path_slash = strchr(path_part, '/');
+        size_t path_part_len = path_slash ? path_slash - path_part : path_len - (path_part - path);
+
+        return prefix_part_len == path_part_len;
+    }
+
+    return false;
+}
+
 static char **dup_argv(int argc, const char * const *argv, struct arena *arena)
 {
     char **pointer_list = arena_malloc(arena, (argc + 1) * sizeof(char*));

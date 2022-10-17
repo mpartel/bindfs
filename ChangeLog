@@ -1,3 +1,8 @@
+2022-10-17  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed --resolve-symlinks when mountpoint name starts
+	  with source dir name (issue #122, thanks @1-eric)
+
 2022-10-06  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Basic OpenBSD support. The test suite does not pass yet.

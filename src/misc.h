@@ -53,6 +53,10 @@ const char *my_basename(const char *path);
    Otherwise, returns ".". */
 const char *my_dirname(char *path);
 
+/* Returns true if the initial path components of 'path' are the path components of 'prefix'.
+   Assumes 'strlen(prefix) == prefix_len'. */
+bool path_starts_with(const char *path, const char* prefix, size_t prefix_len);
+
 /* Filters arguments in comma-separated lists prefixed by '-o'.
  * Allocates 'new_argv' and its strings, as well as some temporary data, into 'arena'. */
 void filter_o_opts(

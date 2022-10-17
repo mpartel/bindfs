@@ -40,11 +40,19 @@ static void test_my_dirname(char *arg, const char *expected)
 
     const char *ret = my_dirname(arg);
     if (strcmp(ret, expected) != 0) {
-        printf("Expected my_dirname(`%s') to return `%s' but got `%s'\n", orig, expected, ret);
-        failures++;
+        printf("Expected my_dirname(\"%s\") to return \"%s\" but got \"%s\"\n", orig, expected, ret);
+        ++failures;
     }
 
     free(orig);
+}
+
+static void test_path_starts_with(const char* path, const char* prefix, bool expected)
+{
+    if (path_starts_with(path, prefix, strlen(prefix)) != expected) {
+        printf("Expected path_starts_with(\"%s\", \"%s\") to return %d but got %d\n", path, prefix, (int)expected, (int)!expected);
+        ++failures;
+    }
 }
 
 static void my_dirname_suite()
@@ -80,6 +88,60 @@ static void my_dirname_suite()
 
     strcpy(buf, ".");
     test_my_dirname(buf, "..");
+}
+
+static void path_starts_with_suite()
+{
+    test_path_starts_with("/a/b/c", "/a/b", true);
+    test_path_starts_with("/a/b/c", "/a/b/", true);
+    test_path_starts_with("/a/b/c/", "/a/b/c/", true);
+    test_path_starts_with("/a/b/c", "/a/b/c/", true);
+    test_path_starts_with("/a/b/c", "/a/b/c", true);
+    test_path_starts_with("/a/b/c", "/a/b/c/d", false);
+    test_path_starts_with("/a/b/c/d", "/a/b/c", true);
+    test_path_starts_with("/a/x/c", "/a/b", false);
+    test_path_starts_with("/x/b/c", "/a/b", false);
+    test_path_starts_with("/a", "/a/b", false);
+    test_path_starts_with("/a/b", "/a", true);
+    test_path_starts_with("a", "a/b", false);
+    test_path_starts_with("a/b", "a", true);
+    test_path_starts_with("a/b/c", "a/b", true);
+    test_path_starts_with("a/b/c", "a/b/c", true);
+    test_path_starts_with("/aaa/abc", "/aaa/abc", true);
+    test_path_starts_with("/aaa/abcd", "/aaa/abc", false);
+    test_path_starts_with("/aaa/abcdef", "/aaa/abc", false);
+    test_path_starts_with("/aaa/ab", "/aaa/abc", false);
+    test_path_starts_with("/aaa/abcdef/ccc", "/aaa/abc", false);
+    test_path_starts_with("/aaa/bbb/ccc", "/aaa/bbb/ccc", true);
+    test_path_starts_with("/aaa/bbb/ccc", "/aaa/bbb/cccc", false);
+    test_path_starts_with("/aaa/bbb/ccc", "/aaa/bbb/cc", false);
+    test_path_starts_with("/aaa/bbb/ccc/", "/aaa/bbb/ccc", true);
+    test_path_starts_with("/aaa/bbb/ccc/", "/aaa/bbb/cccc", false);
+    test_path_starts_with("/aaa/bbb/ccc/", "/aaa/bbb/cc", false);
+    test_path_starts_with("/aaa/bbb/ccc", "/aaa/bbb/ccc/", true);
+    test_path_starts_with("/aaa/bbb/ccc", "/aaa/bbb/cccc/", false);
+    test_path_starts_with("/aaa/bbb/ccc", "/aaa/bbb/cc/", false);
+    test_path_starts_with("/aaa/bbb/ccc/", "/aaa/bbb/ccc/", true);
+    test_path_starts_with("/aaa/bbb/ccc/", "/aaa/bbb/cccc/", false);
+    test_path_starts_with("/aaa/bbb/ccc/", "/aaa/bbb/cc/", false);
+    test_path_starts_with("abc", "abc", true);
+    test_path_starts_with("abc", "ab", false);
+    test_path_starts_with("abc", "abcd", false);
+    test_path_starts_with("abc/", "abc", true);
+    test_path_starts_with("abc/", "ab", false);
+    test_path_starts_with("abc/", "abcd", false);
+    test_path_starts_with("abc", "abc/", true);
+    test_path_starts_with("abc", "ab/", false);
+    test_path_starts_with("abc", "abcd/", false);
+    test_path_starts_with("abc/", "abc/", true);
+    test_path_starts_with("abc/", "ab/", false);
+    test_path_starts_with("abc/", "abcd/", false);
+    test_path_starts_with("abc//", "abc//", true);
+    test_path_starts_with("abc//", "ab//", false);
+    test_path_starts_with("abc//", "abcd//", false);
+    test_path_starts_with("/a/b/c", "", true);
+    test_path_starts_with("/a/b/c", "/", true);
+    test_path_starts_with("/a/b/c", "/", true);
 }
 
 static void sprintf_new_suite() {
@@ -133,17 +195,17 @@ static void filter_o_opts_test(const char **init, const char **expected) {
     for (int i = 0; i < argc; ++i) {
         if (argv[i] == NULL) {
             printf("Expected %s but got end of argv at index %d with input %s\n", expected[i], i, joined_input);
-            failures++;
+            ++failures;
             break;
         }
         if (expected[i] == NULL) {
             printf("Expected end of args but got %s at index %d with input %s\n", argv[i], i, joined_input);
-            failures++;
+            ++failures;
             break;
         }
         if (strcmp(argv[i], expected[i]) != 0) {
             printf("Expected %s but got %s at index %d with input %s\n", expected[i], argv[i], i, joined_input);
-            failures++;
+            ++failures;
             break;
         }
     }
@@ -240,6 +302,7 @@ static void filter_o_opts_suite() {
 static void test_internal_suite() {
     arena_suite();
     my_dirname_suite();
+    path_starts_with_suite();
     sprintf_new_suite();
     filter_o_opts_suite();
 }
