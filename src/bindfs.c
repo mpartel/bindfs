@@ -457,25 +457,26 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     if (settings.block_devices_as_files && S_ISBLK(stbuf->st_mode)) {
         stbuf->st_mode ^= S_IFBLK | S_IFREG;  // Flip both bits
         int fd = open(procpath, O_RDONLY);
+        if (fd == -1) {
+            return -errno;
+        }
 #ifdef __linux__
         uint64_t size;
         ioctl(fd, BLKGETSIZE64, &size);
         stbuf->st_size = (off_t)size;
         if (stbuf->st_size < 0) {  // Underflow
+            close(fd);
             return -EOVERFLOW;
         }
 #else
-        if (fd == -1) {
-            return -errno;
-        }
         off_t size = lseek(fd, 0, SEEK_END);
         if (size == (off_t)-1) {
             close(fd);
             return -errno;
         }
         stbuf->st_size = size;
-        close(fd);
 #endif
+        close(fd);
     }
 
     /* Then permission bits. Symlink permissions don't matter, though. */
