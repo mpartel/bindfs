@@ -1,3 +1,12 @@
+2023-02-08  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Released 1.17.2
+
+2023-02-07  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed FD leak when using --block-devices-as-files
+	  (issue #125, thanks @mafanasyev-tri)
+
 2022-10-17  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed --resolve-symlinks when mountpoint name starts
