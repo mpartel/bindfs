@@ -321,6 +321,9 @@ static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         void *data);
 #endif
 static int bindfs_statfs(const char *path, struct statvfs *stbuf);
+#if __APPLE__
+static int bindfs_statfs_x(const char *path, struct statfs *stbuf);
+#endif
 static int bindfs_release(const char *path, struct fuse_file_info *fi);
 static int bindfs_fsync(const char *path, int isdatasync,
                         struct fuse_file_info *fi);
@@ -1434,6 +1437,25 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
     return 0;
 }
 
+#if __APPLE__
+static int bindfs_statfs_x(const char *path, struct statfs *stbuf)
+{
+    int res;
+    char *real_path;
+
+    real_path = process_path(path, true);
+    if (real_path == NULL)
+        return -errno;
+
+    res = statfs(real_path, stbuf);
+    free(real_path);
+    if (res == -1)
+        return -errno;
+
+    return 0;
+}
+#endif
+
 static int bindfs_release(const char *path, struct fuse_file_info *fi)
 {
     (void) path;
@@ -1672,6 +1694,9 @@ static struct fuse_operations bindfs_oper = {
     .ioctl      = bindfs_ioctl,
 #endif
     .statfs     = bindfs_statfs,
+#ifdef __APPLE__
+    .statfs_x   = bindfs_statfs_x,
+#endif
     .release    = bindfs_release,
     .fsync      = bindfs_fsync,
 #ifdef HAVE_SETXATTR
