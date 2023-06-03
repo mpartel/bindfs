@@ -1,3 +1,9 @@
+2023-06-03  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added MacOS statfs_x implementation (issue #130,
+	  thanks @ohayetechnology)
+	* Released 1.17.3
+
 2023-02-08  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Released 1.17.2
