@@ -867,15 +867,15 @@ static int bindfs_access(const char *path, int wants)
     // grant access, if we should disallow access, we can't aggregate
     // permissions in this way.
 
-    unsigned int group_perms = 0;
-    unsigned int other_perms = 0;
+    mode_t group_perms = 0;
+    mode_t other_perms = 0;
 
-    unsigned int user_acl_perms = 0;
-    unsigned int acl_mask = 0;
+    mode_t user_acl_perms = 0;
+    mode_t acl_mask = 0;
 
-    unsigned int has_user_acl = 0;
-    unsigned int has_group = 0;
-    unsigned int has_mask = 0;
+    bool has_user_acl = false;
+    bool has_group = false;
+    bool has_mask = false;
 
     acl_t acl = acl_get_file(real_path, ACL_TYPE_ACCESS);
     acl_entry_t acl_entry;
@@ -914,7 +914,7 @@ static int bindfs_access(const char *path, int wants)
 
             case ACL_USER:
                 if (euid == *(uid_t*)acl_qualifier) {
-                    has_user_acl = 1;
+                    has_user_acl = true;
                     user_acl_perms = permset_as_bits;
                 }
                 break;
@@ -925,7 +925,7 @@ static int bindfs_access(const char *path, int wants)
                     // the permissions, not where they come from
                     if (st.st_gid == groups[i]) {
                         DPRINTF("Has ACL_GROUP_OBJ of %d", groups[i]);
-                        has_group = 1;
+                        has_group = true;
                         group_perms |= permset_as_bits;
                     }
                 }
@@ -937,14 +937,14 @@ static int bindfs_access(const char *path, int wants)
                     // the permissions, not where they come from
                     if (*(gid_t*)acl_qualifier == groups[i]) {
                         DPRINTF("Has ACL_GROUP of %d", groups[i]);
-                        has_group = 1;
+                        has_group = true;
                         group_perms |= permset_as_bits;
                     }
                 }
                 break;
 
             case ACL_MASK:
-                has_mask = 1;
+                has_mask = true;
                 acl_mask = permset_as_bits;
                 break;
 
@@ -959,7 +959,7 @@ static int bindfs_access(const char *path, int wants)
     free(real_path);
 
     // If there is no mask entry, it doesn't restrict anything.
-    if (has_mask == 0) {
+    if (!has_mask) {
         DPRINTF("ACL has no ACL_MASK entry, setting mask to rwx");
         acl_mask = R_OK | W_OK | X_OK;
     }
@@ -969,7 +969,7 @@ static int bindfs_access(const char *path, int wants)
 
     // If the user ID of the process matches the qualifier in one
     // of the named user entries, this entry determines access
-    if (has_user_acl == 1) {
+    if (has_user_acl) {
         DPRINTF("Using ACL_USER entry to determine access");
         return (user_acl_perms & acl_mask & wants) == wants
             ? 0
@@ -988,7 +988,7 @@ static int bindfs_access(const char *path, int wants)
     // of the named group entries, but neither the owning group entry nor any
     // of the matching named group entries contains the requested permissions,
     // this determines that access is denied
-    if (has_group == 1) {
+    if (has_group) {
         DPRINTF("Using ACL_GROUP_OBJ or ACL_GROUP entry to determine access");
         return (group_perms & acl_mask & wants) == wants
             ? 0
