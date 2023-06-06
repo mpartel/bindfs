@@ -825,6 +825,9 @@ static int bindfs_access(const char *path, int wants)
         return -errno;
     }
 
+    // Update the stat struct to take into account the bindfs flags
+    getattr_common(real_path, &st);
+
     uid_t euid = geteuid();
     gid_t egid = getegid();
 
