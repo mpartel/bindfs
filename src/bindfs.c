@@ -903,17 +903,13 @@ static int bindfs_access(const char *path, int wants)
 
         void *acl_qualifier = acl_get_qualifier(acl_entry);
         switch(acl_tag) {
-            case ACL_USER_OBJ:
-                if (euid == st.st_uid) {
-                    acl_free(acl_qualifier);
-                    acl_free(acl);
-                    free(real_path);
+            // This check is already performed above. As ACLs are a superset of
+            // the standard Unix permissions, we can perform this permission
+            // check against the non-ACL permissions and potentially return
+            // early.
 
-                    return (permset_as_bits & wants) == wants
-                        ? 0
-                        : -EACCES;
-                }
-                break;
+            //case ACL_USER_OBJ:
+                //break;
 
             case ACL_USER:
                 if (euid == *(uid_t*)acl_qualifier) {
