@@ -1026,12 +1026,12 @@ static int bindfs_access(const char *path, int wants)
  * @return true if the dirname has the requested permissions, false otherwise.
  */
 static bool dirname_access_check(const char *path, int wants) {
-    char *part = strdup(path);
-    part = dirname(part);
+    char *dup_path = strdup(path);
+    char *part = dirname(dup_path);
 
     int access_check_result = access_check(part, wants);
 
-    free(part);
+    free(dup_path);
     return access_check_result == 0;
 }
 
@@ -1045,17 +1045,11 @@ static bool dirname_access_check(const char *path, int wants) {
  *     otherwise.
  */
 static bool path_has_search_perms(const char *path) {
-    char *part = strdup(path);
+    char *dup_path = strdup(path);
+    char *part = dup_path;
 
-    bool parent_dir = true;
     do {
         part = dirname(part);
-
-        if (parent_dir && access_check(part, W_OK) != 0) {
-            free(part);
-            return false;
-        }
-
         DPRINTF(
             "Checking path component for required search permissions: %s",
             part);
@@ -1064,15 +1058,13 @@ static bool path_has_search_perms(const char *path) {
             DPRINTF(
                 "Path component doesn't have required search permission: %s",
                 part);
-            free(part);
+            free(dup_path);
             return false;
         }
-
-        parent_dir = false;
     } while(strcmp(part, "/") != 0);
 
     DPRINTF("Path has search required permissions: %s", path);
-    free(part);
+    free(dup_path);
     return true;
 }
 
@@ -1210,7 +1202,7 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
         return -errno;
 
     if (
-        dirname_access_check(real_path, W_OK)
+        !dirname_access_check(real_path, W_OK)
         || !path_has_search_perms(real_path)
     )
         return -EACCES;
@@ -1244,7 +1236,7 @@ static int bindfs_mkdir(const char *path, mode_t mode)
         return -errno;
 
     if (
-        dirname_access_check(real_path, W_OK)
+        !dirname_access_check(real_path, W_OK)
         || !path_has_search_perms(real_path)
     )
         return -EACCES;
@@ -1289,7 +1281,7 @@ static int bindfs_symlink(const char *from, const char *to)
         return -errno;
 
     if (
-        dirname_access_check(real_to, W_OK)
+        !dirname_access_check(real_to, W_OK)
         || !path_has_search_perms(real_to)
     )
         return -EACCES;
