@@ -249,7 +249,7 @@ static size_t round_up_buffer_size_for_direct_io(size_t size);
 
 static unsigned int permset_to_bits(acl_permset_t permset);
 static bool access_check(const char *real_path, int wants);
-static bool dirname_access_check(const char *path, int wants);
+static bool path_access_check(const char *path, int wants);
 static bool path_has_search_perms(const char *path);
 
 /* FUSE callbacks */
@@ -577,10 +577,7 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
     if (real_path == NULL)
         return -errno;
 
-    if (
-        !dirname_access_check(real_path, W_OK)
-        || !path_has_search_perms(real_path)
-    )
+    if (!path_access_check(real_path, W_OK))
         return -errno;
 
     if (settings.resolve_symlinks) {
@@ -1017,7 +1014,8 @@ static int bindfs_access(const char *path, int wants)
 }
 
 /**
- * Perform an access check against the dirname of the given path.
+ * Check the full path has search permissions and the immediate parent
+ * directory has `wants` permission.
  *
  * @param path The path to get the dirname of and performe the check against.
  * @param wants The bitwise-inclusive OR of the access permissions to be
@@ -1026,14 +1024,14 @@ static int bindfs_access(const char *path, int wants)
  * @return true if the dirname has the requested permissions, false otherwise.
  *     `errno` is set to the specific error number if one occurred.
  */
-static bool dirname_access_check(const char *path, int wants) {
+static bool path_access_check(const char *path, int wants) {
     char *dup_path = strdup(path);
     char *part = dirname(dup_path);
 
     bool access_check_result = access_check(part, wants);
 
     free(dup_path);
-    return access_check_result;
+    return access_check_result && path_has_search_perms(path);
 }
 
 /**
@@ -1202,10 +1200,7 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
     if (real_path == NULL)
         return -errno;
 
-    if (
-        !dirname_access_check(real_path, W_OK)
-        || !path_has_search_perms(real_path)
-    )
+    if (!path_access_check(real_path, W_OK))
         return -errno;
 
     mode = permchain_apply(settings.create_permchain, mode);
@@ -1236,10 +1231,7 @@ static int bindfs_mkdir(const char *path, mode_t mode)
     if (real_path == NULL)
         return -errno;
 
-    if (
-        !dirname_access_check(real_path, W_OK)
-        || !path_has_search_perms(real_path)
-    )
+    if (!path_access_check(real_path, W_OK))
         return -errno;
 
     mode |= S_IFDIR; /* tell permchain_apply this is a directory */
@@ -1281,10 +1273,7 @@ static int bindfs_symlink(const char *from, const char *to)
     if (real_to == NULL)
         return -errno;
 
-    if (
-        !dirname_access_check(real_to, W_OK)
-        || !path_has_search_perms(real_to)
-    )
+    if (!path_access_check(real_to, W_OK))
         return -errno;
 
     res = symlink(from, real_to);
@@ -1323,12 +1312,7 @@ static int bindfs_rename(const char *from, const char *to)
         return -errno;
     }
 
-    if (
-        !dirname_access_check(real_from, W_OK)
-        || !dirname_access_check(real_to, W_OK)
-        || !path_has_search_perms(real_from)
-        || !path_has_search_perms(real_to)
-    )
+    if (!path_access_check(real_from, W_OK) || !path_access_check(real_to, W_OK))
         return -errno;
 
     if(lstat(real_from, &st) != 0)
@@ -1379,11 +1363,7 @@ static int bindfs_link(const char *from, const char *to)
         return -errno;
     }
 
-    if (
-        !dirname_access_check(real_to, W_OK)
-        || !path_has_search_perms(real_from)
-        || !path_has_search_perms(real_to)
-    )
+    if (!path_access_check(real_to, W_OK) || !path_has_search_perms(real_from))
         return -errno;
 
     res = link(real_from, real_to);
@@ -1576,10 +1556,7 @@ static int bindfs_utimens(const char *path, const struct timespec ts[2])
     if (real_path == NULL)
         return -errno;
 
-    if (
-        !dirname_access_check(real_path, W_OK)
-        || !path_has_search_perms(real_path)
-    )
+    if (!path_access_check(real_path, W_OK))
         return -errno;
 
 #ifdef HAVE_UTIMENSAT
@@ -1612,10 +1589,7 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
     if (real_path == NULL)
         return -errno;
 
-    if (
-        !dirname_access_check(real_path, W_OK)
-        || !path_has_search_perms(real_path)
-    )
+    if (!path_access_check(real_path, W_OK))
         return -errno;
 
     // TODO: Pretty sure we need more access checks here. Will let the tests
@@ -1654,10 +1628,7 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
     if (real_path == NULL)
         return -errno;
 
-    if (
-        !dirname_access_check(real_path, W_OK)
-        || !path_has_search_perms(real_path)
-    )
+    if (!path_access_check(real_path, W_OK))
         return -errno;
 
     // TODO: Pretty sure we need more access checks here. Will let the tests
