@@ -248,7 +248,7 @@ static size_t round_up_buffer_size_for_direct_io(size_t size);
 #endif
 
 static unsigned int permset_to_bits(acl_permset_t permset);
-static int access_check(const char *real_path, int wants);
+static bool access_check(const char *real_path, int wants);
 static bool dirname_access_check(const char *path, int wants);
 static bool path_has_search_perms(const char *path);
 
@@ -581,7 +581,7 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
         !dirname_access_check(real_path, W_OK)
         || !path_has_search_perms(real_path)
     )
-        return -EACCES;
+        return -errno;
 
     if (settings.resolve_symlinks) {
         if (lstat(real_path, &st) == -1) {
@@ -820,10 +820,10 @@ static unsigned int permset_to_bits(acl_permset_t permset) {
  * @param wants The bitwise-inclusive OR of the access permissions to be
  *     checked (R_OK, W_OK, X_OK).
  *
- * @return 0 if the effective user has access, -EACCES otherwise.
- *
+ * @return true if the effective user has access or false on any other error.
+ *     `errno` is set to the specific error number if one occurred.
  * */
-static int access_check(const char *real_path, int wants)
+static bool access_check(const char *real_path, int wants)
 {
     DPRINTF("Performing access check for '%s'", real_path);
 
@@ -831,7 +831,7 @@ static int access_check(const char *real_path, int wants)
     if (lstat(real_path, &st) == -1) {
         DPRINTF("Could not lstat '%s': %s", real_path, strerror(errno));
         free(real_path);
-        return -errno;
+        return false;
     }
 
     // Update the stat struct to take into account the bindfs flags
@@ -853,9 +853,8 @@ static int access_check(const char *real_path, int wants)
     // If the user ID of the process is the owner, the owner entry determines
     // access.
     if (euid == st.st_uid) {
-        return (((st.st_mode & 0700) >> 6) & wants) == wants
-            ? 0
-            : -EACCES;
+        errno = EACCES;
+        return (((st.st_mode & 0700) >> 6) & wants) == wants;
     }
 
     // Get the groups the effective user is a part of
@@ -979,9 +978,8 @@ static int access_check(const char *real_path, int wants)
     // of the named user entries, this entry determines access
     if (has_user_acl) {
         DPRINTF("Using ACL_USER entry to determine access");
-        return (user_acl_perms & acl_mask & wants) == wants
-            ? 0
-            : -EACCES;
+        errno = EACCES;
+        return (user_acl_perms & acl_mask & wants) == wants;
     }
 
     // If one of the group IDs of the process matches the owning group and the
@@ -998,22 +996,24 @@ static int access_check(const char *real_path, int wants)
     // this determines that access is denied
     if (has_group) {
         DPRINTF("Using ACL_GROUP_OBJ or ACL_GROUP entry to determine access");
-        return (group_perms & acl_mask & wants) == wants
-            ? 0
-            : -EACCES;
+        errno = EACCES;
+        return (group_perms & acl_mask & wants) == wants;
     }
 
     // Else the other entry determines access.
     DPRINTF("Using ACL_OTHER entry to determine access");
-    return (other_perms & wants) == wants
-        ? 0
-        : -EACCES;
+    errno = EACCES;
+    return (other_perms & wants) == wants;
 }
 
 static int bindfs_access(const char *path, int wants)
 {
     char *real_path = process_path(path, true);
-    return access_check(real_path, wants);
+
+    if (!access_check(real_path, wants))
+        return -errno;
+    else
+        return 0;
 }
 
 /**
@@ -1024,15 +1024,16 @@ static int bindfs_access(const char *path, int wants)
  *     checked (R_OK, W_OK, X_OK).
  *
  * @return true if the dirname has the requested permissions, false otherwise.
+ *     `errno` is set to the specific error number if one occurred.
  */
 static bool dirname_access_check(const char *path, int wants) {
     char *dup_path = strdup(path);
     char *part = dirname(dup_path);
 
-    int access_check_result = access_check(part, wants);
+    bool access_check_result = access_check(part, wants);
 
     free(dup_path);
-    return access_check_result == 0;
+    return access_check_result;
 }
 
 /**
@@ -1054,7 +1055,7 @@ static bool path_has_search_perms(const char *path) {
             "Checking path component for required search permissions: %s",
             part);
 
-        if (access_check(part, X_OK) != 0) {
+        if (!access_check(part, X_OK)) {
             DPRINTF(
                 "Path component doesn't have required search permission: %s",
                 part);
@@ -1078,7 +1079,7 @@ static int bindfs_readlink(const char *path, char *buf, size_t size)
         return -errno;
 
     if(!path_has_search_perms(real_path))
-        return -EACCES;
+        return -errno;
 
     /* No need to check for access to the link itself, since symlink
        permissions don't matter. Access to the path components of the symlink
@@ -1205,7 +1206,7 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
         !dirname_access_check(real_path, W_OK)
         || !path_has_search_perms(real_path)
     )
-        return -EACCES;
+        return -errno;
 
     mode = permchain_apply(settings.create_permchain, mode);
 
@@ -1239,7 +1240,7 @@ static int bindfs_mkdir(const char *path, mode_t mode)
         !dirname_access_check(real_path, W_OK)
         || !path_has_search_perms(real_path)
     )
-        return -EACCES;
+        return -errno;
 
     mode |= S_IFDIR; /* tell permchain_apply this is a directory */
     mode = permchain_apply(settings.create_permchain, mode);
@@ -1284,7 +1285,7 @@ static int bindfs_symlink(const char *from, const char *to)
         !dirname_access_check(real_to, W_OK)
         || !path_has_search_perms(real_to)
     )
-        return -EACCES;
+        return -errno;
 
     res = symlink(from, real_to);
     if (res == -1) {
@@ -1328,13 +1329,13 @@ static int bindfs_rename(const char *from, const char *to)
         || !path_has_search_perms(real_from)
         || !path_has_search_perms(real_to)
     )
-        return -EACCES;
+        return -errno;
 
     if(lstat(real_from, &st) != 0)
         return -errno;
 
-    if ((st.st_mode & S_IFDIR) == S_IFDIR && access_check(real_from, W_OK) != 0)
-        return -EACCES;
+    if ((st.st_mode & S_IFDIR) == S_IFDIR && !access_check(real_from, W_OK))
+        return -errno;
 
 #ifdef HAVE_FUSE_3
 
@@ -1383,7 +1384,7 @@ static int bindfs_link(const char *from, const char *to)
         || !path_has_search_perms(real_from)
         || !path_has_search_perms(real_to)
     )
-        return -EACCES;
+        return -errno;
 
     res = link(real_from, real_to);
     free(real_from);
@@ -1410,7 +1411,7 @@ static int bindfs_chmod(const char *path, mode_t mode)
         return -errno;
 
     if(!path_has_search_perms(real_path))
-        return -EACCES;
+        return -errno;
 
     if (settings.chmod_allow_x) {
         /* Get the old permission bits and see which bits would change. */
@@ -1478,7 +1479,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         return -errno;
 
     if(!path_has_search_perms(real_path))
-        return -EACCES;
+        return -errno;
 
     if (uid != -1) {
         switch (settings.chown_policy) {
@@ -1537,7 +1538,7 @@ static int bindfs_truncate(const char *path, off_t size)
         return -errno;
 
     if(!path_has_search_perms(real_path))
-        return -EACCES;
+        return -errno;
 
     res = truncate(real_path, size);
     free(real_path);
@@ -1579,7 +1580,7 @@ static int bindfs_utimens(const char *path, const struct timespec ts[2])
         !dirname_access_check(real_path, W_OK)
         || !path_has_search_perms(real_path)
     )
-        return -EACCES;
+        return -errno;
 
 #ifdef HAVE_UTIMENSAT
     res = utimensat(settings.mntsrc_fd, real_path, ts, AT_SYMLINK_NOFOLLOW);
@@ -1615,7 +1616,7 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
         !dirname_access_check(real_path, W_OK)
         || !path_has_search_perms(real_path)
     )
-        return -EACCES;
+        return -errno;
 
     // TODO: Pretty sure we need more access checks here. Will let the tests
     // highlight the issues.
@@ -1657,7 +1658,7 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
         !dirname_access_check(real_path, W_OK)
         || !path_has_search_perms(real_path)
     )
-        return -EACCES;
+        return -errno;
 
     // TODO: Pretty sure we need more access checks here. Will let the tests
     // highlight the issues.
@@ -1802,7 +1803,7 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
         return -errno;
 
     if(!path_has_search_perms(real_path))
-        return -EACCES;
+        return -errno;
 
     res = statvfs(real_path, stbuf);
     free(real_path);
