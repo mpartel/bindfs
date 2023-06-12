@@ -872,7 +872,6 @@ static bool access_check(const char *real_path, int wants)
     }
 
     acl_free(acl);
-    free(real_path);
 
     // If there is no mask entry, it doesn't restrict anything.
     if (!has_mask) {
@@ -974,7 +973,7 @@ static bool path_has_search_perms(const char *path) {
             free(dup_path);
             return false;
         }
-    } while(strcmp(part, "/") != 0);
+    } while(strcmp(part, "/") != 0 && strcmp(part, ".") != 0);
 
     DPRINTF("Path has search required permissions: %s", path);
     free(dup_path);
