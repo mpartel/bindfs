@@ -247,6 +247,7 @@ static int unapply_gid_offset(gid_t *gid);
 static size_t round_up_buffer_size_for_direct_io(size_t size);
 #endif
 
+/* Access checking helper functions */
 static unsigned int permset_to_bits(acl_permset_t permset);
 static bool access_check(const char *real_path, int wants);
 static bool path_access_check(const char *path, int wants);
@@ -689,99 +690,6 @@ static size_t round_up_buffer_size_for_direct_io(size_t size)
 }
 #endif
 
-#ifdef HAVE_FUSE_3
-static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
-#else
-static void *bindfs_init()
-#endif
-{
-    #ifdef HAVE_FUSE_3
-    (void) conn;
-    cfg->use_ino = 1;
-
-    // Disable caches so changes in base FS are visible immediately.
-    // Especially the attribute cache must be disabled when different users
-    // might see different file attributes, such as when mirroring users.
-    cfg->entry_timeout = 0;
-    cfg->attr_timeout = 0;
-    cfg->negative_timeout = 0;
-#ifdef __linux__
-    cfg->direct_io = settings.direct_io;
-#endif
-    #endif
-
-    assert(settings.permchain != NULL);
-    assert(settings.mntsrc_fd > 0);
-
-    maybe_stdout_stderr_to_file();
-
-    if (fchdir(settings.mntsrc_fd) != 0) {
-        fprintf(
-            stderr,
-            "Could not change working directory to '%s': %s\n",
-            settings.mntsrc,
-            strerror(errno)
-            );
-        bindfs_init_failed = true;
-#ifdef __OpenBSD__
-        exit(1);
-#else
-        fuse_exit(fuse_get_context()->fuse);
-#endif
-    }
-
-    return NULL;
-}
-
-static void bindfs_destroy(void *private_data)
-{
-}
-
-#ifdef HAVE_FUSE_3
-static int bindfs_getattr(const char *path, struct stat *stbuf,
-                           struct fuse_file_info *fi)
-#else
-static int bindfs_getattr(const char *path, struct stat *stbuf)
-#endif
-{
-    int res;
-    char *real_path;
-
-    real_path = process_path(path, true);
-    if (real_path == NULL)
-        return -errno;
-
-    if (lstat(real_path, stbuf) == -1) {
-        free(real_path);
-        return -errno;
-    }
-
-    res = getattr_common(real_path, stbuf);
-    free(real_path);
-    return res;
-}
-
-#ifndef HAVE_FUSE_3
-static int bindfs_fgetattr(const char *path, struct stat *stbuf,
-                           struct fuse_file_info *fi)
-{
-    int res;
-    char *real_path;
-
-    real_path = process_path(path, true);
-    if (real_path == NULL)
-        return -errno;
-
-    if (fstat(fi->fh, stbuf) == -1) {
-        free(real_path);
-        return -errno;
-    }
-    res = getattr_common(real_path, stbuf);
-    free(real_path);
-    return res;
-}
-#endif
-
 /**
  * Convert an ACL permset to a bitmask.
  *
@@ -1003,16 +911,6 @@ static bool access_check(const char *real_path, int wants)
     return (other_perms & wants) == wants;
 }
 
-static int bindfs_access(const char *path, int wants)
-{
-    char *real_path = process_path(path, true);
-
-    if (!access_check(real_path, wants))
-        return -errno;
-    else
-        return 0;
-}
-
 /**
  * Check the full path has search permissions and the immediate parent
  * directory has `wants` permission.
@@ -1065,6 +963,109 @@ static bool path_has_search_perms(const char *path) {
     DPRINTF("Path has search required permissions: %s", path);
     free(dup_path);
     return true;
+}
+
+#ifdef HAVE_FUSE_3
+static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
+#else
+static void *bindfs_init()
+#endif
+{
+    #ifdef HAVE_FUSE_3
+    (void) conn;
+    cfg->use_ino = 1;
+
+    // Disable caches so changes in base FS are visible immediately.
+    // Especially the attribute cache must be disabled when different users
+    // might see different file attributes, such as when mirroring users.
+    cfg->entry_timeout = 0;
+    cfg->attr_timeout = 0;
+    cfg->negative_timeout = 0;
+#ifdef __linux__
+    cfg->direct_io = settings.direct_io;
+#endif
+    #endif
+
+    assert(settings.permchain != NULL);
+    assert(settings.mntsrc_fd > 0);
+
+    maybe_stdout_stderr_to_file();
+
+    if (fchdir(settings.mntsrc_fd) != 0) {
+        fprintf(
+            stderr,
+            "Could not change working directory to '%s': %s\n",
+            settings.mntsrc,
+            strerror(errno)
+            );
+        bindfs_init_failed = true;
+#ifdef __OpenBSD__
+        exit(1);
+#else
+        fuse_exit(fuse_get_context()->fuse);
+#endif
+    }
+
+    return NULL;
+}
+
+static void bindfs_destroy(void *private_data)
+{
+}
+
+#ifdef HAVE_FUSE_3
+static int bindfs_getattr(const char *path, struct stat *stbuf,
+                           struct fuse_file_info *fi)
+#else
+static int bindfs_getattr(const char *path, struct stat *stbuf)
+#endif
+{
+    int res;
+    char *real_path;
+
+    real_path = process_path(path, true);
+    if (real_path == NULL)
+        return -errno;
+
+    if (lstat(real_path, stbuf) == -1) {
+        free(real_path);
+        return -errno;
+    }
+
+    res = getattr_common(real_path, stbuf);
+    free(real_path);
+    return res;
+}
+
+#ifndef HAVE_FUSE_3
+static int bindfs_fgetattr(const char *path, struct stat *stbuf,
+                           struct fuse_file_info *fi)
+{
+    int res;
+    char *real_path;
+
+    real_path = process_path(path, true);
+    if (real_path == NULL)
+        return -errno;
+
+    if (fstat(fi->fh, stbuf) == -1) {
+        free(real_path);
+        return -errno;
+    }
+    res = getattr_common(real_path, stbuf);
+    free(real_path);
+    return res;
+}
+#endif
+
+static int bindfs_access(const char *path, int wants)
+{
+    char *real_path = process_path(path, true);
+
+    if (!access_check(real_path, wants))
+        return -errno;
+    else
+        return 0;
 }
 
 static int bindfs_readlink(const char *path, char *buf, size_t size)
