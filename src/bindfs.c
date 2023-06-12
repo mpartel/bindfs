@@ -758,8 +758,12 @@ static bool access_check(const char *real_path, int wants)
     // If the user ID of the process is the owner, the owner entry determines
     // access.
     if (euid == st.st_uid) {
-        errno = EACCES;
-        return (((st.st_mode & 0700) >> 6) & wants) == wants;
+        if ((((st.st_mode & 0700) >> 6) & wants) == wants) {
+            return true;
+        } else {
+            errno = EACCES;
+            return false;
+        }
     }
 
     // Get the groups the effective user is a part of
@@ -883,8 +887,12 @@ static bool access_check(const char *real_path, int wants)
     // of the named user entries, this entry determines access
     if (has_user_acl) {
         DPRINTF("Using ACL_USER entry to determine access");
-        errno = EACCES;
-        return (user_acl_perms & acl_mask & wants) == wants;
+        if ((user_acl_perms & acl_mask & wants) == wants) {
+            return true;
+        } else {
+            errno = EACCES;
+            return false;
+        }
     }
 
     // If one of the group IDs of the process matches the owning group and the
@@ -901,14 +909,22 @@ static bool access_check(const char *real_path, int wants)
     // this determines that access is denied
     if (has_group) {
         DPRINTF("Using ACL_GROUP_OBJ or ACL_GROUP entry to determine access");
-        errno = EACCES;
-        return (group_perms & acl_mask & wants) == wants;
+        if ((group_perms & acl_mask & wants) == wants) {
+            return true;
+        } else {
+            errno = EACCES;
+            return false;
+        }
     }
 
     // Else the other entry determines access.
     DPRINTF("Using ACL_OTHER entry to determine access");
-    errno = EACCES;
-    return (other_perms & wants) == wants;
+    if ((other_perms & wants) == wants) {
+        return true;
+    } else {
+        errno = EACCES;
+        return false;
+    }
 }
 
 /**
