@@ -88,11 +88,25 @@ AC_DEFUN([CHECK_FUSE3],
     )]
 )
 
+AC_DEFUN([CHECK_FUSE_T],
+    [PKG_CHECK_MODULES([fuse_t], [fuse-t >= 1.0.0],
+        [
+            AC_DEFINE([HAVE_FUSE_T], [1], [Have FUSE >= 1.0.0])
+            AC_DEFINE([FUSE_USE_VERSION], [34], [FUSE API VERSION = 3.4])
+        ],
+        [$1]
+    )]
+)
+
+
 AS_IF([test "x$with_fuse2" == "xyes"],
     [CHECK_FUSE2([AC_MSG_ERROR([FUSE 2 not found])])],
     [AS_IF([test "x$with_fuse3" == "xyes"],
         [CHECK_FUSE3([AC_MSG_ERROR([FUSE 3 not found])])],
-        [CHECK_FUSE3([CHECK_FUSE2([AC_MSG_ERROR([FUSE not found])])])]
+        [AS_IF([test "x$with_fuse_t" == "xyes"],
+            [CHECK_FUSE_T([AC_MSG_ERROR([FUSE-T not found])])],
+            [CHECK_FUSE3([CHECK_FUSE2([CHECK_FUSE_T([AC_MSG_ERROR([FUSE not found])])])])]
+        )]
     )]
 )
 

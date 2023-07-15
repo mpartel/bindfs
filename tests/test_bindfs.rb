@@ -31,7 +31,10 @@ include Errno
 
 $have_fuse_3 = Proc.new do
   system("pkg-config --exists fuse3")
-  $?.success?
+  $?.success? || Proc.new do
+    system("pkg-config --exists fuse-t")
+    $?.success?
+  end.call
 end.call
 $have_fuse_3_readdir_bug = $have_fuse_3 && Proc.new do
   system("pkg-config --max-version=3.10.1 fuse3")
