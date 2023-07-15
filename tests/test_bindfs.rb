@@ -25,6 +25,7 @@ $LOAD_PATH << (ENV['srcdir'] || '.')
 
 require 'common.rb'
 require 'etc'
+require 'socket'
 require 'tempfile'
 
 include Errno
@@ -926,17 +927,16 @@ testenv("-ouser -onofail,nouser,,,delete-deny -o users -o auto,rename-deny,noaut
 end
 
 # Issue #132 / PR #133
-if `which nc 2> /dev/null`.strip != ''
-  testenv("", :title => "socket files") do
-    IO.popen("nc -U mnt/sock -l", "r") do |pipe|
-      sleep 0.1 until File.exists?('mnt/sock')
-      system("echo hello | nc -U -q 0 mnt/sock")
-      result = pipe.read
-      assert { result.strip == "hello" }
+testenv("", :title => "socket files") do
+  UNIXServer.open("mnt/sock") do |server|
+    UNIXSocket.open("mnt/sock") do |client|
+      socket = server.accept
+      socket.write("hello")
+      socket.close
+      result = client.read
+      assert { result == "hello" }
     end
   end
-else
-  puts "Skipping socket file test because 'nc' is not installed."
 end
 
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
