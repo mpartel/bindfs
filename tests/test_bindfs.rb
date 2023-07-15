@@ -922,6 +922,20 @@ testenv("-ouser -onofail,nouser,,,delete-deny -o users -o auto,rename-deny,noaut
   assert_exception(EPERM) { chmod(0777, 'mnt/file') }
 end
 
+# Issue #132 / PR #133
+if `which nc 2> /dev/null`.strip != ''
+  testenv("", :title => "socket files") do
+    IO.popen("nc -U mnt/sock -l", "r") do |pipe|
+      sleep 0.1 until File.exists?('mnt/sock')
+      system("echo hello | nc -U -q 0 mnt/sock")
+      result = pipe.read
+      assert { result.strip == "hello" }
+    end
+  end
+else
+  puts "Skipping socket file test because 'nc' is not installed."
+end
+
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 # TODO: support FreeBSD in this test (different group management commands)
