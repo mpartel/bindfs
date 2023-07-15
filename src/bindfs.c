@@ -94,6 +94,8 @@
 /* Apple Structs */
 #ifdef __APPLE__
 #include <sys/param.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #define G_PREFIX   "org"
 #define G_KAUTH_FILESEC_XATTR G_PREFIX ".apple.system.Security"
 #define A_PREFIX   "com"
@@ -904,10 +906,36 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
 
     mode = permchain_apply(settings.create_permchain, mode);
 
-    if (S_ISFIFO(mode))
+    if (S_ISFIFO(mode)) {
         res = mkfifo(real_path, mode);
-    else
+#ifdef __APPLE__
+    } else if (S_ISSOCK(mode)) {
+        struct sockaddr_un su;
+        int fd;
+
+        if (strlen(real_path) >= sizeof(su.sun_path)) {
+            errno = ENAMETOOLONG;
+            return -1;
+        }
+        fd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (fd >= 0) {
+            /*
+             * We must bind the socket to the underlying file
+             * system to create the socket file, even though
+             * we'll never listen on this socket.
+             */
+            su.sun_family = AF_UNIX;
+            strncpy(su.sun_path, real_path, sizeof(su.sun_path));
+            res = bind(fd, (struct sockaddr*)&su, sizeof(su));
+            close(fd);
+        } else {
+            res = -1;
+        }
+#endif
+    } else {
         res = mknod(real_path, mode, rdev);
+    }
+
     if (res == -1) {
         free(real_path);
         return -errno;
