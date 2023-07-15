@@ -91,11 +91,15 @@
 #include "userinfo.h"
 #include "usermap.h"
 
+/* Socket file support for MacOS and FreeBSD */
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#include <sys/socket.h>
+#include <sys/un.h>
+#endif
+
 /* Apple Structs */
 #ifdef __APPLE__
 #include <sys/param.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #define G_PREFIX   "org"
 #define G_KAUTH_FILESEC_XATTR G_PREFIX ".apple.system.Security"
 #define A_PREFIX   "com"
@@ -908,7 +912,7 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
 
     if (S_ISFIFO(mode)) {
         res = mkfifo(real_path, mode);
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__FreeBSD__)
     } else if (S_ISSOCK(mode)) {
         struct sockaddr_un su;
         int fd;
