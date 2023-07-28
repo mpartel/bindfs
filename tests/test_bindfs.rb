@@ -939,6 +939,18 @@ testenv("", :title => "socket files") do
   end
 end
 
+testenv("", :title => "socket files ancillary data") do
+  UNIXServer.open("src/sock") do |server|
+    UNIXSocket.open("mnt/sock") do |client|
+      socket = server.accept
+      socket.send_io STDIN
+      socket.close
+      io = client.recv_io
+      assert { File.identical?(STDIN, io) }
+    end
+  end
+end
+
 # FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 # TODO: support FreeBSD in this test (different group management commands)
