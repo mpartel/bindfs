@@ -25,6 +25,8 @@ FUSE 3 is supported. When using FUSE 3, libfuse 3.10.2 or newer is
 recommended to avoid a [bug with readdir](https://github.com/libfuse/libfuse/issues/583),
 though it only seems to affect a few applications.
 
+To compile from source on Linux, first `apt install build-essential pkg-config libfuse3-dev` (or `libfuse-dev` on older systems). On MacOS, install XCode (and let it install Developer Tools), [pkg-config](https://formulae.brew.sh/formula/pkg-config#default) and either [MacFuse](https://osxfuse.github.io/) or [fuse-t](https://www.fuse-t.org/).
+
 Download a [release](https://bindfs.org/downloads/) or clone this repository.
 
 Then compile and install as usual:
