@@ -37,23 +37,25 @@ Here are some examples of what bindfs can do for you:
 * [man 1 bindfs](docs/bindfs.1.html)
 * [ChangeLog](docs/ChangeLog.utf8.txt)
 
-## Downloads and source
+## Installing
 
-bindfs is available through the software repositories of many Linux distributions, as well as MacPorts on OS X. Check there first unless there is a specific new feature that you need.
+bindfs is available through the software repositories of many Linux distributions, as well as [Homebrew](https://formulae.brew.sh/formula/bindfs#default) on MacOS. Check there first unless there is a specific new feature that you need.
 
-Download the latest source tarball here: [{% first_file downloads %}](downloads/{% first_file downloads %}).
+To compile from source on Linux, first `apt install build-essential pkg-config libfuse3-dev` (or `libfuse-dev` on older systems). On MacOS, install XCode (and let it install Developer Tools), [pkg-config](https://formulae.brew.sh/formula/pkg-config#default) and either [MacFuse](https://osxfuse.github.io/) or [fuse-t](https://www.fuse-t.org/).
 
-Compile & install: `./configure && make && sudo make install`.
+Download the latest bindfs source code here: [{% first_file downloads %}](downloads/{% first_file downloads %}).
 
-There is an extensive [HowTo on Ubuntu Forums](http://ubuntuforums.org/showthread.php?t=1460472).
+Compile and install bindfs: `./configure && make && sudo make install`.
 
 ## About
 
-bindfs is developed and tested primarily on Linux with [FUSE](https://github.com/libfuse/libfuse) 2 and 3, but it has been reported to work reasonably well on Mac OS X with [osxfuse](http://osxfuse.github.io/) and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
+bindfs is developed and tested primarily on Linux with [FUSE](https://github.com/libfuse/libfuse) 2 and 3, but it has been reported to work reasonably well on MacOS with [MacFuse](http://osxfuse.github.io/) and [fuse-t](https://www.fuse-t.org/), and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
 
 All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
 bindfs was initially developed in 2006. I consider the program fairly feature-complete but I'll still gladly fix bugs and add some small features as people suggest them.
+
+There is an extensive (if dated) [HowTo on Ubuntu Forums](http://ubuntuforums.org/showthread.php?t=1460472).
 
 ### Bug reports
 
