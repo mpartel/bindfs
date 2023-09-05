@@ -39,9 +39,9 @@ Here are some examples of what bindfs can do for you:
 
 ## Installing
 
-bindfs is available through the software repositories of many Linux distributions, as well as [Homebrew](https://formulae.brew.sh/formula/bindfs#default) on MacOS. Check there first unless there is a specific new feature that you need.
+bindfs is available through the software repositories of many Linux distributions. Check there first unless there is a specific new feature that you need.
 
-To compile from source on Linux, first `apt install build-essential pkg-config libfuse3-dev` (or `libfuse-dev` on older systems). On MacOS, install XCode (and let it install Developer Tools), [pkg-config](https://formulae.brew.sh/formula/pkg-config#default) and either [MacFuse](https://osxfuse.github.io/) or [fuse-t](https://www.fuse-t.org/).
+To compile from source on Linux, first `apt install build-essential pkg-config libfuse3-dev` (or `libfuse-dev` on older systems). On MacOS, install XCode and let it install Developer Tools, then [pkg-config](https://formulae.brew.sh/formula/pkg-config#default) and either [MacFuse](https://osxfuse.github.io/) or [fuse-t](https://www.fuse-t.org/).
 
 Download the latest bindfs source code here: [{% first_file downloads %}](downloads/{% first_file downloads %}).
 
