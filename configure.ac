@@ -26,7 +26,7 @@ if test x"$with_core_foundation" == "xyes" ; then
     LDFLAGS="${LDFLAGS} -framework CoreFoundation"
 fi
 
-AM_CONDITIONAL(BUILD_OS_IS_DARWIN, [test x"$build_os" = darwin])
+AM_CONDITIONAL([BUILD_OS_IS_DARWIN], [case $build_os in darwin* ) true ;; * ) false ;; esac])
 
 # _XOPEN_SOURCE is >= 500 for pread/pwrite; >= 700 for utimensat.
 # __BSD_VISIBLE is for flock() on FreeBSD. It otherwise gets hidden by _XOPEN_SOURCE.
