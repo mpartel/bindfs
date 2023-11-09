@@ -68,6 +68,9 @@ $nobody_gid = nobody_gid = Etc.getpwnam('nobody').gid
 $nobody_group = nobody_group = Etc.getgrgid(nobody_gid).name
 $root_group = root_group = Etc.getgrgid(0).name
 
+$user_1k = user_1k = begin Etc.getpwuid(1000).name; rescue; nil; end
+$user_1k_group = user_1k_group = begin Etc.getgrgid(Etc.getpwuid(1000).gid).name; rescue; nil; end
+
 $tests_dir = File.realpath('.')
 
 
@@ -471,12 +474,43 @@ root_testenv("--uid-offset=2 --gid-offset=20", :title => "file creation with --u
     assert { File.stat('mnt/file').gid == File.stat('src/file').gid + 20 }
 end
 
+# This test requires user 1k to actually exist so we can sudo to it
+if user_1k
+    root_testenv("--uid-offset=-2 --gid-offset=-20", :title => "file creation with negative --uid-offset and --gid-offset") do
+        chown(user_1k, user_1k_group, 'src')
+        chmod(0777, 'src')
+        `sudo -u #{user_1k} -g #{user_1k_group} touch mnt/file`
+
+        assert { File.stat('src/file').uid == 1002 }
+        assert { File.stat('mnt/file').uid == 1000 }
+        assert { File.stat('mnt/file').gid == File.stat('src/file').gid - 20 }
+    end
+end
+
 root_testenv("--uid-offset=2 --gid-offset=20", :title => "chown/chgrp with --uid-offset and --gid-offset") do
     touch('src/file')
+    # Avoid I/O error due to uid and gid = 0 not being mappable with negative offsets
+    chown(1000, 1000, 'src')
+    chown(1000, 1000, 'src/file')
+
     chown(6, 25, 'mnt/file')
 
     assert { File.stat('src/file').uid == 4 }
     assert { File.stat('src/file').gid == 5 }
+    assert { File.stat('mnt/file').uid == 6 }
+    assert { File.stat('mnt/file').gid == 25 }
+end
+
+root_testenv("--uid-offset=-2 --gid-offset=-20", :title => "chown/chgrp with negative --uid-offset and --gid-offset") do
+    touch('src/file')
+    # Avoid I/O error due to uid and gid = 0 not being mappable with negative offsets
+    chown(1000, 1000, 'src')
+    chown(1000, 1000, 'src/file')
+
+    chown(6, 25, 'mnt/file')
+
+    assert { File.stat('src/file').uid == 8 }
+    assert { File.stat('src/file').gid == 45 }
     assert { File.stat('mnt/file').uid == 6 }
     assert { File.stat('mnt/file').gid == 25 }
 end

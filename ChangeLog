@@ -1,3 +1,7 @@
+2023-11-09  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Support negative --{uid,gid}-offset (issue #142)
+
 2023-09-22  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Support `mount -t bindfs` on MacOS (PR #140, thanks @Kentzo)

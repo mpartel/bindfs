@@ -35,6 +35,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #ifdef HAVE_SYS_TYPES_H
@@ -116,8 +117,8 @@ int flock(int fd, int operation);
 
 /* We pessimistically assume signed uid_t and gid_t in our overflow checks,
    mostly because supporting both cases would require a bunch more code. */
-static const uid_t UID_T_MAX = ((1LL << (sizeof(uid_t)*8-1)) - 1);
-static const gid_t GID_T_MAX = ((1LL << (sizeof(gid_t)*8-1)) - 1);
+static const int64_t UID_T_MAX = ((1LL << (sizeof(uid_t)*8-1)) - 1);
+static const int64_t GID_T_MAX = ((1LL << (sizeof(gid_t)*8-1)) - 1);
 static const int UID_GID_OVERFLOW_ERRNO = EIO;
 
 /* SETTINGS */
@@ -213,8 +214,8 @@ static struct Settings {
     bool direct_io;
 #endif
 
-    uid_t uid_offset;
-    gid_t gid_offset;
+    int64_t uid_offset;
+    int64_t gid_offset;
 
 } settings;
 
@@ -635,39 +636,47 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
 }
 
 static int apply_uid_offset(uid_t *uid) {
-    if (*uid > UID_T_MAX - settings.uid_offset) {
-        DPRINTF("UID %lld overflowed while applying offset", (long long)*uid);
+    uid_t result = *uid + (uid_t)settings.uid_offset;
+    if (0 <= result && result <= UID_T_MAX) {
+        *uid = result;
+        return 1;
+    } else {
+        DPRINTF("UID %ld overflowed while applying offset", (int64_t)*uid);
         return 0;
     }
-    *uid += settings.uid_offset;
-    return 1;
 }
 
 static int apply_gid_offset(gid_t *gid) {
-    if (*gid > GID_T_MAX - settings.gid_offset) {
-        DPRINTF("GID %lld overflowed while applying offset", (long long)*gid);
+    gid_t result = *gid + (gid_t)settings.gid_offset;
+    if (0 <= result && result <= GID_T_MAX) {
+        *gid = result;
+        return 1;
+    } else {
+        DPRINTF("GID %ld overflowed while applying offset", (int64_t)*gid);
         return 0;
     }
-    *gid += settings.gid_offset;
-    return 1;
 }
 
 static int unapply_uid_offset(uid_t *uid) {
-    if (*uid < settings.uid_offset) {
-        DPRINTF("UID %lld underflowed while unapplying offset", (long long)*uid);
+    uid_t result = *uid - (uid_t)settings.uid_offset;
+    if (0 <= result && result <= UID_T_MAX) {
+        *uid = result;
+        return 1;
+    } else {
+        DPRINTF("UID %ld underflowed while applying offset", (int64_t)*uid);
         return 0;
     }
-    *uid -= settings.uid_offset;
-    return 1;
 }
 
 static int unapply_gid_offset(gid_t *gid) {
-  if (*gid < settings.gid_offset) {
-        DPRINTF("GID %lld underflowed while unapplying offset", (long long)*gid);
+    gid_t result = *gid - (gid_t)settings.gid_offset;
+    if (0 <= result && result <= GID_T_MAX) {
+        *gid = result;
+        return 1;
+    } else {
+        DPRINTF("GID %ld underflowed while applying offset", (int64_t)*gid);
         return 0;
     }
-    *gid -= settings.gid_offset;
-    return 1;
 }
 
 #ifdef __linux__
@@ -2680,7 +2689,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         char* endptr = od.uid_offset;
-        settings.uid_offset = strtoul(od.uid_offset, &endptr, 10);
+        settings.uid_offset = strtoll(od.uid_offset, &endptr, 10);
         if (*endptr != '\0') {
             fprintf(stderr, "Error: Value of --uid-offset must be an integer.\n");
             return 1;
@@ -2697,7 +2706,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         char* endptr = od.gid_offset;
-        settings.gid_offset = strtoul(od.gid_offset, &endptr, 10);
+        settings.gid_offset = strtoll(od.gid_offset, &endptr, 10);
         if (*endptr != '\0') {
             fprintf(stderr, "Error: Value of --gid-offset must be an integer.\n");
             return 1;
