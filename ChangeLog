@@ -1,6 +1,7 @@
 2023-11-09  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Support negative --{uid,gid}-offset (issue #142)
+	* Released 1.17.5
 
 2023-09-22  Martin Pärtel <martin dot partel at gmail dot com>
 
