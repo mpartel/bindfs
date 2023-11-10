@@ -243,10 +243,11 @@ static int chown_new_file(const char *path, struct fuse_context *fc, int (*chown
 static int delete_file(const char *path, int (*target_delete_func)(const char *));
 
 /* Apply offsets with overflow checking. */
-static int apply_uid_offset(uid_t *uid);
-static int apply_gid_offset(gid_t *gid);
-static int unapply_uid_offset(uid_t *uid);
-static int unapply_gid_offset(gid_t *gid);
+static bool apply_uid_offset(uid_t *uid);
+static bool apply_gid_offset(gid_t *gid);
+static bool unapply_uid_offset(uid_t *uid);
+static bool unapply_gid_offset(gid_t *gid);
+static bool bounded_add(int64_t* a, int64_t b, int64_t max);
 
 #ifdef __linux__
 static size_t round_up_buffer_size_for_direct_io(size_t size);
@@ -635,48 +636,57 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
     return 0;
 }
 
-static int apply_uid_offset(uid_t *uid) {
-    uid_t result = *uid + (uid_t)settings.uid_offset;
-    if (0 <= result && result <= UID_T_MAX) {
-        *uid = result;
-        return 1;
+static bool apply_uid_offset(uid_t *uid) {
+    int64_t value = (int64_t)*uid;
+    if (bounded_add(&value, settings.uid_offset, UID_T_MAX)) {
+        *uid = (uid_t)value;
+        return true;
     } else {
-        DPRINTF("UID %ld overflowed while applying offset", (int64_t)*uid);
-        return 0;
+        DPRINTF("UID %ld out of bounds after applying offset", value);
+        return false;
     }
 }
 
-static int apply_gid_offset(gid_t *gid) {
-    gid_t result = *gid + (gid_t)settings.gid_offset;
-    if (0 <= result && result <= GID_T_MAX) {
-        *gid = result;
-        return 1;
+static bool apply_gid_offset(gid_t *gid) {
+    int64_t value = (int64_t)*gid;
+    if (bounded_add(&value, settings.gid_offset, GID_T_MAX)) {
+        *gid = (uid_t)value;
+        return true;
     } else {
-        DPRINTF("GID %ld overflowed while applying offset", (int64_t)*gid);
-        return 0;
+        DPRINTF("GID %ld out of bounds after applying offset", value);
+        return false;
     }
 }
 
-static int unapply_uid_offset(uid_t *uid) {
-    uid_t result = *uid - (uid_t)settings.uid_offset;
-    if (0 <= result && result <= UID_T_MAX) {
-        *uid = result;
-        return 1;
+static bool unapply_uid_offset(uid_t *uid) {
+    int64_t value = (int64_t)*uid;
+    if (bounded_add(&value, -settings.uid_offset, UID_T_MAX)) {
+        *uid = (uid_t)value;
+        return true;
     } else {
-        DPRINTF("UID %ld underflowed while applying offset", (int64_t)*uid);
-        return 0;
+        DPRINTF("UID %ld out of bounds after unapplying offset", value);
+        return false;
     }
 }
 
-static int unapply_gid_offset(gid_t *gid) {
-    gid_t result = *gid - (gid_t)settings.gid_offset;
-    if (0 <= result && result <= GID_T_MAX) {
-        *gid = result;
-        return 1;
+static bool unapply_gid_offset(gid_t *gid) {
+    int64_t value = (int64_t)*gid;
+    if (bounded_add(&value, -settings.gid_offset, GID_T_MAX)) {
+        *gid = (uid_t)value;
+        return true;
     } else {
-        DPRINTF("GID %ld underflowed while applying offset", (int64_t)*gid);
-        return 0;
+        DPRINTF("GID %ld out of bounds after unapplying offset", value);
+        return false;
     }
+}
+
+static bool bounded_add(int64_t* a, int64_t b, int64_t max) {
+    int64_t result;
+    if (!__builtin_add_overflow(*a, b, &result) && 0 <= result && result <= max) {
+        *a = result;
+        return true;
+    }
+    return false;
 }
 
 #ifdef __linux__
