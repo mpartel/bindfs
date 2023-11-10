@@ -1,3 +1,9 @@
+2023-11-10  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed undefined behaviour on platforms where `uid_t` or `gid_t`
+	  is signed (issue #143, thanks @hartwork!)
+	* Released 1.17.6
+
 2023-11-09  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Support negative --{uid,gid}-offset (issue #142)
