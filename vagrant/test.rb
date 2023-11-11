@@ -117,6 +117,7 @@ else
     puts
     puts "See test.log in a failed VM's directory for more information"
     puts
+    exit 1
   end
 end
 
