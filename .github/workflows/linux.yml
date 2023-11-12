@@ -66,6 +66,8 @@ jobs:
           ./autogen.sh
 
       - name: 'Configure'
+        env:
+          CFLAGS: -Werror
         run: |-
           set -x
           mkdir build
