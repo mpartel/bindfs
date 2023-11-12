@@ -83,12 +83,12 @@ jobs:
         run: |-
           set -x
           whoami
-          make check
+          make -C build make check
 
       - name: 'Test as root'
         run: |-
           set -x
-          sudo make check
+          sudo make -C build make check
 
       - name: 'Install'
         run: |-
