@@ -79,6 +79,17 @@ jobs:
           set -x
           make -C build -j$(nproc) VERBOSE=1
 
+      - name: 'Test as non-root'
+        run: |-
+          set -x
+          whoami
+          make check
+
+      - name: 'Test as root'
+        run: |-
+          set -x
+          sudo make check
+
       - name: 'Install'
         run: |-
           set -x -o pipefail
