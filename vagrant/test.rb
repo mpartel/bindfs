@@ -6,6 +6,7 @@ Usage: test.rb [--nohalt] [vm1 [...]]
 Options:
   -h      --help            Print this and exit.
   --nohalt                  Don't halt VMs when done.
+  --print-logs              Prints each VM's logs when it completes.
 
 If VM names are given, only those are tested.
 
@@ -19,6 +20,7 @@ require 'fileutils'
 Dir.chdir(File.dirname(__FILE__))
 
 halt_vms = true
+print_logs = false
 specifically_selected_vms = []
 ARGV.each do |arg|
   if arg == '-h' || arg == '--help'
@@ -26,6 +28,8 @@ ARGV.each do |arg|
     exit
   elsif arg == '--nohalt'
     halt_vms = false
+  elsif arg == '--print-logs'
+    print_logs = true
   elsif !arg.start_with?('-')
     specifically_selected_vms << arg
   else
@@ -63,12 +67,12 @@ errors = []
 threads = dirs.map do |dir|
   Thread.new do
     begin
-      File.open(dir + "/test.log", "wb") do |logfile|
+      File.open(dir + "/test.log", "w+b") do |logfile|
         run_and_log = -> (command) do
           logfile.puts ""
           logfile.puts "##### #{command} #####"
           logfile.flush
-          pid = Process.spawn(command, chdir: dir, out: logfile, err: :out)
+          pid = Process.spawn(command, chdir: dir, out: logfile, err: logfile)
           Process.waitpid(pid)
           $?.success?
         end
@@ -100,6 +104,10 @@ threads = dirs.map do |dir|
     ensure
       mutex.synchronize do
         puts "Finished VM: #{dir}"
+      end
+      if print_logs
+        puts File.read(dir + "/test.log")
+        puts
       end
     end
   end

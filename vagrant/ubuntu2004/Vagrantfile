@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "roboxes/centos8"
+  config.vm.box = "roboxes/ubuntu2004"
 
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "../../", "/bindfs",
@@ -12,19 +12,17 @@ Vagrant.configure("2") do |config|
     rsync__args: ["-av", "--delete-after"]
 
   config.vm.provider "virtualbox" do |v|
-    v.name = "bindfs-centos8"
+    v.name = "bindfs-ubuntu2004"
   end
   config.vm.provider "libvirt" do |v|
     v.driver = if File.exist?('/dev/kvm') then 'kvm' else 'qemu' end
   end
 
   config.vm.provision "shell", inline: <<-SHELL
-    # CentOS 8 is EOL
-    # https://www.cyberithub.com/solved-failed-to-download-metadata-for-repo-appstream/
-    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
-    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
-
-    yum install -y fuse fuse-devel gcc make pkg-config ruby valgrind
+    apt-get update
+    apt-get install -y fuse libfuse-dev build-essential pkg-config ruby valgrind
+    apt-get clean
+    adduser vagrant fuse
     echo user_allow_other > /etc/fuse.conf
   SHELL
 end

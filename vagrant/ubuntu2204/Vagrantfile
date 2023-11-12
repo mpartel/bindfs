@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/xenial64"
+  config.vm.box = "roboxes/ubuntu2204"
 
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "../../", "/bindfs",
@@ -12,7 +12,10 @@ Vagrant.configure("2") do |config|
     rsync__args: ["-av", "--delete-after"]
 
   config.vm.provider "virtualbox" do |v|
-    v.name = "bindfs-xenial64"
+    v.name = "bindfs-ubuntu2204"
+  end
+  config.vm.provider "libvirt" do |v|
+    v.driver = if File.exist?('/dev/kvm') then 'kvm' else 'qemu' end
   end
 
   config.vm.provision "shell", inline: <<-SHELL
