@@ -64,6 +64,8 @@
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif
+#include <sys/acl.h>
+#include <acl/libacl.h>
 
 #ifdef HAVE_FUSE_3
 #ifndef __NR_renameat2
@@ -252,6 +254,12 @@ static bool bounded_add(int64_t* a, int64_t b, int64_t max);
 #ifdef __linux__
 static size_t round_up_buffer_size_for_direct_io(size_t size);
 #endif
+
+/* Access checking helper functions */
+static unsigned int permset_to_bits(acl_permset_t permset);
+static bool access_check(const char *real_path, int wants);
+static bool path_access_check(const char *path, int wants);
+static bool path_has_search_perms(const char *path);
 
 /* FUSE callbacks */
 #ifdef HAVE_FUSE_3
@@ -578,6 +586,9 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
     if (real_path == NULL)
         return -errno;
 
+    if (!path_access_check(real_path, W_OK))
+        return -errno;
+
     if (settings.resolve_symlinks) {
         if (lstat(real_path, &st) == -1) {
             free(real_path);
@@ -704,6 +715,296 @@ static size_t round_up_buffer_size_for_direct_io(size_t size)
 }
 #endif
 
+/**
+ * Convert an ACL permset to a bitmask.
+ *
+ * @param permset The permset to convert.
+ *
+ * @return The permset represented as an `access(2)` compatible bitmask.
+ */
+static unsigned int permset_to_bits(acl_permset_t permset) {
+    unsigned int bits = 0;
+
+    if (acl_get_perm(permset, ACL_READ) == 1)
+        bits |= R_OK;
+
+    if (acl_get_perm(permset, ACL_WRITE) == 1)
+        bits |= W_OK;
+
+    if (acl_get_perm(permset, ACL_EXECUTE) == 1)
+        bits |= X_OK;
+
+    return bits;
+}
+
+/**
+ * Determine whether the effective user has access to a given file system
+ * object.
+ *
+ * Access check algorithm documented here: https://www.usenix.org/legacy/publications/library/proceedings/usenix03/tech/freenix03/full_papers/gruenbacher/gruenbacher_html/main.html
+ *
+ * This function performs POSIX ACL access checking, which is a superset of the
+ * standard Unix permissions.
+ *
+ * @param path The path to the file system object.
+ * @param wants The bitwise-inclusive OR of the access permissions to be
+ *     checked (R_OK, W_OK, X_OK).
+ *
+ * @return true if the effective user has access or false on any other error.
+ *     `errno` is set to the specific error number if one occurred.
+ * */
+static bool access_check(const char *real_path, int wants)
+{
+    DPRINTF("Performing access check for '%s'", real_path);
+
+    struct stat st;
+    if (lstat(real_path, &st) == -1) {
+        DPRINTF("Could not lstat '%s': %s", real_path, strerror(errno));
+        free(real_path);
+        return false;
+    }
+
+    // Update the stat struct to take into account the bindfs flags
+    getattr_common(real_path, &st);
+
+    uid_t euid = geteuid();
+    gid_t egid = getegid();
+
+    // TODO: There are `root` cases still needing to be accounted for.
+    //       This is not the correct implementation!
+    //if (euid == 0)
+    //    return 0;
+
+    struct passwd *pwd = getpwuid(euid);
+
+    // We can perform this check early, Unsubstantiated, but I would imagine
+    // it's one of the more likely cases, so it makes sense to optimise for it.
+    //
+    // If the user ID of the process is the owner, the owner entry determines
+    // access.
+    if (euid == st.st_uid) {
+        if ((((st.st_mode & 0700) >> 6) & wants) == wants) {
+            return true;
+        } else {
+            errno = EACCES;
+            return false;
+        }
+    }
+
+    // Get the groups the effective user is a part of
+    int ngroups = 8;
+    gid_t *groups = malloc(sizeof(*groups) * ngroups);
+
+    while (getgrouplist(pwd->pw_name, egid, groups, &ngroups) == -1) {
+        DPRINTF("Reallocating space for groups to %d entries", ngroups);
+        groups = realloc(groups, sizeof(*groups) * ngroups);
+    }
+
+    // Notes on the below variables:
+    // We do not need to store the owner permissions as we can exit immediately
+    // if we find them and do not need to do further processing.
+
+    // We do not need to store group ACL permissions separately from the
+    // standard group permissions. We can merge all the group permissions
+    // together and treat them as one. TODO: I think, need to thoroughly test.
+    // NOTE: This only holds if an object that has ACLs where `group_a = r--`,
+    // `group_b = --x` and the request is for `r-x` (`wants` = 5) we should
+    // grant access, if we should disallow access, we can't aggregate
+    // permissions in this way.
+
+    mode_t group_perms = 0;
+    mode_t other_perms = 0;
+
+    mode_t user_acl_perms = 0;
+    mode_t acl_mask = 0;
+
+    bool has_user_acl = false;
+    bool has_group = false;
+    bool has_mask = false;
+
+    acl_t acl = acl_get_file(real_path, ACL_TYPE_ACCESS);
+    acl_entry_t acl_entry;
+    for (
+        int result = acl_get_entry(acl, ACL_FIRST_ENTRY, &acl_entry);
+        result > 0;
+        result = acl_get_entry(acl, ACL_NEXT_ENTRY, &acl_entry)
+    ) {
+        acl_tag_t acl_tag;
+        if (acl_get_tag_type(acl_entry, &acl_tag) != 0) {
+            DPRINTF("Could not get ACL tag type: %s", strerror(errno));
+            continue;
+        }
+
+        acl_permset_t acl_permset;
+        if (acl_get_permset(acl_entry, &acl_permset) != 0) {
+            DPRINTF("Could not get ACL permset: %s", strerror(errno));
+            continue;
+        }
+
+        unsigned int permset_as_bits = permset_to_bits(acl_permset);
+
+        void *acl_qualifier = acl_get_qualifier(acl_entry);
+        switch(acl_tag) {
+            // This check is already performed above. As ACLs are a superset of
+            // the standard Unix permissions, we can perform this permission
+            // check against the non-ACL permissions and potentially return
+            // early.
+
+            //case ACL_USER_OBJ:
+                //break;
+
+            case ACL_USER:
+                if (euid == *(uid_t*)acl_qualifier) {
+                    has_user_acl = true;
+                    user_acl_perms = permset_as_bits;
+                }
+                break;
+
+            case ACL_GROUP_OBJ:
+                for (int i = 0; i < ngroups; i++) {
+                    // Aggregate all group permissions, we only care if we have
+                    // the permissions, not where they come from
+                    if (st.st_gid == groups[i]) {
+                        DPRINTF("Has ACL_GROUP_OBJ of %d", groups[i]);
+                        has_group = true;
+                        group_perms |= permset_as_bits;
+                    }
+                }
+                break;
+
+            case ACL_GROUP:
+                for (int i = 0; i < ngroups; i++) {
+                    // Aggregate all group permissions, we only care if we have
+                    // the permissions, not where they come from
+                    if (*(gid_t*)acl_qualifier == groups[i]) {
+                        DPRINTF("Has ACL_GROUP of %d", groups[i]);
+                        has_group = true;
+                        group_perms |= permset_as_bits;
+                    }
+                }
+                break;
+
+            case ACL_MASK:
+                has_mask = true;
+                acl_mask = permset_as_bits;
+                break;
+
+            case ACL_OTHER:
+                other_perms = permset_as_bits;
+                break;
+        }
+        acl_free(acl_qualifier);
+    }
+
+    acl_free(acl);
+
+    // If there is no mask entry, it doesn't restrict anything.
+    if (!has_mask) {
+        DPRINTF("ACL has no ACL_MASK entry, setting mask to rwx");
+        acl_mask = R_OK | W_OK | X_OK;
+    }
+
+    //If the user ID of the process is the owner, the owner entry determines
+    //access - This check is performed above, very early in the function.
+
+    // If the user ID of the process matches the qualifier in one
+    // of the named user entries, this entry determines access
+    if (has_user_acl) {
+        DPRINTF("Using ACL_USER entry to determine access");
+        if ((user_acl_perms & acl_mask & wants) == wants) {
+            return true;
+        } else {
+            errno = EACCES;
+            return false;
+        }
+    }
+
+    // If one of the group IDs of the process matches the owning group and the
+    // owning group entry contains the requested permissions, this entry
+    // determines access
+
+    // If one of the group IDs of the process matches the qualifier of one of
+    // the named group entries and this entry contains the requested
+    // permissions, this entry determines access
+
+    // If one of the group IDs of the process matches the owning group or any
+    // of the named group entries, but neither the owning group entry nor any
+    // of the matching named group entries contains the requested permissions,
+    // this determines that access is denied
+    if (has_group) {
+        DPRINTF("Using ACL_GROUP_OBJ or ACL_GROUP entry to determine access");
+        if ((group_perms & acl_mask & wants) == wants) {
+            return true;
+        } else {
+            errno = EACCES;
+            return false;
+        }
+    }
+
+    // Else the other entry determines access.
+    DPRINTF("Using ACL_OTHER entry to determine access");
+    if ((other_perms & wants) == wants) {
+        return true;
+    } else {
+        errno = EACCES;
+        return false;
+    }
+}
+
+/**
+ * Check the full path has search permissions and the immediate parent
+ * directory has `wants` permission.
+ *
+ * @param path The path to get the dirname of and performe the check against.
+ * @param wants The bitwise-inclusive OR of the access permissions to be
+ *     checked (R_OK, W_OK, X_OK).
+ *
+ * @return true if the dirname has the requested permissions, false otherwise.
+ *     `errno` is set to the specific error number if one occurred.
+ */
+static bool path_access_check(const char *path, int wants) {
+    char *dup_path = strdup(path);
+    char *part = dirname(dup_path);
+
+    bool access_check_result = access_check(part, wants);
+
+    free(dup_path);
+    return access_check_result && path_has_search_perms(path);
+}
+
+/**
+ * Iterate over the given path and check whether each component has the
+ * search permission.
+ *
+ * @param path The path to iterate over.
+ *
+ * @return true if all path components have the search permission, false
+ *     otherwise.
+ */
+static bool path_has_search_perms(const char *path) {
+    char *dup_path = strdup(path);
+    char *part = dup_path;
+
+    do {
+        part = dirname(part);
+        DPRINTF(
+            "Checking path component for required search permissions: %s",
+            part);
+
+        if (!access_check(part, X_OK)) {
+            DPRINTF(
+                "Path component doesn't have required search permission: %s",
+                part);
+            free(dup_path);
+            return false;
+        }
+    } while(strcmp(part, "/") != 0 && strcmp(part, ".") != 0);
+
+    DPRINTF("Path has search required permissions: %s", path);
+    free(dup_path);
+    return true;
+}
+
 #ifdef HAVE_FUSE_3
 static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
 #else
@@ -797,6 +1098,16 @@ static int bindfs_fgetattr(const char *path, struct stat *stbuf,
 }
 #endif
 
+static int bindfs_access(const char *path, int wants)
+{
+    char *real_path = process_path(path, true);
+
+    if (!access_check(real_path, wants))
+        return -errno;
+    else
+        return 0;
+}
+
 static int bindfs_readlink(const char *path, char *buf, size_t size)
 {
     int res;
@@ -804,6 +1115,9 @@ static int bindfs_readlink(const char *path, char *buf, size_t size)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if(!path_has_search_perms(real_path))
         return -errno;
 
     /* No need to check for access to the link itself, since symlink
@@ -927,6 +1241,9 @@ static int bindfs_mknod(const char *path, mode_t mode, dev_t rdev)
     if (real_path == NULL)
         return -errno;
 
+    if (!path_access_check(real_path, W_OK))
+        return -errno;
+
     mode = permchain_apply(settings.create_permchain, mode);
 
     if (S_ISFIFO(mode)) {
@@ -981,6 +1298,9 @@ static int bindfs_mkdir(const char *path, mode_t mode)
     if (real_path == NULL)
         return -errno;
 
+    if (!path_access_check(real_path, W_OK))
+        return -errno;
+
     mode |= S_IFDIR; /* tell permchain_apply this is a directory */
     mode = permchain_apply(settings.create_permchain, mode);
 
@@ -1020,6 +1340,9 @@ static int bindfs_symlink(const char *from, const char *to)
     if (real_to == NULL)
         return -errno;
 
+    if (!path_access_check(real_to, W_OK))
+        return -errno;
+
     res = symlink(from, real_to);
     if (res == -1) {
         free(real_to);
@@ -1041,6 +1364,7 @@ static int bindfs_rename(const char *from, const char *to)
 {
     int res;
     char *real_from, *real_to;
+    struct stat st;
 
     if (settings.rename_deny)
         return -EPERM;
@@ -1054,6 +1378,15 @@ static int bindfs_rename(const char *from, const char *to)
         free(real_from);
         return -errno;
     }
+
+    if (!path_access_check(real_from, W_OK) || !path_access_check(real_to, W_OK))
+        return -errno;
+
+    if(lstat(real_from, &st) != 0)
+        return -errno;
+
+    if ((st.st_mode & S_IFDIR) == S_IFDIR && !access_check(real_from, W_OK))
+        return -errno;
 
 #ifdef HAVE_FUSE_3
 
@@ -1097,6 +1430,9 @@ static int bindfs_link(const char *from, const char *to)
         return -errno;
     }
 
+    if (!path_access_check(real_to, W_OK) || !path_has_search_perms(real_from))
+        return -errno;
+
     res = link(real_from, real_to);
     free(real_from);
     free(real_to);
@@ -1119,6 +1455,9 @@ static int bindfs_chmod(const char *path, mode_t mode)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if(!path_has_search_perms(real_path))
         return -errno;
 
     if (settings.chmod_allow_x) {
@@ -1182,6 +1521,13 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
     int res;
     char *real_path;
 
+    real_path = process_path(path, true);
+    if (real_path == NULL)
+        return -errno;
+
+    if(!path_has_search_perms(real_path))
+        return -errno;
+
     if (uid != -1) {
         switch (settings.chown_policy) {
         case CHOWN_NORMAL:
@@ -1215,10 +1561,6 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
     }
 
     if (uid != -1 || gid != -1) {
-        real_path = process_path(path, true);
-        if (real_path == NULL)
-            return -errno;
-
         res = lchown(real_path, uid, gid);
         free(real_path);
         if (res == -1)
@@ -1240,6 +1582,9 @@ static int bindfs_truncate(const char *path, off_t size)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if(!path_has_search_perms(real_path))
         return -errno;
 
     res = truncate(real_path, size);
@@ -1278,6 +1623,9 @@ static int bindfs_utimens(const char *path, const struct timespec ts[2])
     if (real_path == NULL)
         return -errno;
 
+    if (!path_access_check(real_path, W_OK))
+        return -errno;
+
 #ifdef HAVE_UTIMENSAT
     res = utimensat(settings.mntsrc_fd, real_path, ts, AT_SYMLINK_NOFOLLOW);
 #elif HAVE_LUTIMES
@@ -1307,6 +1655,12 @@ static int bindfs_create(const char *path, mode_t mode, struct fuse_file_info *f
     real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
+
+    if (!path_access_check(real_path, W_OK))
+        return -errno;
+
+    // TODO: Pretty sure we need more access checks here. Will let the tests
+    // highlight the issues.
 
     mode |= S_IFREG; /* tell permchain_apply this is a regular file */
     mode = permchain_apply(settings.create_permchain, mode);
@@ -1340,6 +1694,12 @@ static int bindfs_open(const char *path, struct fuse_file_info *fi)
     real_path = process_path(path, true);
     if (real_path == NULL)
         return -errno;
+
+    if (!path_access_check(real_path, W_OK))
+        return -errno;
+
+    // TODO: Pretty sure we need more access checks here. Will let the tests
+    // highlight the issues.
 
     int flags = fi->flags;
 #ifdef __linux__
@@ -1478,6 +1838,9 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
 
     real_path = process_path(path, true);
     if (real_path == NULL)
+        return -errno;
+
+    if(!path_has_search_perms(real_path))
         return -errno;
 
     res = statvfs(real_path, stbuf);
@@ -1716,7 +2079,7 @@ static struct fuse_operations bindfs_oper = {
     #ifndef HAVE_FUSE_3
     .fgetattr   = bindfs_fgetattr,
     #endif
-    /* no access() since we always use -o default_permissions */
+    .access     = bindfs_access,
     .readlink   = bindfs_readlink,
     .readdir    = bindfs_readdir,
     .mknod      = bindfs_mknod,
@@ -2825,9 +3188,6 @@ int main(int argc, char *argv[])
     if (!od.no_allow_other) {
         fuse_opt_add_arg(&args, "-oallow_other");
     }
-
-    /* We want the kernel to do our access checks for us based on what getattr gives it. */
-    fuse_opt_add_arg(&args, "-odefault_permissions");
 
     // With FUSE 3 we set this in bindfs_init
 #ifndef HAVE_FUSE_3
