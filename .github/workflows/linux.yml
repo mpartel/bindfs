@@ -70,28 +70,26 @@ jobs:
           CFLAGS: -Werror
         run: |-
           set -x
-          mkdir build
-          cd build
-          ../configure
+          ./configure
 
       - name: 'Build'
         run: |-
           set -x
-          make -C build -j$(nproc) VERBOSE=1
+          make -j$(nproc) VERBOSE=1
 
       - name: 'Test as non-root'
         run: |-
           set -x
           whoami
-          make -C build check
+          make check
 
       - name: 'Test as root'
         run: |-
           set -x
-          sudo make -C build check
+          sudo make check
 
       - name: 'Install'
         run: |-
           set -x -o pipefail
-          make -C build install DESTDIR="${PWD}"/ROOT/
+          make install DESTDIR="${PWD}"/ROOT/
           find ROOT/ | sort | xargs ls -ld
