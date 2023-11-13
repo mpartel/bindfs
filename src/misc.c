@@ -166,7 +166,7 @@ bool path_starts_with(const char *path, const char* prefix, size_t prefix_len)
 
         const char* path_part = path + (prefix_part - prefix);
         const char* path_slash = strchr(path_part, '/');
-        size_t path_part_len = path_slash ? path_slash - path_part : path_len - (path_part - path);
+        size_t path_part_len = path_slash ? (size_t)(path_slash - path_part) : path_len - (path_part - path);
 
         return prefix_part_len == path_part_len;
     }
