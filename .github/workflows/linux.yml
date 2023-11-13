@@ -12,27 +12,38 @@ on:
 
 jobs:
   linux:
-    name: Build (${{ matrix.cc }} on ${{ matrix.runs-on }})
+    name: Build (${{ matrix.cc }} and ${{ matrix.fuse_package }} on ${{ matrix.runs-on }})
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          # FUSE 2
           - cc: gcc-13
             cxx: g++-13
             clang_major_version: null
             clang_repo_suffix: null
             runs-on: ubuntu-22.04
+            fuse_package: libfuse-dev
+          # FUSE 3
+          - cc: gcc-13
+            cxx: g++-13
+            clang_major_version: null
+            clang_repo_suffix: null
+            runs-on: ubuntu-22.04
+            fuse_package: libfuse3-dev
           - cc: clang-17
             cxx: clang++-17
             clang_major_version: 17
             clang_repo_suffix: -17
             runs-on: ubuntu-22.04
+            fuse_package: libfuse3-dev
           - cc: clang-18
             cxx: clang++-18
             clang_major_version: 18
             clang_repo_suffix:
             runs-on: ubuntu-22.04
+            fuse_package: libfuse3-dev
     steps:
       - name: Add Clang/LLVM repositories
         if: "${{ contains(matrix.cxx, 'clang') }}"
@@ -48,7 +59,7 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
             autoconf \
             automake \
-            libfuse3-dev \
+            ${{ matrix.fuse_package }} \
             libtool \
             pkg-config
 
