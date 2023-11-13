@@ -151,8 +151,18 @@ error:
 static int add_octal_rule_to_permchain(const char *start, const char *end,
                                        struct permchain *pc)
 {
+    // Make [start..end[ available as a null-terminated string to `strtol`
+    const int len = end - start;
+    char * const buf = malloc((len + 1) * sizeof(char));
+    if (buf == NULL)
+        return -1;
+    memcpy(buf, start, len);
+    buf[len] = '\0';
+
     struct permchain *newpc = permchain_create();
-    long mode = strtol(start, NULL, 8);
+
+    long mode = strtol(buf, NULL, 8);
+    free(buf);
 
     if (mode < 0 || mode > 0777) {
         permchain_destroy(newpc);
