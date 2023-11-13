@@ -446,9 +446,9 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     }
 
     /* Report user-defined owner/group if specified */
-    if (settings.new_uid != -1)
+    if (settings.new_uid != (uid_t)-1)
         stbuf->st_uid = settings.new_uid;
-    if (settings.new_gid != -1)
+    if (settings.new_gid != (gid_t)-1)
         stbuf->st_gid = settings.new_gid;
 
     /* Mirrored user? */
@@ -549,12 +549,12 @@ static int chown_new_file(const char *path, struct fuse_context *fc, int (*chown
         }
     }
 
-    if (settings.create_for_uid != -1)
+    if (settings.create_for_uid != (uid_t)-1)
         file_owner = settings.create_for_uid;
-    if (settings.create_for_gid != -1)
+    if (settings.create_for_gid != (gid_t)-1)
         file_group = settings.create_for_gid;
 
-    if ((file_owner != -1) || (file_group != -1)) {
+    if ((file_owner != (uid_t)-1) || (file_group != (gid_t)-1)) {
         if (chown_func(path, file_owner, file_group) == -1) {
             DPRINTF("Failed to chown new file or directory (%d)", errno);
         }
@@ -1182,7 +1182,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
     int res;
     char *real_path;
 
-    if (uid != -1) {
+    if (uid != (uid_t)-1) {
         switch (settings.chown_policy) {
         case CHOWN_NORMAL:
             uid = usermap_get_uid_or_default(settings.usermap_reverse, uid, uid);
@@ -1198,7 +1198,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         }
     }
 
-    if (gid != -1) {
+    if (gid != (gid_t)-1) {
         switch (settings.chgrp_policy) {
         case CHGRP_NORMAL:
             gid = usermap_get_gid_or_default(settings.usermap_reverse, gid, gid);
@@ -1214,7 +1214,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         }
     }
 
-    if (uid != -1 || gid != -1) {
+    if (uid != (uid_t)-1 || gid != (gid_t)-1) {
         real_path = process_path(path, true);
         if (real_path == NULL)
             return -errno;

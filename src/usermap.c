@@ -52,7 +52,7 @@ UsermapStatus usermap_add_uid(UserMap *map, uid_t from, uid_t to)
         map->user_from = (uid_t*)realloc(map->user_from, map->user_capacity * sizeof(uid_t));
         map->user_to = (uid_t*)realloc(map->user_to, map->user_capacity * sizeof(uid_t));
     }
-    if (usermap_get_uid_or_default(map, from, -1) != -1) {
+    if (usermap_get_uid_or_default(map, from, -1) != (uid_t)-1) {
         return usermap_status_duplicate_key;
     }
     i = map->user_size;
@@ -77,7 +77,7 @@ UsermapStatus usermap_add_gid(UserMap *map, gid_t from, gid_t to)
         map->group_from = (gid_t*)realloc(map->group_from, map->group_capacity * sizeof(gid_t));
         map->group_to = (gid_t*)realloc(map->group_to, map->group_capacity * sizeof(gid_t));
     }
-    if (usermap_get_gid_or_default(map, from, -1) != -1) {
+    if (usermap_get_gid_or_default(map, from, -1) != (gid_t)-1) {
         return usermap_status_duplicate_key;
     }
     i = map->group_size;
