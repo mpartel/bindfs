@@ -19,6 +19,7 @@
 
 #include "misc.h"
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -328,11 +329,11 @@ void grow_memory_block(struct memory_block *a, size_t amount)
             if (new_cap == 0) {
                 new_cap = 8;
             } else {
+                if (new_cap > SIZE_MAX / 2) {
+                    fprintf(stderr, "Memory block too large.");
+                    abort();
+                }
                 new_cap *= 2;
-            }
-            if (new_cap < 0) {  // Overflow
-                fprintf(stderr, "Memory block too large.");
-                abort();
             }
         }
         a->ptr = (char *)realloc(a->ptr, new_cap);
