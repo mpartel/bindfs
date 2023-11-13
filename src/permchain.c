@@ -67,6 +67,8 @@ static int add_chmod_rule_to_permchain(const char *start, const char *end,
 
     int len = end - start;
     char *buf = malloc((len + 1) * sizeof(char));
+    if (buf == NULL)
+        return -1;
     const char *p = buf;
 
     enum {LHS, RHS} state = LHS;
