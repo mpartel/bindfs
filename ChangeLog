@@ -1,3 +1,8 @@
+2023-11-19  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Enabled -Wextra and fixed many compiler warnings
+	  (PR #148, thanks @hartwork!)
+
 2023-11-10  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed undefined behaviour on platforms where `uid_t` or `gid_t`
