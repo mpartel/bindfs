@@ -61,7 +61,8 @@ jobs:
             automake \
             ${{ matrix.fuse_package }} \
             libtool \
-            pkg-config
+            pkg-config \
+            valgrind
 
       - name: Install build dependency Clang ${{ matrix.clang_major_version }}
         if: "${{ contains(matrix.cxx, 'clang') }}"
