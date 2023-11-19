@@ -35,7 +35,7 @@ AM_CONDITIONAL([BUILD_OS_IS_DARWIN], [case $build_os in darwin* ) true ;; * ) fa
 # _DARWIN_BETTER_REALPATH fixes MacOS realpath() broken around Catalina (#83).
 my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -D_XOPEN_SOURCE=700 -D__BSD_VISIBLE=1 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_DARWIN_BETTER_REALPATH"
 
-my_CFLAGS="-std=c99 -Wall -Wpedantic -fno-common"
+my_CFLAGS="-std=c99 -Wall -Wextra -Wpedantic -fno-common"
 my_LDFLAGS="-pthread"
 AC_SUBST([my_CPPFLAGS])
 AC_SUBST([my_CFLAGS])

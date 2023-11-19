@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
             perror("failed to write");
             return 1;
         }
-        if (res != buf_size) {
+        if ((size_t)res != buf_size) {
             // Too lazy to write a loop here unless it turns out to be necessary.
             fprintf(stderr, "Failed to write exactly %lu bytes", (unsigned long)amt_read);
         }

@@ -446,9 +446,9 @@ static int getattr_common(const char *procpath, struct stat *stbuf)
     }
 
     /* Report user-defined owner/group if specified */
-    if (settings.new_uid != -1)
+    if (settings.new_uid != (uid_t)-1)
         stbuf->st_uid = settings.new_uid;
-    if (settings.new_gid != -1)
+    if (settings.new_gid != (gid_t)-1)
         stbuf->st_gid = settings.new_gid;
 
     /* Mirrored user? */
@@ -549,12 +549,12 @@ static int chown_new_file(const char *path, struct fuse_context *fc, int (*chown
         }
     }
 
-    if (settings.create_for_uid != -1)
+    if (settings.create_for_uid != (uid_t)-1)
         file_owner = settings.create_for_uid;
-    if (settings.create_for_gid != -1)
+    if (settings.create_for_gid != (gid_t)-1)
         file_group = settings.create_for_gid;
 
-    if ((file_owner != -1) || (file_group != -1)) {
+    if ((file_owner != (uid_t)-1) || (file_group != (gid_t)-1)) {
         if (chown_func(path, file_owner, file_group) == -1) {
             DPRINTF("Failed to chown new file or directory (%d)", errno);
         }
@@ -750,6 +750,7 @@ static void *bindfs_init()
 
 static void bindfs_destroy(void *private_data)
 {
+    (void)private_data;
 }
 
 #ifdef HAVE_FUSE_3
@@ -761,6 +762,9 @@ static int bindfs_getattr(const char *path, struct stat *stbuf)
 {
     int res;
     char *real_path;
+#ifdef HAVE_FUSE_3
+    (void)fi;
+#endif
 
     real_path = process_path(path, true);
     if (real_path == NULL)
@@ -827,6 +831,11 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi)
 #endif
 {
+    (void)offset;
+    (void)fi;
+#ifdef HAVE_FUSE_3
+    (void)flags;
+#endif
     char *real_path = process_path(path, true);
     if (real_path == NULL) {
         return -errno;
@@ -1116,6 +1125,9 @@ static int bindfs_chmod(const char *path, mode_t mode)
     struct stat st;
     mode_t diff = 0;
     char *real_path;
+#ifdef HAVE_FUSE_3
+    (void)fi;
+#endif
 
     real_path = process_path(path, true);
     if (real_path == NULL)
@@ -1181,8 +1193,11 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
 {
     int res;
     char *real_path;
+#ifdef HAVE_FUSE_3
+    (void)fi;
+#endif
 
-    if (uid != -1) {
+    if (uid != (uid_t)-1) {
         switch (settings.chown_policy) {
         case CHOWN_NORMAL:
             uid = usermap_get_uid_or_default(settings.usermap_reverse, uid, uid);
@@ -1198,7 +1213,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         }
     }
 
-    if (gid != -1) {
+    if (gid != (gid_t)-1) {
         switch (settings.chgrp_policy) {
         case CHGRP_NORMAL:
             gid = usermap_get_gid_or_default(settings.usermap_reverse, gid, gid);
@@ -1214,7 +1229,7 @@ static int bindfs_chown(const char *path, uid_t uid, gid_t gid)
         }
     }
 
-    if (uid != -1 || gid != -1) {
+    if (uid != (uid_t)-1 || gid != (gid_t)-1) {
         real_path = process_path(path, true);
         if (real_path == NULL)
             return -errno;
@@ -1237,6 +1252,9 @@ static int bindfs_truncate(const char *path, off_t size)
 {
     int res;
     char *real_path;
+#ifdef HAVE_FUSE_3
+    (void)fi;
+#endif
 
     real_path = process_path(path, true);
     if (real_path == NULL)
@@ -1273,6 +1291,9 @@ static int bindfs_utimens(const char *path, const struct timespec ts[2])
 {
     int res;
     char *real_path;
+#ifdef HAVE_FUSE_3
+    (void)fi;
+#endif
 
     real_path = process_path(path, true);
     if (real_path == NULL)
@@ -1437,6 +1458,7 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
 static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        struct flock *lock)
 {
+  (void)path;
   int res = fcntl(fi->fh, cmd, lock);
   if (res == -1) {
     return -errno;
@@ -1447,6 +1469,7 @@ static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
 /* This callback is only installed if lock forwarding is enabled. */
 static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op)
 {
+    (void)path;
     int res = flock(fi->fh, op);
     if (res == -1) {
         return -errno;
@@ -1464,6 +1487,9 @@ static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         void *data)
 #endif
 {
+    (void)path;
+    (void)arg;
+    (void)flags;
     int res = ioctl(fi->fh, cmd, data);
     if (res == -1) {
       return -errno;
@@ -1891,6 +1917,8 @@ enum OptionKey {
 static int process_option(void *data, const char *arg, int key,
                           struct fuse_args *outargs)
 {
+    (void)data;
+    (void)outargs;
     switch ((enum OptionKey)key)
     {
     case OPTKEY_HELP:
@@ -2322,6 +2350,7 @@ static void setup_signal_handling()
 
 static void signal_handler(int sig)
 {
+    (void)sig;
     invalidate_user_cache();
 }
 
