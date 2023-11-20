@@ -316,9 +316,11 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi);
 static int bindfs_write(const char *path, const char *buf, size_t size,
                         off_t offset, struct fuse_file_info *fi);
+#if defined(HAVE_FUSE_29) || defined(HAVE_FUSE_3)
 static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        struct flock *lock);
 static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op);
+#endif
 #ifdef HAVE_FUSE_3
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
@@ -1454,6 +1456,7 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
     return res;
 }
 
+#if defined(HAVE_FUSE_29) || defined(HAVE_FUSE_3)
 /* This callback is only installed if lock forwarding is enabled. */
 static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        struct flock *lock)
@@ -1476,6 +1479,7 @@ static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op)
     }
     return 0;
 }
+#endif
 
 #ifdef HAVE_FUSE_3
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
