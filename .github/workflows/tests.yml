@@ -79,6 +79,8 @@ jobs:
 
       - name: 'Configure'
         env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
           CFLAGS: -Werror
         run: |-
           set -x
