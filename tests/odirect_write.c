@@ -32,7 +32,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    size_t total_size = 0;
     while (1) {
         if (feof(stdin)) {
             break;
@@ -47,8 +46,6 @@ int main(int argc, char** argv) {
         if (amt_read == 0) {
             continue;
         }
-
-        total_size += amt_read;
 
         ssize_t res = write(fd, buf, buf_size);
         if (res == -1) {
