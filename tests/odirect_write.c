@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
 
 #include <stdio.h>
 
-int main() {
+int main(void) {
     fprintf(stderr, "Not supported on this platform.\n");
     return 1;
 }

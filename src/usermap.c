@@ -14,7 +14,7 @@ struct UserMap {
     int group_size;
 };
 
-UserMap *usermap_create()
+UserMap *usermap_create(void)
 {
     UserMap* map = (UserMap*)malloc(sizeof(UserMap));
     map->user_from = NULL;

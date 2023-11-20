@@ -6,12 +6,12 @@ static const double epsilon = 0.000000000001;
 
 static volatile double time_now = 123123.0;
 
-double test_clock()
+double test_clock(void)
 {
     return time_now;
 }
 
-void computes_correct_sleep_times()
+void computes_correct_sleep_times(void)
 {
     time_now = 123123.0;
     RateLimiter limiter;
@@ -29,7 +29,7 @@ void computes_correct_sleep_times()
     rate_limiter_destroy(&limiter);
 }
 
-void works_after_being_idle()
+void works_after_being_idle(void)
 {
     time_now = 123123.0;
     RateLimiter limiter;
@@ -45,7 +45,7 @@ void works_after_being_idle()
     rate_limiter_destroy(&limiter);
 }
 
-void sleeps_correct_amount()
+void sleeps_correct_amount(void)
 {
     RateLimiter limiter;
     rate_limiter_init(&limiter, 10, &gettimeofday_clock);
@@ -58,7 +58,7 @@ void sleeps_correct_amount()
     rate_limiter_destroy(&limiter);
 }
 
-void rate_limiter_suite()
+void rate_limiter_suite(void)
 {
     computes_correct_sleep_times();
     works_after_being_idle();

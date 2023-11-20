@@ -52,13 +52,13 @@ static struct memory_block cache_memory_block = MEMORY_BLOCK_INITIALIZER;
 
 static volatile int cache_rebuild_requested = 1;
 
-static void rebuild_cache();
+static void rebuild_cache(void);
 static struct uid_cache_entry *uid_cache_lookup(uid_t key);
 static struct gid_cache_entry *gid_cache_lookup(gid_t key);
-static int rebuild_uid_cache();
-static int rebuild_gid_cache();
-static void clear_uid_cache();
-static void clear_gid_cache();
+static int rebuild_uid_cache(void);
+static int rebuild_gid_cache(void);
+static void clear_uid_cache(void);
+static void clear_gid_cache(void);
 static int uid_cache_name_sortcmp(const void *key, const void *entry);
 static int uid_cache_name_searchcmp(const void *key, const void *entry);
 static int uid_cache_uid_sortcmp(const void *key, const void *entry);
@@ -66,7 +66,7 @@ static int uid_cache_uid_searchcmp(const void *key, const void *entry);
 static int gid_cache_gid_sortcmp(const void *key, const void *entry);
 static int gid_cache_gid_searchcmp(const void *key, const void *entry);
 
-static void rebuild_cache()
+static void rebuild_cache(void)
 {
     free_memory_block(&cache_memory_block);
     init_memory_block(&cache_memory_block, 1024);
@@ -98,7 +98,7 @@ static struct gid_cache_entry *gid_cache_lookup(gid_t key)
     );
 }
 
-static int rebuild_uid_cache()
+static int rebuild_uid_cache(void)
 {
     /* We're holding the lock, so we have mutual exclusion on getpwent and getgrent too. */
     struct passwd *pw;
@@ -144,7 +144,7 @@ error:
     return 0;
 }
 
-static int rebuild_gid_cache()
+static int rebuild_gid_cache(void)
 {
     /* We're holding the lock, so we have mutual exclusion on getpwent and getgrent too. */
     struct group *gr;
@@ -205,12 +205,12 @@ error:
     return 0;
 }
 
-static void clear_uid_cache()
+static void clear_uid_cache(void)
 {
     uid_cache_size = 0;
 }
 
-static void clear_gid_cache()
+static void clear_gid_cache(void)
 {
     gid_cache_size = 0;
 }
@@ -361,7 +361,7 @@ done:
     return ret;
 }
 
-void invalidate_user_cache()
+void invalidate_user_cache(void)
 {
     cache_rebuild_requested = 1;
 }

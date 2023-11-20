@@ -30,16 +30,16 @@ extern const double rate_limiter_idle_credit;
 
 typedef struct RateLimiter {
     double rate;  /* bytes / second */
-    double (*clock)();
+    double (*clock)(void);
     double last_modified;
     double accumulated_sleep_time;
     pthread_mutex_t mutex;
 } RateLimiter;
 
-double gettimeofday_clock();
+double gettimeofday_clock(void);
 
 /* 0 on success, error number on error. */
-void rate_limiter_init(RateLimiter* limiter, double rate, double (*clock)());
+void rate_limiter_init(RateLimiter* limiter, double rate, double (*clock)(void));
 /* Blocks until the rate limiter clears `size` units. */
 void rate_limiter_wait(RateLimiter* limiter, size_t size);
 /* Updates the rate limiter like `rate_limiter_wait` but does not actually
