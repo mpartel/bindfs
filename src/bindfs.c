@@ -257,7 +257,7 @@ static size_t round_up_buffer_size_for_direct_io(size_t size);
 #ifdef HAVE_FUSE_3
 static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg);
 #else
-static void *bindfs_init(void);
+static void *bindfs_init(struct fuse_conn_info *conn);
 #endif
 static void bindfs_destroy(void *private_data);
 #ifdef HAVE_FUSE_3
@@ -709,11 +709,11 @@ static size_t round_up_buffer_size_for_direct_io(size_t size)
 #ifdef HAVE_FUSE_3
 static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
 #else
-static void *bindfs_init(void)
+static void *bindfs_init(struct fuse_conn_info *conn)
 #endif
 {
-    #ifdef HAVE_FUSE_3
     (void) conn;
+    #ifdef HAVE_FUSE_3
     cfg->use_ino = 1;
 
     // Disable caches so changes in base FS are visible immediately.
