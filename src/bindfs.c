@@ -1674,7 +1674,7 @@ static int bindfs_listxattr(const char *path, char* list, size_t size)
                 }
                 curr += thislen;
                 len += thislen;
-            } while (len < res);
+            } while (len < (size_t)res);
         } else {
             // TODO: https://github.com/osxfuse/fuse/blob/master/example/fusexmp_fh.c
             // had this commented out bit here o_O
