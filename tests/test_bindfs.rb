@@ -973,7 +973,7 @@ testenv("", :title => "socket files") do
   end
 end
 
-# FIXME: this stuff around testenv is a hax, and testenv may also exit(), which defeats the 'ensure' below.
+# FIXME: this stuff around testenv is a hack, and testenv may also exit(), which defeats the 'ensure' below.
 # the test setup ought to be refactored. It might well use MiniTest or something.
 # TODO: support FreeBSD in this test (different group management commands)
 if Process.uid == 0 && `uname`.strip == 'Linux'

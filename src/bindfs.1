@@ -133,7 +133,7 @@ have bindfs try to change the owner to a particular user or group.
 .B \-\-create\-as\-user, \-o create\-as\-user
 Tries to change the owner and group of new files and directories to the
 uid and gid of the caller. This can work only if the mounter is root.
-It is also the default behavior (mimicing mount \-\-bind) if the mounter is root.
+It is also the default behavior (mimicking mount \-\-bind) if the mounter is root.
 
 .TP
 .B \-\-create\-as\-mounter, \-o create\-as\-mounter
@@ -234,7 +234,7 @@ Allows setting and clearing the executable attribute on files
 chmods will only affect execute bits on files and changes to other bits are
 discarded.
 With \-\-chmod\-deny, all chmods that would change any bits except
-excecute bits on files will still fail with a 'permission denied'.
+execute bits on files will still fail with a 'permission denied'.
 This option does nothing with \-\-chmod\-normal.
 
 
@@ -442,7 +442,7 @@ See \fBfuse\fP(8) for the full list of FUSE options. Some of the more common one
 Make the mount strictly read-only.
 This even prevents root from writing to it.
 If this is all you need, then (since Linux 2.6.26) you can get a
-more efficent mount with \fBmount \-\-bind\fP and then \fBmount \-o remount,ro\fP.
+more efficient mount with \fBmount \-\-bind\fP and then \fBmount \-o remount,ro\fP.
 
 .TP
 .B \-d, \-o debug
@@ -523,7 +523,7 @@ and adds the user execute bit for directories and executables.
 .TP
 .B bindfs \-ono\-allow\-other,perms=a\-w somedir somedir
 
-Makes a directory read\-only and accessable only by the current user.
+Makes a directory read\-only and accessible only by the current user.
 
 .TP
 .B /home/bob/shared /var/www/shared/bob  fuse.bindfs  perms=0000:u+rD   0   0
