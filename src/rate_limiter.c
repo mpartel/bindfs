@@ -28,7 +28,7 @@
 
 const double rate_limiter_idle_credit = -0.2;
 
-double gettimeofday_clock()
+double gettimeofday_clock(void)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -50,7 +50,7 @@ static void sleep_seconds(double s)
     nanosleep(&ts, NULL);
 }
 
-void rate_limiter_init(RateLimiter *limiter, double rate, double (*clock)())
+void rate_limiter_init(RateLimiter *limiter, double rate, double (*clock)(void))
 {
     limiter->rate = rate;
     limiter->clock = clock;

@@ -37,7 +37,7 @@ typedef enum UsermapStatus {
     usermap_status_duplicate_key = 1
 } UsermapStatus;
 
-UserMap *usermap_create();
+UserMap *usermap_create(void);
 void usermap_destroy(UserMap *map);
 
 UsermapStatus usermap_add_uid(UserMap *map, uid_t from, uid_t to);

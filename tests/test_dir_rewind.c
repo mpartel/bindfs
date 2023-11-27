@@ -17,7 +17,7 @@
 
 #define BUF_SIZE 4096
 
-int main()
+int main(void)
 {
     int fd = open(".", O_RDONLY | O_DIRECTORY);
     if (fd == -1) {
@@ -72,7 +72,7 @@ int main()
 
 #include <stdio.h>
 
-int main()
+int main(void)
 {
     printf("This test currently only compiles on Linux/amd64.\n");
     printf("Skipping by just returning successfully.\n");

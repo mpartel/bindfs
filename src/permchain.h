@@ -36,7 +36,7 @@
 
 struct permchain;
 
-struct permchain *permchain_create();
+struct permchain *permchain_create(void);
 
 /* Parses chmod arguments like 0777, a=rX, og-rwx etc.
    Multiple rules may be given, separated with commas or colons.

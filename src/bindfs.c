@@ -225,7 +225,7 @@ static bool bindfs_init_failed = false;
 
 /* PROTOTYPES */
 
-static int is_mirroring_enabled();
+static int is_mirroring_enabled(void);
 
 /* Checks whether the uid is to be the mirrored owner of all files. */
 static int is_mirrored_user(uid_t uid);
@@ -257,7 +257,7 @@ static size_t round_up_buffer_size_for_direct_io(size_t size);
 #ifdef HAVE_FUSE_3
 static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg);
 #else
-static void *bindfs_init();
+static void *bindfs_init(struct fuse_conn_info *conn);
 #endif
 static void bindfs_destroy(void *private_data);
 #ifdef HAVE_FUSE_3
@@ -316,9 +316,11 @@ static int bindfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi);
 static int bindfs_write(const char *path, const char *buf, size_t size,
                         off_t offset, struct fuse_file_info *fi);
+#if defined(HAVE_FUSE_29) || defined(HAVE_FUSE_3)
 static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        struct flock *lock);
 static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op);
+#endif
 #ifdef HAVE_FUSE_3
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         struct fuse_file_info *fi, unsigned int flags,
@@ -343,14 +345,14 @@ static int process_option(void *data, const char *arg, int key,
                           struct fuse_args *outargs);
 static int parse_mirrored_users(char* mirror);
 static int parse_user_map(UserMap *map, UserMap *reverse_map, char *spec);
-static char *get_working_dir();
-static void maybe_stdout_stderr_to_file();
+static char *get_working_dir(void);
+static void maybe_stdout_stderr_to_file(void);
 
 /* Sets up handling of SIGUSR1. */
-static void setup_signal_handling();
+static void setup_signal_handling(void);
 static void signal_handler(int sig);
 
-static void atexit_func();
+static void atexit_func(void);
 
 /* 
 Ignore some options (starting with -o) 
@@ -362,7 +364,7 @@ are special ones interpreted by systemd in /etc/fstab
 struct fuse_args filter_special_opts(struct fuse_args *args);
 static bool keep_option(const char* opt);
 
-static int is_mirroring_enabled()
+static int is_mirroring_enabled(void)
 {
     return settings.num_mirrored_users + settings.num_mirrored_members > 0;
 }
@@ -707,11 +709,11 @@ static size_t round_up_buffer_size_for_direct_io(size_t size)
 #ifdef HAVE_FUSE_3
 static void *bindfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg)
 #else
-static void *bindfs_init()
+static void *bindfs_init(struct fuse_conn_info *conn)
 #endif
 {
-    #ifdef HAVE_FUSE_3
     (void) conn;
+    #ifdef HAVE_FUSE_3
     cfg->use_ino = 1;
 
     // Disable caches so changes in base FS are visible immediately.
@@ -1454,6 +1456,7 @@ static int bindfs_write(const char *path, const char *buf, size_t size,
     return res;
 }
 
+#if defined(HAVE_FUSE_29) || defined(HAVE_FUSE_3)
 /* This callback is only installed if lock forwarding is enabled. */
 static int bindfs_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        struct flock *lock)
@@ -1476,6 +1479,7 @@ static int bindfs_flock(const char *path, struct fuse_file_info *fi, int op)
     }
     return 0;
 }
+#endif
 
 #ifdef HAVE_FUSE_3
 static int bindfs_ioctl(const char *path, int cmd, void *arg,
@@ -1674,7 +1678,7 @@ static int bindfs_listxattr(const char *path, char* list, size_t size)
                 }
                 curr += thislen;
                 len += thislen;
-            } while (len < res);
+            } while (len < (size_t)res);
         } else {
             // TODO: https://github.com/osxfuse/fuse/blob/master/example/fusexmp_fh.c
             // had this commented out bit here o_O
@@ -2304,7 +2308,7 @@ fail:
     return 0;
 }
 
-static void maybe_stdout_stderr_to_file()
+static void maybe_stdout_stderr_to_file(void)
 {
     /* TODO: make this a command line option. */
 #if 0
@@ -2327,7 +2331,7 @@ static void maybe_stdout_stderr_to_file()
 #endif
 }
 
-static char *get_working_dir()
+static char *get_working_dir(void)
 {
     size_t buf_size = 4096;
     char* buf = malloc(buf_size);
@@ -2338,7 +2342,7 @@ static char *get_working_dir()
     return buf;
 }
 
-static void setup_signal_handling()
+static void setup_signal_handling(void)
 {
     struct sigaction sa;
     sa.sa_handler = signal_handler;
@@ -2354,7 +2358,7 @@ static void signal_handler(int sig)
     invalidate_user_cache();
 }
 
-static void atexit_func()
+static void atexit_func(void)
 {
     free(settings.mntsrc);
     free(settings.mntdest);

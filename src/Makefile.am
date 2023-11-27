@@ -12,7 +12,7 @@ bindfs_LDADD = ${fuse_LIBS} ${fuse3_LIBS} ${fuse_t_LIBS} ${my_LDFLAGS}
 man_MANS = bindfs.1
 
 if BUILD_OS_IS_DARWIN
-bindfs_BUNDLEDIR = /Library/Filesystems/bindfs.fs
+bindfs_BUNDLEDIR = $(DESTDIR)/Library/Filesystems/bindfs.fs
 bindfs_BUNDLEBINDIR = "${bindfs_BUNDLEDIR}/Contents/Resources"
 
 install-exec-hook:

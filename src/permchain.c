@@ -40,7 +40,7 @@ struct permchain {
     struct permchain *next;
 };
 
-struct permchain *permchain_create()
+struct permchain *permchain_create(void)
 {
     struct permchain *pc = malloc(sizeof(struct permchain));
     pc->mask = 0000;

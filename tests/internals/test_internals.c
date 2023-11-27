@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-static void arena_suite()
+static void arena_suite(void)
 {
     const int iterations = 1000;
     struct arena arena;
@@ -55,7 +55,7 @@ static void test_path_starts_with(const char* path, const char* prefix, bool exp
     }
 }
 
-static void my_dirname_suite()
+static void my_dirname_suite(void)
 {
     char buf[256];
 
@@ -90,7 +90,7 @@ static void my_dirname_suite()
     test_my_dirname(buf, "..");
 }
 
-static void path_starts_with_suite()
+static void path_starts_with_suite(void)
 {
     test_path_starts_with("/a/b/c", "/a/b", true);
     test_path_starts_with("/a/b/c", "/a/b/", true);
@@ -144,7 +144,7 @@ static void path_starts_with_suite()
     test_path_starts_with("/a/b/c", "/", true);
 }
 
-static void sprintf_new_suite() {
+static void sprintf_new_suite(void) {
     char *result;
 
     result = sprintf_new("Hello %d %s", 123, "World");
@@ -214,7 +214,7 @@ static void filter_o_opts_test(const char **init, const char **expected) {
     free(joined_input);
 }
 
-static void filter_o_opts_suite() {
+static void filter_o_opts_suite(void) {
     {
         const char *in[] = {"-obad1", NULL};
         const char *exp[] = {NULL};
@@ -299,7 +299,7 @@ static void filter_o_opts_suite() {
     }
 }
 
-static void test_internal_suite() {
+static void test_internal_suite(void) {
     arena_suite();
     my_dirname_suite();
     path_starts_with_suite();
