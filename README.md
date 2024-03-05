@@ -58,8 +58,7 @@ See https://github.com/osxfuse/osxfuse/wiki/Mount-options for details.
 
 ## Test suite ##
 
-[![Build Status (FUSE 2)](https://github.com/mpartel/bindfs/actions/workflows/tests.yml/badge.svg)](https://github.com/mpartel/bindfs/actions/workflows/tests.yml)
-[![Build Status (FUSE 3)](https://github.com/mpartel/bindfs/actions/workflows/tests.yml/badge.svg)](https://github.com/mpartel/bindfs/actions/workflows/tests.yml)
+[![Build Status](https://github.com/mpartel/bindfs/actions/workflows/tests.yml/badge.svg)](https://github.com/mpartel/bindfs/actions/workflows/tests.yml)
 
 
 Bindfs comes with a (somewhat brittle and messy) test suite.
