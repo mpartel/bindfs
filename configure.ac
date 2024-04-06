@@ -11,7 +11,9 @@ AC_PROG_LIBTOOL
 AC_ARG_ENABLE([debug-output],
     [AS_HELP_STRING([--enable-debug-output], [enable debug output])])
 AC_ARG_WITH([core-foundation],
-    AS_HELP_STRING([--with-core-foundation], [link against Core Foundation (OS X only) @<:@default=no@:>@]))
+    AS_HELP_STRING([--with-core-foundation], [(MacOS only) link against Core Foundation @<:@default=no@:>@]))
+AC_ARG_ENABLE([macos-fs-link],
+    [AS_HELP_STRING([--disable-macos-fs-link], [(MacOS only) don't install link to /Library/Filesystems - disables 'mount -t bindfs' and /etc/fstab support])])
 AC_ARG_WITH([fuse2],
     [AS_HELP_STRING([--with-fuse2], [link against libfuse 2.x (default: autodetect, preferring 3.x)])])
 AC_ARG_WITH([fuse3],
@@ -26,7 +28,7 @@ if test x"$with_core_foundation" == "xyes" ; then
     LDFLAGS="${LDFLAGS} -framework CoreFoundation"
 fi
 
-AM_CONDITIONAL([BUILD_OS_IS_DARWIN], [case $build_os in darwin* ) true ;; * ) false ;; esac])
+AM_CONDITIONAL([INSTALL_MACOS_FS_LINK], [case $build_os in darwin* ) test x"$enable_macos_fs_link" != "xno" ;; * ) false ;; esac])
 
 # _XOPEN_SOURCE is >= 500 for pread/pwrite; >= 700 for utimensat.
 # __BSD_VISIBLE is for flock() on FreeBSD. It otherwise gets hidden by _XOPEN_SOURCE.

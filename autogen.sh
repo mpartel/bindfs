@@ -6,7 +6,6 @@ if [ "$1" == "-d" ]; then
 	shift;
 	echo "Running ./configure"
 	echo
-	sleep 1s
 	./configure "$@"
 elif [ -n "$1" ]; then
 	echo
