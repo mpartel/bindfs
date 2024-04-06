@@ -1,3 +1,9 @@
+2024-04-06  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* (MacOS) Added `./configure` option `--disable-macos-fs-link`
+	  (issue #140)
+	* Released 1.17.7
+
 2023-11-19  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Enabled -Wextra and fixed many compiler warnings
