@@ -23,15 +23,15 @@ jobs:
       matrix:
         include:
           # FUSE 2
-          - cc: gcc-13
-            cxx: g++-13
+          - cc: gcc
+            cxx: g++
             clang_major_version: null
             clang_repo_suffix: null
             runs-on: ubuntu-22.04
             fuse_package: libfuse-dev
           # FUSE 3
-          - cc: gcc-13
-            cxx: g++-13
+          - cc: gcc
+            cxx: g++
             clang_major_version: null
             clang_repo_suffix: null
             runs-on: ubuntu-22.04
