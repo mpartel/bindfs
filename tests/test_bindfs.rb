@@ -774,16 +774,18 @@ if $have_fuse_29 || $have_fuse_3
     # (this test passes with an empty file as well, but this way is clearer)
 
     # flock
-    File.open('mnt/file') do |f1|
-      File.open('src/file') do |f2|
-        assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
-        assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
-        assert { f1.flock(File::LOCK_UN)  }
+    if `uname`.strip != 'FreeBSD'  # FreeBSD's FUSE  doesn't yet support forwarding flock: https://wiki.freebsd.org/action/recall/FUSEFS?action=recall&rev=58
+      File.open('mnt/file') do |f1|
+        File.open('src/file') do |f2|
+          assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+          assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+          assert { f1.flock(File::LOCK_UN)  }
 
-        assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
-        assert { !f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+          assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+          assert { !f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+        end
+        assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
       end
-      assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
     end
 
     # fcntl locking
@@ -795,13 +797,15 @@ if $have_fuse_29 || $have_fuse_3
     File.write('src/file', 'some contents for fcntl lockng')
 
     # flock
-    File.open('mnt/file') do |f1|
-      File.open('src/file') do |f2|
-        assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
-        assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
-      end
-      File.open('mnt/file') do |f2|
-        assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+    if `uname`.strip != 'FreeBSD'  # FreeBSD's FUSE doesn't yet support forwarding flock: https://wiki.freebsd.org/action/recall/FUSEFS?action=recall&rev=58
+      File.open('mnt/file') do |f1|
+        File.open('src/file') do |f2|
+          assert { f1.flock(File::LOCK_EX | File::LOCK_NB)  }
+          assert { f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+        end
+        File.open('mnt/file') do |f2|
+          assert { !f2.flock(File::LOCK_EX | File::LOCK_NB)  }
+        end
       end
     end
 
@@ -818,7 +822,7 @@ end # have_fuse_29
 #
 # This test is also disabled for old (FUSE < 2.9) systems.
 # TODO: figure out why it doesn't work.
-if $have_fuse_29 || $have_fuse_3
+if ($have_fuse_29 || $have_fuse_3) && `uname`.strip != 'FreeBSD'  # FreeBSD's FUSE doesn't yet support ioctl: https://wiki.freebsd.org/action/recall/FUSEFS?action=recall&rev=58
   root_testenv("--enable-ioctl", :title => "append-only ioctl", :valgrind => false) do
     touch('mnt/file')
     system('chattr +a mnt/file')

@@ -2927,6 +2927,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+#if  defined(__FreeBSD__)
+    if (settings.enable_lock_forwarding) {
+        fprintf(stderr, "WARNING: FreeBSD (version 14) doesn't yet forward flock() to FUSE filesystems: https://wiki.freebsd.org/action/recall/FUSEFS?action=recall&rev=58\n");
+        fprintf(stderr, "This means that only fcntl()-based locks might be forwarded by bindfs!\n");
+    }
+#endif
+
     /* Remove the locking implementation unless the user has enabled lock
        forwarding. FUSE implements locking inside the mountpoint by default. */
     if (!settings.enable_lock_forwarding) {
