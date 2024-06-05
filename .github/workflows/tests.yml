@@ -177,7 +177,7 @@ jobs:
           - centos8
           - debian10
           - debian11
-          #- freebsd12  # https://github.com/mpartel/bindfs/issues/144#issuecomment-1807258383
+          - freebsd14
           - ubuntu1804
           - ubuntu2004
           - ubuntu2204
@@ -216,6 +216,7 @@ jobs:
 
       - name: Check for KVM
         run: |-
+          # This check is probably obsolete now: https://github.com/actions/runner-images/discussions/7191
           if [[ -e /dev/kvm ]]; then
             echo "This GitHub Action runner has KVM. This run will be fast."
           else
