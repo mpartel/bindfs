@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "roboxes/freebsd12"
+  config.vm.box = "roboxes/freebsd14"
 
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "../../", "/bindfs",
@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
     rsync__args: ["-av", "--delete-after"]
 
   config.vm.provider "virtualbox" do |v|
-    v.name = "bindfs-freebsd12"
+    v.name = "bindfs-freebsd14"
   end
   config.vm.provider "libvirt" do |v|
     v.driver = if File.exist?('/dev/kvm') then 'kvm' else 'qemu' end
@@ -20,10 +20,10 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     pkg update
-    pkg install -y fusefs-libs pkgconf ruby
+    pkg install -y fusefs-libs3 pkgconf autoconf automake libtool ruby
 
-    kldload fuse.ko
-    echo 'fuse_load="YES"' >> /boot/loader.conf
+    kldload fusefs
+    echo 'fusefs_load="YES"' >> /boot/loader.conf
 
     sysctl vfs.usermount=1
     echo vfs.usermount=1 >> /etc/sysctl.conf
