@@ -837,7 +837,7 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     (void)fi;
 #ifdef HAVE_FUSE_3
     bool readdirplus = (flags & FUSE_READDIR_PLUS) == FUSE_READDIR_PLUS;
-    enum fuse_fill_dir_flags fill_dir_flags = readdirplus ? FUSE_FILL_DIR_PLUS : FUSE_FILL_DIR_DEFAULTS;
+    enum fuse_fill_dir_flags fill_dir_flags = readdirplus ? FUSE_FILL_DIR_PLUS : 0;
 #else
     bool readdirplus = false;
 #endif
