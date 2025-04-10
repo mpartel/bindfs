@@ -836,7 +836,10 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     (void)offset;
     (void)fi;
 #ifdef HAVE_FUSE_3
-    (void)flags;
+    bool readdirplus = (flags & FUSE_READDIR_PLUS) == FUSE_READDIR_PLUS;
+    enum fuse_fill_dir_flags fill_dir_flags = readdirplus ? FUSE_FILL_DIR_PLUS : FUSE_FILL_DIR_DEFAULTS;
+#else
+    bool readdirplus = false;
 #endif
     char *real_path = process_path(path, true);
     if (real_path == NULL) {
@@ -859,12 +862,11 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         pc_ret = NAME_MAX;
     }
 
-    // Path buffer for resolving symlinks
-    struct memory_block resolve_buf = MEMORY_BLOCK_INITIALIZER;
-    if (settings.resolve_symlinks) {
+    struct memory_block path_buf = MEMORY_BLOCK_INITIALIZER;
+    if (settings.resolve_symlinks || readdirplus) {
         int len = strlen(real_path);
-        append_to_memory_block(&resolve_buf, real_path, len + 1);
-        resolve_buf.ptr[len] = '/';
+        append_to_memory_block(&path_buf, real_path, len + 1);
+        path_buf.ptr[len] = '/';
     }
 
     free(real_path);
@@ -882,23 +884,38 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         }
 
         struct stat st;
-        memset(&st, 0, sizeof(st));
-        st.st_ino = de->d_ino;
-        st.st_mode = de->d_type << 12;
 
-        if (settings.resolve_symlinks && (st.st_mode & S_IFLNK) == S_IFLNK) {
+        if ((settings.resolve_symlinks && de->d_type == DT_LNK) || readdirplus) {
             int file_len = strlen(de->d_name) + 1;  // (include null terminator)
-            append_to_memory_block(&resolve_buf, de->d_name, file_len);
-            char *resolved = realpath(resolve_buf.ptr, NULL);
-            resolve_buf.size -= file_len;
+            append_to_memory_block(&path_buf, de->d_name, file_len);
 
-            if (resolved) {
-                if (lstat(resolved, &st) == -1) {
+            if (settings.resolve_symlinks && de->d_type == DT_LNK) {
+                char *resolved = realpath(path_buf.ptr, NULL);
+
+                if (resolved) {
+                    if (lstat(resolved, &st) == -1) {
+                        result = -errno;
+                        break;
+                    }
+                    free(resolved);
+                } else {
                     result = -errno;
                     break;
                 }
-                free(resolved);
+            } else {
+                if (lstat(path_buf.ptr, &st) == -1) {
+                    result = -errno;
+                    break;
+                }
             }
+
+            if (readdirplus) {
+                if ((result = getattr_common(path_buf.ptr, &st)) < 0) {
+                    break;
+                }
+            }
+
+            path_buf.size -= file_len;
         }
 
         // See issue #28 for why we pass a 0 offset to `filler` and ignore
@@ -909,19 +926,17 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         // errno in that case, so we zero it first and set it ourself if it
         // doesn't.
         #ifdef HAVE_FUSE_3
-        // TODO: FUSE_FILL_DIR_PLUS doesn't work with offset==0: https://github.com/libfuse/libfuse/issues/583
-        //       Work around this by implementing the offset!=1 mode. Be careful - it's quite error-prone!
-        if (filler(buf, de->d_name, &st, 0, FUSE_FILL_DIR_PLUS) != 0) {
+        if (filler(buf, de->d_name, readdirplus ? &st : NULL, 0, fill_dir_flags) != 0) {
         #else
-        if (filler(buf, de->d_name, &st, 0) != 0) {
+        if (filler(buf, de->d_name, readdirplus ? &st : NULL, 0) != 0) {
         #endif
             result = errno != 0 ? -errno : -EIO;
             break;
         }
     }
 
-    if (settings.resolve_symlinks) {
-        free_memory_block(&resolve_buf);
+    if (settings.resolve_symlinks || readdirplus) {
+        free_memory_block(&path_buf);
     }
 
     closedir(dp);
