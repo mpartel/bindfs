@@ -6,6 +6,8 @@ name: Build and test
 on:
   pull_request:
   push:
+    branches:
+      - main
   schedule:
     - cron: '0 3 * * 5'  # Every Friday at 3am
   workflow_dispatch:
@@ -49,18 +51,18 @@ jobs:
             runs-on: ubuntu-22.04
             fuse_package: libfuse3-dev
           # fuse-t
-          - cc: gcc-13
-            cxx: g++-13
+          - cc: gcc
+            cxx: g++
             clang_major_version: null
             clang_repo_suffix: null
-            runs-on: macos-13
+            runs-on: macos-15
             fuse_package: fuse-t
           # macFUSE
-          - cc: clang-15
-            cxx: clang++-15
-            clang_major_version: 15
+          - cc: clang
+            cxx: clang++
+            clang_major_version: null
             clang_repo_suffix: null
-            runs-on: macos-13
+            runs-on: macos-15
             fuse_package: macfuse
     steps:
       - name: Add Clang/LLVM repositories
@@ -168,51 +170,43 @@ jobs:
 
   vagrant:
     name: Run Vagrant tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         # TODO: automatically check that this list is up-to-date
         box:
-          - centos8
           - debian10
           - debian11
           - freebsd14
-          - ubuntu1804
+          - rockylinux9
           - ubuntu2004
           - ubuntu2204
+          - ubuntu2404
     steps:
       - name: Install dependencies
         run: |-
           set -x
-          for FILE in /etc/apt/sources.list /etc/apt/sources.list.d/*; do
-            if [[ -e "${FILE}" ]]; then
-              sudo sed -i 's/# deb-src /deb-src /'  "${FILE}"
-            fi
-          done
+          sudo sed -i 's/Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
 
           # The following is based on these instructions:
           # https://developer.hashicorp.com/vagrant/install?product_intent=vagrant
           # https://vagrant-libvirt.github.io/vagrant-libvirt/installation.html
 
-          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt-get update
-          sudo apt-get build-dep vagrant ruby-libvirt
+          sudo apt-get build-dep ruby-libvirt
           sudo apt-get install -y vagrant \
             qemu-system-x86 \
             autoconf automake libtool pkg-config \
-            qemu libvirt-daemon-system ebtables libguestfs-tools \
-            libxslt-dev libxml2-dev zlib1g-dev ruby-dev
+            libvirt-daemon-system ebtables libguestfs-tools \
+            libxslt-dev libxml2-dev zlib1g-dev ruby ruby-dev
           vagrant plugin install vagrant-libvirt
           sudo adduser "${USER}" libvirt
 
       - name: Checkout Git branch
         uses: actions/checkout@v4
-
-      - name: 'Generate build files with ./autogen.sh'
-        run: |-
-          ./autogen.sh
 
       - name: Check for KVM
         run: |-
@@ -229,4 +223,4 @@ jobs:
         run: |-
           # sudo needed because the current shell is not yet in group "libvirt"
           # https://github.com/actions/runner-images/discussions/5981
-          sudo -E -s -u "${USER}" vagrant/test.rb --print-logs ${{ matrix.box }}
+          sudo -E -s -u "${USER}" ruby vagrant/test.rb --print-logs ${{ matrix.box }}
