@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "roboxes/ubuntu1804"
+  config.vm.box = "boxen/rockylinux-9"
 
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "../../", "/bindfs",
@@ -12,17 +12,14 @@ Vagrant.configure("2") do |config|
     rsync__args: ["-av", "--delete-after"]
 
   config.vm.provider "virtualbox" do |v|
-    v.name = "bindfs-ubuntu1804"
+    v.name = "bindfs-rockylinux9"
   end
   config.vm.provider "libvirt" do |v|
     v.driver = if File.exist?('/dev/kvm') then 'kvm' else 'qemu' end
   end
 
   config.vm.provision "shell", inline: <<-SHELL
-    apt-get update
-    apt-get install -y fuse libfuse-dev build-essential pkg-config ruby valgrind
-    apt-get clean
-    adduser vagrant fuse
+    yum install -y fuse3 fuse3-devel gcc make automake autoconf libtool pkg-config ruby valgrind
     echo user_allow_other > /etc/fuse.conf
   SHELL
 end
