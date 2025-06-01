@@ -113,6 +113,10 @@
 #define   LOCK_NB   4    /* don't block when locking */
 #define   LOCK_UN   8    /* unlock */
 int flock(int fd, int operation);
+
+#if !defined(DT_LNK)
+# define  DT_LNK   10
+#endif
 #endif
 
 /* We pessimistically assume signed uid_t and gid_t in our overflow checks,
