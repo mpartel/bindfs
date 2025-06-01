@@ -203,8 +203,7 @@ jobs:
             autoconf automake libtool pkg-config \
             libvirt-daemon-system ebtables libguestfs-tools \
             libxslt-dev libxml2-dev zlib1g-dev ruby ruby-dev
-          vagrant plugin install vagrant-libvirt
-          sudo adduser "${USER}" libvirt
+          sudo vagrant plugin install vagrant-libvirt
 
       - name: Checkout Git branch
         uses: actions/checkout@v4
@@ -222,6 +221,8 @@ jobs:
         env:
           VAGRANT_DEFAULT_PROVIDER: libvirt
         run: |-
-          # sudo needed because the current shell is not yet in group "libvirt"
+          # We use vagrant with sudo because it has proven stupendously difficult to
+          # get the current shell into group "libvirt" in a way that Vagrant is happy with.
           # https://github.com/actions/runner-images/discussions/5981
-          sudo -E -s -u "${USER}" ruby vagrant/test.rb --print-logs ${{ matrix.box }}
+          sudo chmod a+rx /root  # Give libvirt access to /root/.vagrant.d which is about to be created
+          sudo ruby vagrant/test.rb --print-logs ${{ matrix.box }}
