@@ -137,7 +137,8 @@ jobs:
       - name: 'Build'
         run: |-
           set -x
-          make -j$(nproc || sysctl -n hw.logicalcpu) VERBOSE=1
+          cpu_threads="$(nproc 2>/dev/null || sysctl -n hw.logicalcpu || echo 4)"
+          make "-j${cpu_threads}" VERBOSE=1
 
       - name: 'Test as non-root'
         run: |-

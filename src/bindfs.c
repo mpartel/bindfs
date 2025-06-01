@@ -101,6 +101,7 @@
 /* Apple Structs */
 #ifdef __APPLE__
 #include <sys/param.h>
+#include <sys/dirent.h>
 #define G_PREFIX   "org"
 #define G_KAUTH_FILESEC_XATTR G_PREFIX ".apple.system.Security"
 #define A_PREFIX   "com"

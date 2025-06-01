@@ -37,7 +37,14 @@ AM_CONDITIONAL([INSTALL_MACOS_FS_LINK], [case $build_os in darwin* ) test x"$ena
 # _DARWIN_BETTER_REALPATH fixes MacOS realpath() broken around Catalina (#83).
 my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -D_XOPEN_SOURCE=700 -D__BSD_VISIBLE=1 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_DARWIN_BETTER_REALPATH"
 
-my_CFLAGS="-std=c99 -Wall -Wextra -Wpedantic -fno-common"
+dnl libfuse >=3.17 started requiring gnu11 from the C compiler
+AS_IF([test "x$with_fuse2" == "xyes"], [
+    my_std=c99
+], [
+    my_std=gnu11
+])
+
+my_CFLAGS="-std=${my_std} -Wall -Wextra -Wpedantic -fno-common"
 my_LDFLAGS="-pthread"
 AC_SUBST([my_CPPFLAGS])
 AC_SUBST([my_CFLAGS])
