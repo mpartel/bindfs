@@ -6,8 +6,6 @@ name: Build and test
 on:
   pull_request:
   push:
-    branches:
-      - main
   schedule:
     - cron: '0 3 * * 5'  # Every Friday at 3am
   workflow_dispatch:
