@@ -55,13 +55,13 @@ jobs:
             clang_repo_suffix: null
             runs-on: macos-13
             fuse_package: fuse-t
-          # macFUSE
-          - cc: clang-15
-            cxx: clang++-15
-            clang_major_version: 15
-            clang_repo_suffix: null
-            runs-on: macos-13
-            fuse_package: macfuse
+#         # macFUSE
+#         - cc: clang-15
+#           cxx: clang++-15
+#           clang_major_version: 15
+#           clang_repo_suffix: null
+#           runs-on: macos-13
+#           fuse_package: macfuse
     steps:
       - name: Add Clang/LLVM repositories
         if: "${{ runner.os == 'Linux' && contains(matrix.cxx, 'clang') }}"
