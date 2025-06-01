@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "boxen/ubuntu-20.04"
+  config.vm.box = "roboxes/ubuntu2004"
 
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.synced_folder "../../", "/bindfs",
@@ -20,7 +20,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     apt-get update
-    apt-get install -y fuse libfuse-dev build-essential automake autoconf libtool pkg-config ruby valgrind
+    apt-get install -y fuse libfuse-dev build-essential pkg-config ruby valgrind
     apt-get clean
     adduser vagrant fuse
     echo user_allow_other > /etc/fuse.conf

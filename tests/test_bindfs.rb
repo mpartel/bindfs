@@ -185,7 +185,7 @@ testenv("--ctime-from-mtime") do
     sleep(1.1)
     chmod(0777, mf)
 
-    # to_i gives us precision of 1 sec
+    # to_i gives us prceision of 1 sec
     assert { File.stat(mf).ctime.to_i == File.stat(mf).mtime.to_i }
     assert { File.stat(sf).ctime > File.stat(sf).mtime }
 end
@@ -522,7 +522,7 @@ testenv("", :title => "preserves inode numbers") do
     assert { File.stat('mnt/dir').ino == File.stat('src/dir').ino }
 end
 
-if $have_fuse3 && !$have_fuse_3_readdir_bug  # https://github.com/libfuse/libfuse/issues/583
+unless $have_fuse_3_readdir_bug  # https://github.com/libfuse/libfuse/issues/583
     testenv("", :title => "preserves readdir inode numbers") do
         touch('src/file')
         mkdir('src/dir')
