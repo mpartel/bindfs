@@ -19,11 +19,11 @@ AC_ARG_WITH([fuse2],
 AC_ARG_WITH([fuse3],
     [AS_HELP_STRING([--with-fuse3], [link against libfuse 3.x (default: autodetect, preferring 3.x)])])
 
-if test x"$enable_debug_output" == "xyes" ; then
+if test x"$enable_debug_output" = "xyes" ; then
     AC_DEFINE([BINDFS_DEBUG], [1], [Define to 1 to enable debugging messages])
 fi
 
-if test x"$with_core_foundation" == "xyes" ; then
+if test x"$with_core_foundation" = "xyes" ; then
     AC_MSG_NOTICE([Linking with Core Foundation])
     LDFLAGS="${LDFLAGS} -framework CoreFoundation"
 fi
@@ -115,11 +115,11 @@ AC_DEFUN([CHECK_FUSE_T],
 )
 
 
-AS_IF([test "x$with_fuse2" == "xyes"],
+AS_IF([test "x$with_fuse2" = "xyes"],
     [CHECK_FUSE2([AC_MSG_ERROR([FUSE 2 not found])])],
-    [AS_IF([test "x$with_fuse3" == "xyes"],
+    [AS_IF([test "x$with_fuse3" = "xyes"],
         [CHECK_FUSE3([AC_MSG_ERROR([FUSE 3 not found])])],
-        [AS_IF([test "x$with_fuse_t" == "xyes"],
+        [AS_IF([test "x$with_fuse_t" = "xyes"],
             [CHECK_FUSE_T([AC_MSG_ERROR([FUSE-T not found])])],
             [CHECK_FUSE3([CHECK_FUSE2([CHECK_FUSE_T([AC_MSG_ERROR([FUSE not found])])])])]
         )]
