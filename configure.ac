@@ -39,7 +39,7 @@ AM_CONDITIONAL([INSTALL_MACOS_FS_LINK], [case $build_os in darwin* ) test x"$ena
 my_CPPFLAGS="-D_REENTRANT -D_FILE_OFFSET_BITS=64 -D_XOPEN_SOURCE=700 -D__BSD_VISIBLE=1 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_DARWIN_BETTER_REALPATH -D_DARWIN_C_SOURCE"
 
 dnl libfuse >=3.17 started requiring gnu11 from the C compiler
-AS_IF([test "x$with_fuse2" == "xyes"], [
+AS_IF([test "x$with_fuse2" = "xyes"], [
     my_std=c99
 ], [
     my_std=gnu11
