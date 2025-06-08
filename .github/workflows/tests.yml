@@ -106,7 +106,7 @@ jobs:
               clang-${{ matrix.clang_major_version }}
 
       - name: Add versioned aliases for Clang ${{ matrix.clang_major_version }}
-        if: "${{ runner.os == 'macOS' && contains(matrix.cxx, 'clang') }}"
+        if: "${{ runner.os == 'macOS' && matrix.clang_major_version != null }}"
         run: |-
           set -x
           sudo ln -s "$(brew --prefix llvm@${{ matrix.clang_major_version }})"/bin/clang   /usr/local/bin/clang-${{ matrix.clang_major_version }}
