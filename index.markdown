@@ -49,7 +49,10 @@ Compile and install bindfs: `./configure && make && sudo make install`.
 
 ## About
 
-bindfs is developed and tested primarily on Linux with [FUSE](https://github.com/libfuse/libfuse) 2 and 3, but it has been reported to work reasonably well on MacOS with [MacFuse](http://osxfuse.github.io/) and [fuse-t](https://www.fuse-t.org/), and on FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/).
+bindfs is developed and tested primarily on Linux with [FUSE 3](https://github.com/libfuse/libfuse).
+
+Support for Linux with FUSE 2, for MacOS with [fuse-t](https://www.fuse-t.org/) and for FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/) is best-effort.
+[MacFUSE](https://macfuse.github.io/) might work, but is not properly supported, since it's impossible to test it without access to a physical Mac. Volunteer maintenance of MacFUSE support is welcome.
 
 All FUSE filesystems necessarily incur a performance penalty in CPU time and memory consumption. If all you need is to make a directory read-only then `mount --bind -r` is more efficient.
 
