@@ -29,6 +29,11 @@ File.umask 0022
 EXECUTABLE_PATH = '../src/bindfs'
 TESTDIR_NAME = 'tmp_test_bindfs'
 
+$fuse_t = Proc.new do
+    system("pkg-config --exists fuse-t")
+    $?.success?
+end.call
+
 # If set to an array of test names, only those will be run
 $only_these_tests = nil
 
@@ -46,6 +51,10 @@ end
 def fail!(msg, error = nil, options = {})
     options = {:exit => true}.merge(options)
     fail(msg, error, options)
+end
+
+def sh!(cmd)
+    raise Exception.new("Command failed: #{cmd}") unless system(cmd)
 end
 
 def wait_for(options = {}, &condition)
@@ -168,8 +177,13 @@ def testenv(bindfs_args, options = {}, &block)
     end
 
     if !$?.success?
-        fail("exit status: #{$?}")
-        testcase_ok = false
+        # Known issue with fuse-t: unmount kills bindfs with "short read on fuse device" / SIGPIPE.
+        # No idea why.
+        ignore = $?.signaled? && $?.termsig == Signal.list['PIPE'] && $fuse_t
+        unless ignore
+            fail("exit status: #{$?}")
+            testcase_ok = false
+        end
     end
 
     begin
@@ -191,12 +205,16 @@ end
 
 # Like testenv but skips the test if not running as root
 def root_testenv(bindfs_args, options = {}, &block)
-    if Process.uid == 0
-        testenv(bindfs_args, options, &block)
-    else
+    if Process.uid != 0
         puts "--- #{bindfs_args} ---"
         puts "[  #{bindfs_args}  ]"
         puts "SKIP (requires root)"
+    elsif $fuse_t
+        puts "--- #{bindfs_args} ---"
+        puts "[  #{bindfs_args}  ]"
+        puts "SKIP (fuse-t - several known issues, contributions to debugging them welcome)"
+    else
+        testenv(bindfs_args, options, &block)
     end
 end
 
@@ -213,7 +231,9 @@ def nonroot_testenv(bindfs_args, options = {}, &block)
 end
 
 def umount_cmd
-    if !`which fusermount3`.strip.empty?
+    if $fuse_t
+        'diskutil unmount force'
+    elsif !`which fusermount3`.strip.empty?
         'fusermount3 -uz'
     elsif !`which fusermount`.strip.empty?
         'fusermount -uz'

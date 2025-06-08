@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  linux:
+  tests:
     name: Build (${{ matrix.cc }} and ${{ matrix.fuse_package }} on ${{ matrix.runs-on }})
     runs-on: ${{ matrix.runs-on }}
     strategy:
@@ -26,42 +26,36 @@ jobs:
           - cc: gcc
             cxx: g++
             clang_major_version: null
-            clang_repo_suffix: null
             runs-on: ubuntu-22.04
             fuse_package: libfuse-dev
           # FUSE 3
           - cc: gcc
             cxx: g++
             clang_major_version: null
-            clang_repo_suffix: null
             runs-on: ubuntu-22.04
             fuse_package: libfuse3-dev
           - cc: clang-17
             cxx: clang++-17
             clang_major_version: 17
-            clang_repo_suffix: -17
             runs-on: ubuntu-22.04
             fuse_package: libfuse3-dev
           - cc: clang-18
             cxx: clang++-18
             clang_major_version: 18
-            clang_repo_suffix: -18
             runs-on: ubuntu-22.04
             fuse_package: libfuse3-dev
-          # fuse-t
-          - cc: gcc-13
-            cxx: g++-13
+          # fuse-t, gcc
+          - cc: gcc
+            cxx: g++
             clang_major_version: null
-            clang_repo_suffix: null
-            runs-on: macos-13
+            runs-on: macos-15
             fuse_package: fuse-t
-          # macFUSE
-          - cc: clang-15
-            cxx: clang++-15
-            clang_major_version: 15
-            clang_repo_suffix: null
-            runs-on: macos-13
-            fuse_package: macfuse
+          # fuse-t, clang
+          - cc: clang
+            cxx: clang++
+            clang_major_version: null
+            runs-on: macos-15
+            fuse_package: fuse-t
     steps:
       - name: Add Clang/LLVM repositories
         if: "${{ runner.os == 'Linux' && contains(matrix.cxx, 'clang') }}"
@@ -69,7 +63,7 @@ jobs:
           set -x
           source /etc/os-release
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}${{ matrix.clang_repo_suffix }} main"
+          sudo add-apt-repository "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-${{ matrix.clang_major_version }} main"
 
       - name: Install build dependencies
         if: "${{ runner.os == 'Linux' }}"
@@ -88,9 +82,11 @@ jobs:
         run: |-
           set -x
 
-          if [[ ${{ matrix.fuse_package }} = macfuse ]]; then
-            brew install --cask macfuse
-          elif [[ ${{ matrix.fuse_package }} = fuse-t ]]; then
+          # Installing MacFUSE requires visiting the MacOS recovery environment,
+          # so testing it in CI seems to be hopeless. Therefore we only test with fuse-t.
+          # Apparently the best security is making it so inconvenient that you can't run the thing at all.
+          if [[ ${{ matrix.fuse_package }} = fuse-t ]]; then
+            sudo mkdir -p /usr/local/include  # https://github.com/macos-fuse-t/fuse-t/issues/77
             brew tap macos-fuse-t/homebrew-cask
             brew install fuse-t
           else
@@ -110,7 +106,7 @@ jobs:
               clang-${{ matrix.clang_major_version }}
 
       - name: Add versioned aliases for Clang ${{ matrix.clang_major_version }}
-        if: "${{ runner.os == 'macOS' && contains(matrix.cxx, 'clang') }}"
+        if: "${{ runner.os == 'macOS' && matrix.clang_major_version != null }}"
         run: |-
           set -x
           sudo ln -s "$(brew --prefix llvm@${{ matrix.clang_major_version }})"/bin/clang   /usr/local/bin/clang-${{ matrix.clang_major_version }}
@@ -135,30 +131,19 @@ jobs:
       - name: 'Build'
         run: |-
           set -x
-          make -j$(nproc || sysctl -n hw.logicalcpu) VERBOSE=1
+          cpu_threads="$(nproc 2>/dev/null || sysctl -n hw.logicalcpu || echo 4)"
+          make "-j${cpu_threads}" VERBOSE=1
 
       - name: 'Test as non-root'
         run: |-
-          if [[ ${{ runner.os }} = macOS ]]; then
-            ignore_errors=true  # while unfixed
-          else
-            ignore_errors=false
-          fi
-
           set -x
           whoami
-          make check || ${ignore_errors}
+          make check
 
       - name: 'Test as root'
         run: |-
-          if [[ ${{ runner.os }} = macOS ]]; then
-            ignore_errors=true  # while unfixed
-          else
-            ignore_errors=false
-          fi
-
           set -x
-          sudo make check || ${ignore_errors}
+          sudo make check
 
       - name: 'Install'
         run: |-
@@ -168,51 +153,42 @@ jobs:
 
   vagrant:
     name: Run Vagrant tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         # TODO: automatically check that this list is up-to-date
         box:
-          - centos8
           - debian10
           - debian11
           - freebsd14
-          - ubuntu1804
+          - rockylinux9
           - ubuntu2004
           - ubuntu2204
+          - ubuntu2404
     steps:
       - name: Install dependencies
         run: |-
           set -x
-          for FILE in /etc/apt/sources.list /etc/apt/sources.list.d/*; do
-            if [[ -e "${FILE}" ]]; then
-              sudo sed -i 's/# deb-src /deb-src /'  "${FILE}"
-            fi
-          done
+          sudo sed -i 's/Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
 
           # The following is based on these instructions:
           # https://developer.hashicorp.com/vagrant/install?product_intent=vagrant
           # https://vagrant-libvirt.github.io/vagrant-libvirt/installation.html
 
-          wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt-get update
-          sudo apt-get build-dep vagrant ruby-libvirt
+          sudo apt-get build-dep ruby-libvirt
           sudo apt-get install -y vagrant \
             qemu-system-x86 \
             autoconf automake libtool pkg-config \
-            qemu libvirt-daemon-system ebtables libguestfs-tools \
-            libxslt-dev libxml2-dev zlib1g-dev ruby-dev
-          vagrant plugin install vagrant-libvirt
-          sudo adduser "${USER}" libvirt
+            libvirt-daemon-system ebtables libguestfs-tools \
+            libxslt-dev libxml2-dev zlib1g-dev ruby ruby-dev
+          sudo vagrant plugin install vagrant-libvirt
 
       - name: Checkout Git branch
         uses: actions/checkout@v4
-
-      - name: 'Generate build files with ./autogen.sh'
-        run: |-
-          ./autogen.sh
 
       - name: Check for KVM
         run: |-
@@ -227,6 +203,8 @@ jobs:
         env:
           VAGRANT_DEFAULT_PROVIDER: libvirt
         run: |-
-          # sudo needed because the current shell is not yet in group "libvirt"
+          # We use vagrant with sudo because it has proven stupendously difficult to
+          # get the current shell into group "libvirt" in a way that Vagrant is happy with.
           # https://github.com/actions/runner-images/discussions/5981
-          sudo -E -s -u "${USER}" vagrant/test.rb --print-logs ${{ matrix.box }}
+          sudo chmod a+rx /root  # Give libvirt access to /root/.vagrant.d which is about to be created
+          sudo ruby vagrant/test.rb --print-logs ${{ matrix.box }}

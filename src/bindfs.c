@@ -101,18 +101,13 @@
 /* Apple Structs */
 #ifdef __APPLE__
 #include <sys/param.h>
+#include <sys/dirent.h>
 #define G_PREFIX   "org"
 #define G_KAUTH_FILESEC_XATTR G_PREFIX ".apple.system.Security"
 #define A_PREFIX   "com"
 #define A_KAUTH_FILESEC_XATTR A_PREFIX ".apple.system.Security"
 #define XATTR_APPLE_PREFIX   "com.apple."
 
-// Yes, Apple asks us to copy/paste these -.-
-#define   LOCK_SH   1    /* shared lock */
-#define   LOCK_EX   2    /* exclusive lock */
-#define   LOCK_NB   4    /* don't block when locking */
-#define   LOCK_UN   8    /* unlock */
-int flock(int fd, int operation);
 #endif
 
 /* We pessimistically assume signed uid_t and gid_t in our overflow checks,
@@ -331,7 +326,7 @@ static int bindfs_ioctl(const char *path, int cmd, void *arg,
                         void *data);
 #endif
 static int bindfs_statfs(const char *path, struct statvfs *stbuf);
-#if __APPLE__
+#ifdef HAVE_FUSE_T
 static int bindfs_statfs_x(const char *path, struct statfs *stbuf);
 #endif
 static int bindfs_release(const char *path, struct fuse_file_info *fi);
@@ -1533,7 +1528,7 @@ static int bindfs_statfs(const char *path, struct statvfs *stbuf)
     return 0;
 }
 
-#if __APPLE__
+#ifdef HAVE_FUSE_T
 static int bindfs_statfs_x(const char *path, struct statfs *stbuf)
 {
     int res;
@@ -1586,7 +1581,7 @@ static int bindfs_fsync(const char *path, int isdatasync,
    understanding from the osxfuse example file:
    https://github.com/osxfuse/fuse/blob/master/example/fusexmp_fh.c */
 
-#ifdef __APPLE__
+#ifdef HAVE_FUSE_T
 static int bindfs_setxattr(const char *path, const char *name, const char *value,
                            size_t size, int flags, uint32_t position)
 #else
@@ -1606,7 +1601,7 @@ static int bindfs_setxattr(const char *path, const char *name, const char *value
     if (real_path == NULL)
         return -errno;
 
-#if defined(__APPLE__)
+#if HAVE_FUSE_T
     if (!strncmp(name, XATTR_APPLE_PREFIX, sizeof(XATTR_APPLE_PREFIX) - 1)) {
         flags &= ~(XATTR_NOSECURITY);
     }
@@ -1631,7 +1626,7 @@ static int bindfs_setxattr(const char *path, const char *name, const char *value
     return 0;
 }
 
-#ifdef __APPLE__
+#ifdef HAVE_FUSE_T
 static int bindfs_getxattr(const char *path, const char *name, char *value,
                            size_t size, uint32_t position)
 #else
@@ -1648,7 +1643,7 @@ static int bindfs_getxattr(const char *path, const char *name, char *value,
     if (real_path == NULL)
         return -errno;
 
-#if defined(__APPLE__)
+#if HAVE_FUSE_T
     if (strcmp(name, A_KAUTH_FILESEC_XATTR) == 0) {
         char new_name[MAXPATHLEN];
         memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
@@ -1790,7 +1785,7 @@ static struct fuse_operations bindfs_oper = {
     .ioctl      = bindfs_ioctl,
 #endif
     .statfs     = bindfs_statfs,
-#ifdef __APPLE__
+#ifdef HAVE_FUSE_T
     .statfs_x   = bindfs_statfs_x,
 #endif
     .release    = bindfs_release,
@@ -2881,6 +2876,10 @@ int main(int argc, char *argv[])
 #ifndef HAVE_FUSE_3
     /* We want to mirror inodes. */
     fuse_opt_add_arg(&args, "-ouse_ino");
+#endif
+
+#ifdef HAVE_FUSE_T
+    fuse_opt_add_arg(&args, "-onoattrcache");
 #endif
 
     /* Show the source dir in the first field on /etc/mtab, to be consistent

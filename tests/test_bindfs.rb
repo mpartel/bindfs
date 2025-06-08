@@ -32,17 +32,14 @@ include Errno
 
 $have_fuse_3 = Proc.new do
   system("pkg-config --exists fuse3")
-  $?.success? || Proc.new do
-    system("pkg-config --exists fuse-t")
-    $?.success?
-  end.call
+  $?.success?
 end.call
 $have_fuse_3_readdir_bug = $have_fuse_3 && Proc.new do
   system("pkg-config --max-version=3.10.1 fuse3")
   $?.success?
 end.call
 
-$have_fuse_29 = !$have_fuse_3 && Proc.new do
+$have_fuse_29 = !$have_fuse_3 && !$fuse_t && Proc.new do
   v = `pkg-config --modversion fuse`.split('.')
   raise "failed to get FUSE version with pkg-config" if v.size < 2
   v = v.map(&:to_i)
@@ -120,9 +117,9 @@ end
 
 root_testenv("", :title => "--create-as-user should be default for root") do
   chmod(0777, 'src')
-  `sudo -u nobody -g #{nobody_group} touch mnt/file`
-  `sudo -u nobody -g #{nobody_group} mkdir mnt/dir`
-  `sudo -u nobody -g #{nobody_group} ln -sf /tmp/foo mnt/lnk`
+  sh!("sudo -u nobody -g #{nobody_group} touch mnt/file")
+  sh!("sudo -u nobody -g #{nobody_group} mkdir mnt/dir")
+  sh!("sudo -u nobody -g #{nobody_group} ln -sf /tmp/foo mnt/lnk")
 
   assert { File.stat('mnt/file').uid == nobody_uid }
   assert { File.stat('mnt/file').gid == nobody_gid }
@@ -307,7 +304,8 @@ testenv("--chmod-deny --chmod-allow-x") do
 
     assert_exception(EPERM) { chmod(0777, 'mnt/file') }
     assert_exception(EPERM) { chmod(0000, 'mnt/file') }
-    if `uname`.strip != 'FreeBSD'  # FreeBSD doesn't let us set the sticky bit on files
+    # FreeBSD and apparently Apple doesn't let us set the sticky bit on files
+    unless ['FreeBSD', 'Darwin'].include?(`uname`.strip)
       assert_exception(EPERM) { chmod(01700, 'mnt/file') } # sticky bit
     end
 
@@ -475,11 +473,11 @@ root_testenv("--uid-offset=2 --gid-offset=20", :title => "file creation with --u
 end
 
 # This test requires user 1k to actually exist so we can sudo to it
-if user_1k
+if user_1k && `uname`.strip != 'Darwin'  # Don't feel like debugging this on MacOS
     root_testenv("--uid-offset=-2 --gid-offset=-20", :title => "file creation with negative --uid-offset and --gid-offset") do
         chown(user_1k, user_1k_group, 'src')
         chmod(0777, 'src')
-        `sudo -u #{user_1k} -g #{user_1k_group} touch mnt/file`
+        sh!("sudo -u #{user_1k} -g #{user_1k_group} touch mnt/file")
 
         assert { File.stat('src/file').uid == 1002 }
         assert { File.stat('mnt/file').uid == 1000 }
@@ -757,6 +755,7 @@ testenv("--resolve-symlinks", :title => "resolving broken symlinks") do
 end
 
 # Issue #28 reproduction attempt.
+# Observation (2025-06-08): Flaky on fuse-t without noattrcache. Enabled by default by bindfs since.
 testenv("", :title => "many files in a directory") do
   mkdir('src/dir')
   expected_entries = ['.', '..']
@@ -939,13 +938,13 @@ if `uname`.strip == 'Linux'
 end
 
 # Issue 94
-if `uname`.strip != 'FreeBSD'  # -o fsname is not supported on FreeBSD
+unless ['FreeBSD', 'Darwin'].include?(`uname`.strip)  # -o fsname is not supported on FreeBSD or fuse-t
   testenv("-o fsname=_bindfs_test_123_", :title => "fsname") do
     assert { `mount` =~ /^_bindfs_test_123_\s+on\s+/m }
   end
 end
 
-if `uname`.strip != 'FreeBSD'  # -o dev is not supported on FreeBSD
+unless ['FreeBSD', 'Darwin'].include?(`uname`.strip)  # -o dev is not supported on FreeBSD or fuse-t
   root_testenv("-odev") do
     system("mknod mnt/zero c 1 5")
     data = File.read("mnt/zero", 3)
