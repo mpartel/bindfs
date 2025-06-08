@@ -2878,6 +2878,10 @@ int main(int argc, char *argv[])
     fuse_opt_add_arg(&args, "-ouse_ino");
 #endif
 
+#ifdef HAVE_FUSE_T
+    fuse_opt_add_arg(&args, "-onoattrcache");
+#endif
+
     /* Show the source dir in the first field on /etc/mtab, to be consistent
        with "real" filesystems.
 

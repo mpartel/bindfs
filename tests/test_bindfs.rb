@@ -755,8 +755,8 @@ testenv("--resolve-symlinks", :title => "resolving broken symlinks") do
 end
 
 # Issue #28 reproduction attempt.
-# Flaky on fuse-t without noattrcache (2025-06-08)
-testenv(if $fuse_t then "-o noattrcache" else "" end, :title => "many files in a directory") do
+# Observation (2025-06-08): Flaky on fuse-t without noattrcache. Enabled by default by bindfs since.
+testenv("", :title => "many files in a directory") do
   mkdir('src/dir')
   expected_entries = ['.', '..']
   10000.times do |i|
