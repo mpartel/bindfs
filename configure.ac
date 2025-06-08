@@ -5,7 +5,7 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_PROG_CC
 AC_LANG(C)
-AC_PROG_LIBTOOL
+LT_INIT
 
 # --enable and --with options
 AC_ARG_ENABLE([debug-output],
