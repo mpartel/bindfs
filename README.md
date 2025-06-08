@@ -17,6 +17,10 @@ Some things bindfs can be used for:
 Non-root users can use almost all features, but most interesting
 use-cases need `user_allow_other` to be defined in `/etc/fuse.conf`.
 
+bindfs is developed and tested primarily on Linux with [FUSE 3](https://github.com/libfuse/libfuse).
+
+Support for Linux with FUSE 2, for MacOS with [fuse-t](https://www.fuse-t.org/) and for FreeBSD with [fuse4bsd](http://www.freshports.org/sysutils/fusefs-kmod/) is best-effort.
+[MacFUSE](https://macfuse.github.io/) might work, but is not properly supported, since it's impossible to test it without access to a physical Mac. Volunteer maintenance of MacFUSE support is welcome.
 
 ## Installation ##
 
@@ -25,7 +29,9 @@ FUSE 3 is supported. When using FUSE 3, libfuse 3.10.2 or newer is
 recommended to avoid a [bug with readdir](https://github.com/libfuse/libfuse/issues/583),
 though it only seems to affect a few applications.
 
-To compile from source on Linux, first `apt install build-essential pkg-config libfuse3-dev` (or `libfuse-dev` on older systems). On MacOS, install XCode (and let it install Developer Tools), [pkg-config](https://formulae.brew.sh/formula/pkg-config#default) and either [MacFuse](https://osxfuse.github.io/) or [fuse-t](https://www.fuse-t.org/).
+To compile from source on Linux, first `apt install build-essential pkg-config libfuse3-dev` (or `libfuse-dev` on older systems).
+On MacOS, install XCode (and let it install Developer Tools), [pkg-config](https://formulae.brew.sh/formula/pkg-config#default)
+and [fuse-t](https://www.fuse-t.org/) ([MacFuse](https://osxfuse.github.io/) support is highly best-effort).
 
 Download a [release](https://bindfs.org/downloads/) or clone this repository.
 

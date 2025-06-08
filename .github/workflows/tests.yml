@@ -56,18 +56,6 @@ jobs:
             clang_major_version: null
             runs-on: macos-15
             fuse_package: fuse-t
-          # macFUSE, gcc
-          - cc: gcc
-            cxx: g++
-            clang_major_version: null
-            runs-on: macos-15
-            fuse_package: macfuse
-          # macFUSE, clang
-          - cc: clang
-            cxx: clang++
-            clang_major_version: null
-            runs-on: macos-15
-            fuse_package: macfuse
     steps:
       - name: Add Clang/LLVM repositories
         if: "${{ runner.os == 'Linux' && contains(matrix.cxx, 'clang') }}"
@@ -94,9 +82,10 @@ jobs:
         run: |-
           set -x
 
-          if [[ ${{ matrix.fuse_package }} = macfuse ]]; then
-            brew install --cask macfuse
-          elif [[ ${{ matrix.fuse_package }} = fuse-t ]]; then
+          # Installing MacFUSE requires visiting the MacOS recovery environment,
+          # so testing it in CI seems to be hopeless. Therefore we only test with fuse-t.
+          # Apparently the best security is making it so inconvenient that you can't run the thing at all.
+          if [[ ${{ matrix.fuse_package }} = fuse-t ]]; then
             sudo mkdir -p /usr/local/include  # https://github.com/macos-fuse-t/fuse-t/issues/77
             brew tap macos-fuse-t/homebrew-cask
             brew install fuse-t
@@ -147,26 +136,14 @@ jobs:
 
       - name: 'Test as non-root'
         run: |-
-          if [[ ${{ runner.os }} = macOS ]]; then
-            ignore_errors=true  # while unfixed
-          else
-            ignore_errors=false
-          fi
-
           set -x
           whoami
-          make check || ${ignore_errors}
+          make check
 
       - name: 'Test as root'
         run: |-
-          if [[ ${{ runner.os }} = macOS ]]; then
-            ignore_errors=true  # while unfixed
-          else
-            ignore_errors=false
-          fi
-
           set -x
-          sudo make check || ${ignore_errors}
+          sudo make check
 
       - name: 'Install'
         run: |-
