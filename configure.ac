@@ -46,6 +46,12 @@ AS_IF([test "x$with_fuse2" == "xyes"], [
 ])
 
 my_CFLAGS="-std=${my_std} -Wall -Wextra -Wpedantic -fno-common"
+case $build_os in
+  darwin* )
+    # For MacFuse 5.x (2025-06-08)
+    my_CFLAGS="${my_CFLAGS} -Wno-language-extension-token -Wno-dollar-in-identifier-extension -DFUSE_DARWIN_ENABLE_EXTENSIONS=0"
+    ;;
+esac
 my_LDFLAGS="-pthread"
 AC_SUBST([my_CPPFLAGS])
 AC_SUBST([my_CFLAGS])
