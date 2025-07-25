@@ -159,8 +159,8 @@ jobs:
       matrix:
         # TODO: automatically check that this list is up-to-date
         box:
-          - debian10
           - debian11
+          - debian12
           - freebsd14
           - rockylinux9
           - ubuntu2004
