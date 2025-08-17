@@ -1,3 +1,10 @@
+2025-08-17  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Added `-osubtype=argv[0]` to prevent some systems from
+	  auto-unmounting bindfs when the network goes down
+	  (PR #172, thanks @NishiyamaPedro!)
+	* Released 1.18.2
+
 2025-06-08  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Enabled noattrcache by default with fuse-t
