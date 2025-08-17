@@ -2900,6 +2900,19 @@ int main(int argc, char *argv[])
         free(tmp);
     }
 
+    /* OpenRC unmounts all filesystems with the "fuse" type when the network goes down (issue #72).
+
+       Because we set mntsrc as fsname to be consistent with "real" filesystems,
+       we need to add the subtype argument so that it doesn't mount with the "fuse" type.
+
+       Eg. "fuse.bindfs"
+     */
+#ifndef __FreeBSD__
+    char *tmp = sprintf_new("-osubtype=%s", my_basename(settings.progname));
+    fuse_opt_add_arg(&args, tmp);
+    free(tmp);
+#endif
+
     // With FUSE 3, we disable caches in bindfs_init
 #ifndef HAVE_FUSE_3
     /* We need to disable the attribute cache whenever two users
