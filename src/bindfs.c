@@ -893,7 +893,7 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                         break;
                     }
                     free(resolved);
-                } else {
+                } else if (lstat(path_buf.ptr, &st) == -1) {
                     result = -errno;
                     break;
                 }
