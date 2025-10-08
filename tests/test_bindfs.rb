@@ -754,6 +754,22 @@ testenv("--resolve-symlinks", :title => "resolving broken symlinks") do
   assert { !File.exist?('mnt/dirlink') }
 end
 
+# PR #175
+testenv("--resolve-symlinks", :title => "listing directory with broken symlink") do
+  mkdir('src/dir')
+  touch('src/dir/file1')
+  touch('src/dir/file2')
+  Dir.chdir 'src/dir' do
+    symlink('nonexistent', 'broken')
+  end
+
+  entries = Dir.entries('mnt/dir')
+  assert { entries.include?('file1') }
+  assert { entries.include?('file2') }
+  assert { entries.include?('broken') }
+  assert { File.lstat('mnt/dir/broken').symlink? }
+end
+
 # Issue #28 reproduction attempt.
 # Observation (2025-06-08): Flaky on fuse-t without noattrcache. Enabled by default by bindfs since.
 testenv("", :title => "many files in a directory") do

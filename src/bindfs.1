@@ -311,6 +311,8 @@ the old file out of the way, create a new file in its place, and finally delete
 the old file. Doing these operations on a resolved symlink will replace it with
 a regular file.
 
+Broken symlinks still show up as (unresolved) symlinks in this mode.
+
 Symlinks pointing outside the source directory are supported with the following
 exception: accessing the mountpoint recursively through a resolved symlink is
 not supported and will return an error. This is because a FUSE filesystem cannot
