@@ -1,3 +1,8 @@
+2025-10-08  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Fixed --resolve-symlinks with broken symlinks (PR #175, thanks @paulwkc!)
+	* Released 1.18.3
+
 2025-08-17  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Added `-osubtype=argv[0]` to prevent some systems from

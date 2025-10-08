@@ -367,26 +367,29 @@ the destination file. This can be configured with <b>--resolved-symlink-deletion
 the old file out of the way, create a new file in its place, and finally
 delete the old file. Doing these operations on a resolved symlink will replace
 it with a regular file. 
-<p> Symlinks pointing outside the source directory
-are supported with the following exception: accessing the mountpoint recursively
-through a resolved symlink is not supported and will return an error. This
-is because a FUSE filesystem cannot reliably call itself recursively without
-deadlocking, especially in single-threaded mode. 
+<p> Broken symlinks still show up as (unresolved) symlinks
+in this mode. 
+<p> Symlinks are not resolved recursively. 
+<p> Symlinks pointing
+outside the source directory are supported with the following exception:
+accessing the mountpoint recursively through a resolved symlink is not
+supported and will return an error. This is because a FUSE filesystem cannot
+reliably call itself recursively without deadlocking, especially in single-threaded
+mode. 
 <p> </dd>
 
-<dt><b>--resolved-symlink-deletion=<i>policy</i>,
--o resolved-symlink-deletion=<i>policy</i></b> </dt>
-<dd>If <b>--resolve-symlinks</b> is enabled, decides
-what happens when a resolved symlink is deleted.  The options are: <b>deny</b>
-(resolved symlinks cannot be deleted), <b>symlink-only</b> (the underlying symlink
-is deleted, its target is not), <b>symlink-first</b> (the symlink is deleted, and
-if that succeeds, the target is deleted but no error is reported if that
-fails) or <b>target-first</b> (the target is deleted first, and the symlink is
-deleted only if deleting the target succeeded).  The default is <b>symlink-only</b>.
-
-<p> Note that deleting files inside symlinked directories is always possible
-with all settings, including <b>deny</b>, unless something else protects those
-files. 
+<dt><b>--resolved-symlink-deletion=<i>policy</i>, -o resolved-symlink-deletion=<i>policy</i></b>
+</dt>
+<dd>If <b>--resolve-symlinks</b> is enabled, decides what happens when a resolved symlink
+is deleted.  The options are: <b>deny</b> (resolved symlinks cannot be deleted),
+<b>symlink-only</b> (the underlying symlink is deleted, its target is not), <b>symlink-first</b>
+(the symlink is deleted, and if that succeeds, the target is deleted but
+no error is reported if that fails) or <b>target-first</b> (the target is deleted
+first, and the symlink is deleted only if deleting the target succeeded).
+ The default is <b>symlink-only</b>. 
+<p> Note that deleting files inside symlinked
+directories is always possible with all settings, including <b>deny</b>, unless
+something else protects those files. 
 <p> 
 <p> </dd>
 </dl>
@@ -397,23 +400,23 @@ files.
 <dl>
 
 <dt><b>-h, --help</b> </dt>
-<dd>Displays a help message and exits.
-
+<dd>Displays
+a help message and exits. 
 <p> </dd>
 
 <dt><b>-V, --version</b> </dt>
-<dd>Displays version information and exits. 
-<p> <b>--fuse-version</b> Displays
-the version of the FUSE library interface that was seen at compile-time,
-as well as the version that bindfs currently runs with. 
+<dd>Displays version information and exits.
+
+<p> <b>--fuse-version</b> Displays the version of the FUSE library interface that was
+seen at compile-time, as well as the version that bindfs currently runs
+with. 
 <p> </dd>
 
-<dt><b>--no-allow-other, -o
-no-allow-other</b> </dt>
-<dd>Does not add <b>-o allow_other</b> to FUSE options. This causes the
-mount to be accessible only by the current user. 
-<p> (The deprecated shorthand
-<b>-n</b> is also still accepted.) 
+<dt><b>--no-allow-other, -o no-allow-other</b> </dt>
+<dd>Does not add <b>-o allow_other</b> to FUSE options.
+This causes the mount to be accessible only by the current user. 
+<p> (The deprecated
+shorthand <b>-n</b> is also still accepted.) 
 <p> </dd>
 
 <dt><b>--realistic-permissions, -o realistic-permissions</b>
