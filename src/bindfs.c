@@ -890,6 +890,7 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                 if (resolved) {
                     if (lstat(resolved, &st) == -1) {
                         result = -errno;
+                        free(resolved);
                         break;
                     }
                     free(resolved);
@@ -897,11 +898,9 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                     result = -errno;
                     break;
                 }
-            } else {
-                if (lstat(path_buf.ptr, &st) == -1) {
-                    result = -errno;
-                    break;
-                }
+            } else if (lstat(path_buf.ptr, &st) == -1) {
+                result = -errno;
+                break;
             }
 
             if (readdirplus) {

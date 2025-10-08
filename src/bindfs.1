@@ -313,6 +313,8 @@ a regular file.
 
 Broken symlinks still show up as (unresolved) symlinks in this mode.
 
+Symlinks are not resolved recursively.
+
 Symlinks pointing outside the source directory are supported with the following
 exception: accessing the mountpoint recursively through a resolved symlink is
 not supported and will return an error. This is because a FUSE filesystem cannot
