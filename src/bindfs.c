@@ -2992,6 +2992,11 @@ int main(int argc, char *argv[])
     /* fuse_main will daemonize by fork()'ing. The signal handler will persist. */
     setup_signal_handling();
 
+    /* Populate user cache eagerly, but only if it's needed. (See issue #178 for why this is desirable.) */
+    if (is_mirroring_enabled()) {
+        init_user_cache();
+    }
+
     fuse_main_return = fuse_main(args.argc, args.argv, &bindfs_oper, NULL);
 
     fuse_opt_free_args(&args);

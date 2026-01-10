@@ -1,3 +1,8 @@
+2026-01-10  Martin Pärtel <martin dot partel at gmail dot com>
+
+	* Populate user and group cache eagerly on startup, if the cache is needed
+	  (#178).
+
 2025-10-08  Martin Pärtel <martin dot partel at gmail dot com>
 
 	* Fixed --resolve-symlinks with broken symlinks (PR #175, thanks @paulwkc!)

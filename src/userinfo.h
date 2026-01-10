@@ -36,5 +36,6 @@ int group_gid(const char *groupname, gid_t *ret);
 
 int user_belongs_to_group(uid_t uid, gid_t gid);
 void invalidate_user_cache(void); /* safe to call from signal handler */
+void init_user_cache(void);
 
 #endif

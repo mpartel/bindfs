@@ -21,6 +21,7 @@
 #include "misc.h"
 #include "debug.h"
 
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -50,9 +51,8 @@ static int gid_cache_capacity = 0;
 
 static struct memory_block cache_memory_block = MEMORY_BLOCK_INITIALIZER;
 
-static volatile int cache_rebuild_requested = 1;
+static volatile sig_atomic_t cache_rebuild_requested = 1;
 
-static void rebuild_cache(void);
 static struct uid_cache_entry *uid_cache_lookup(uid_t key);
 static struct gid_cache_entry *gid_cache_lookup(gid_t key);
 static int rebuild_uid_cache(void);
@@ -65,16 +65,6 @@ static int uid_cache_uid_sortcmp(const void *key, const void *entry);
 static int uid_cache_uid_searchcmp(const void *key, const void *entry);
 static int gid_cache_gid_sortcmp(const void *key, const void *entry);
 static int gid_cache_gid_searchcmp(const void *key, const void *entry);
-
-static void rebuild_cache(void)
-{
-    free_memory_block(&cache_memory_block);
-    init_memory_block(&cache_memory_block, 1024);
-    rebuild_uid_cache();
-    rebuild_gid_cache();
-    qsort(uid_cache, uid_cache_size, sizeof(struct uid_cache_entry), uid_cache_uid_sortcmp);
-    qsort(gid_cache, gid_cache_size, sizeof(struct gid_cache_entry), gid_cache_gid_sortcmp);
-}
 
 static struct uid_cache_entry *uid_cache_lookup(uid_t key)
 {
@@ -323,21 +313,11 @@ int user_belongs_to_group(uid_t uid, gid_t gid)
     int i;
     uid_t *uids;
 
-    pthread_rwlock_rdlock(&cache_lock);
-
     if (cache_rebuild_requested) {
-        pthread_rwlock_unlock(&cache_lock);
-
-        pthread_rwlock_wrlock(&cache_lock);
-        if (cache_rebuild_requested) {
-            DPRINTF("%s", "Building user/group cache");
-            cache_rebuild_requested = 0;
-            rebuild_cache();
-        }
-        pthread_rwlock_unlock(&cache_lock);
-
-        pthread_rwlock_rdlock(&cache_lock);
+        init_user_cache();
     }
+
+    pthread_rwlock_rdlock(&cache_lock);
 
     struct uid_cache_entry *uent = uid_cache_lookup(uid);
     if (uent && uent->main_gid == gid) {
@@ -364,4 +344,21 @@ done:
 void invalidate_user_cache(void)
 {
     cache_rebuild_requested = 1;
+}
+
+void init_user_cache(void)
+{
+    pthread_rwlock_wrlock(&cache_lock);
+    if (cache_rebuild_requested) {
+        DPRINTF("Building user/group cache");
+        cache_rebuild_requested = 0;
+
+        free_memory_block(&cache_memory_block);
+        init_memory_block(&cache_memory_block, 1024);
+        rebuild_uid_cache();
+        rebuild_gid_cache();
+        qsort(uid_cache, uid_cache_size, sizeof(struct uid_cache_entry), uid_cache_uid_sortcmp);
+        qsort(gid_cache, gid_cache_size, sizeof(struct gid_cache_entry), gid_cache_gid_sortcmp);
+    }
+    pthread_rwlock_unlock(&cache_lock);
 }
