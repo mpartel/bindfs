@@ -7,6 +7,8 @@ AC_PROG_CC
 AC_LANG(C)
 LT_INIT
 
+AC_CANONICAL_HOST
+
 # --enable and --with options
 AC_ARG_ENABLE([debug-output],
     [AS_HELP_STRING([--enable-debug-output], [enable debug output])])
@@ -28,7 +30,7 @@ if test x"$with_core_foundation" = "xyes" ; then
     LDFLAGS="${LDFLAGS} -framework CoreFoundation"
 fi
 
-AM_CONDITIONAL([INSTALL_MACOS_FS_LINK], [case $build_os in darwin* ) test x"$enable_macos_fs_link" != "xno" ;; * ) false ;; esac])
+AM_CONDITIONAL([INSTALL_MACOS_FS_LINK], [case $host_os in darwin* ) test x"$enable_macos_fs_link" != "xno" ;; * ) false ;; esac])
 
 # _XOPEN_SOURCE is >= 500 for pread/pwrite; >= 700 for utimensat.
 # __BSD_VISIBLE is for flock() on FreeBSD. It otherwise gets hidden by _XOPEN_SOURCE.
@@ -46,7 +48,7 @@ AS_IF([test "x$with_fuse2" = "xyes"], [
 ])
 
 my_CFLAGS="-std=${my_std} -Wall -Wextra -Wpedantic -fno-common"
-case $build_os in
+case $host_os in
   darwin* )
     # For MacFuse 5.x (2025-06-08)
     my_CFLAGS="${my_CFLAGS} -Wno-language-extension-token -Wno-dollar-in-identifier-extension -DFUSE_DARWIN_ENABLE_EXTENSIONS=0"
