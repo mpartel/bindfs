@@ -1,6 +1,6 @@
 AC_INIT([bindfs],[1.18.4],[martin.partel@gmail.com])
 
-AM_INIT_AUTOMAKE([foreign serial-tests])
+AM_INIT_AUTOMAKE([foreign serial-tests subdir-objects])
 AC_CONFIG_HEADERS([config.h])
 
 AC_PROG_CC
