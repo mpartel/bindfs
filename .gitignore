@@ -5,6 +5,7 @@
 # Autotools stuff
 Makefile.in
 Makefile
+.dirstamp
 
 /autom4te.cache
 /aclocal.m4
