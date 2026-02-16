@@ -20,4 +20,4 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
-    - uses: codespell-project/actions-codespell@v2.1
+    - uses: codespell-project/actions-codespell@v2.2
