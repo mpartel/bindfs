@@ -2928,7 +2928,7 @@ int main(int argc, char *argv[])
         fuse_opt_add_arg(&args, "-ononempty");
 
     /* Open mount source for chrooting in bindfs_init */
-#ifdef __QNXNTO__
+#ifdef O_DIRECTORY
     settings.mntsrc_fd = open(settings.mntsrc, O_RDONLY | O_DIRECTORY);
 #else
     settings.mntsrc_fd = open(settings.mntsrc, O_RDONLY);
