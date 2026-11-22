@@ -878,7 +878,15 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             break;
         }
 
+        // If we don't fill `st` below, we still give `filler` the inode
+        // number and file type. Otherwise libfuse reports FUSE_UNKNOWN_INO.
+        // This matters when the kernel doesn't use readdirplus (e.g. FreeBSD).
         struct stat st;
+        memset(&st, 0, sizeof(st));
+        st.st_ino = de->d_ino;
+        #ifdef DTTOIF
+        st.st_mode = DTTOIF(de->d_type);
+        #endif
 
         if ((settings.resolve_symlinks && de->d_type == DT_LNK) || readdirplus) {
             int file_len = strlen(de->d_name) + 1;  // (include null terminator)
@@ -912,6 +920,11 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             path_buf.size -= file_len;
         }
 
+        // Match getattr_common's type change (it only ran above if readdirplus).
+        if (settings.block_devices_as_files && S_ISBLK(st.st_mode)) {
+            st.st_mode ^= S_IFBLK | S_IFREG;
+        }
+
         // See issue #28 for why we pass a 0 offset to `filler` and ignore
         // `offset`.
         //
@@ -920,9 +933,9 @@ static int bindfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         // errno in that case, so we zero it first and set it ourself if it
         // doesn't.
         #ifdef HAVE_FUSE_3
-        if (filler(buf, de->d_name, readdirplus ? &st : NULL, 0, fill_dir_flags) != 0) {
+        if (filler(buf, de->d_name, &st, 0, fill_dir_flags) != 0) {
         #else
-        if (filler(buf, de->d_name, readdirplus ? &st : NULL, 0) != 0) {
+        if (filler(buf, de->d_name, &st, 0) != 0) {
         #endif
             result = errno != 0 ? -errno : -EIO;
             break;

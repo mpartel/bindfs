@@ -1,3 +1,7 @@
+2026-11-22  Martin Pärtel <martin dot partel at gmail dot com>
+	* Give inode number to readdir when `!FUSE_READDIR_PLUS` (at least FreeBSD 14)
+	* Fixed `--block-devices-as-files` not applying on readdir.
+
 2026-01-20  Martin Pärtel <martin dot partel at gmail dot com>
 	* Merged build fix for MacFUSE (PR #180, thanks @slonopotamus!)
 	* Released 1.18.4
