@@ -6,6 +6,7 @@ name: Build and test
 on:
   pull_request:
   push:
+    branches: [master]
   schedule:
     - cron: '0 3 * * 5'  # Every Friday at 3am
   workflow_dispatch:
@@ -159,7 +160,6 @@ jobs:
       matrix:
         # TODO: automatically check that this list is up-to-date
         box:
-          - debian11
           - debian12
           - freebsd14
           - rockylinux9

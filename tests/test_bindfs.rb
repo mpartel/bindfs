@@ -30,21 +30,9 @@ require 'tempfile'
 
 include Errno
 
-$have_fuse_3 = Proc.new do
-  system("pkg-config --exists fuse3")
-  $?.success?
-end.call
 $have_fuse_3_readdir_bug = $have_fuse_3 && Proc.new do
   system("pkg-config --max-version=3.10.1 fuse3")
   $?.success?
-end.call
-
-$have_fuse_29 = !$have_fuse_3 && !$fuse_t && Proc.new do
-  v = `pkg-config --modversion fuse`.split('.')
-  raise "failed to get FUSE version with pkg-config" if v.size < 2
-  v = v.map(&:to_i)
-  v = [2, 8, 0]
-  v[0] > 2 || (v[0] == 2 && v[1] >= 9)
 end.call
 
 # FileUtils.chown turned out to be quite buggy in Ruby 1.8.7,
@@ -520,7 +508,7 @@ testenv("", :title => "preserves inode numbers") do
     assert { File.stat('mnt/dir').ino == File.stat('src/dir').ino }
 end
 
-if $have_fuse3 && !$have_fuse_3_readdir_bug  # https://github.com/libfuse/libfuse/issues/583
+if $have_fuse_3 && !$have_fuse_3_readdir_bug  # https://github.com/libfuse/libfuse/issues/583
     testenv("", :title => "preserves readdir inode numbers") do
         touch('src/file')
         mkdir('src/dir')
@@ -828,7 +816,7 @@ if $have_fuse_29 || $have_fuse_3
     system("#{$tests_dir}/fcntl_locker src/file mnt/file")
     raise "fcntl lock sharing test failed" unless $?.exitstatus == 1
   end
-end # have_fuse_29
+end # have_fuse_29 || have_fuse_3
 
 # Issue #37
 #
