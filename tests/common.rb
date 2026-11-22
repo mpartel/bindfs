@@ -29,10 +29,20 @@ File.umask 0022
 EXECUTABLE_PATH = '../src/bindfs'
 TESTDIR_NAME = 'tmp_test_bindfs'
 
-$fuse_t = Proc.new do
-    system("pkg-config --exists fuse-t")
-    $?.success?
-end.call
+# Which FUSE flavour bindfs was built against.
+# These mirror the HAVE_FUSE_* macros that ./configure wrote to config.h,
+# so tests see exactly what the bindfs binary sees.
+CONFIG_H_PATH = '../config.h'
+raise "#{CONFIG_H_PATH} not found. Run ./configure first." unless File.exist?(CONFIG_H_PATH)
+$config_h = File.read(CONFIG_H_PATH)
+
+def config_h_defined?(macro)
+    !!($config_h =~ /^#define #{macro}\b/)
+end
+
+$have_fuse_29 = config_h_defined?('HAVE_FUSE_29')
+$have_fuse_3 = config_h_defined?('HAVE_FUSE_3')
+$have_fuse_t = config_h_defined?('HAVE_FUSE_T')
 
 # If set to an array of test names, only those will be run
 $only_these_tests = nil
@@ -179,7 +189,7 @@ def testenv(bindfs_args, options = {}, &block)
     if !$?.success?
         # Known issue with fuse-t: unmount kills bindfs with "short read on fuse device" / SIGPIPE.
         # No idea why.
-        ignore = $?.signaled? && $?.termsig == Signal.list['PIPE'] && $fuse_t
+        ignore = $?.signaled? && $?.termsig == Signal.list['PIPE'] && $have_fuse_t
         unless ignore
             fail("exit status: #{$?}")
             testcase_ok = false
@@ -209,7 +219,7 @@ def root_testenv(bindfs_args, options = {}, &block)
         puts "--- #{bindfs_args} ---"
         puts "[  #{bindfs_args}  ]"
         puts "SKIP (requires root)"
-    elsif $fuse_t
+    elsif $have_fuse_t
         puts "--- #{bindfs_args} ---"
         puts "[  #{bindfs_args}  ]"
         puts "SKIP (fuse-t - several known issues, contributions to debugging them welcome)"
@@ -231,7 +241,7 @@ def nonroot_testenv(bindfs_args, options = {}, &block)
 end
 
 def umount_cmd
-    if $fuse_t
+    if $have_fuse_t
         'diskutil unmount force'
     elsif !`which fusermount3`.strip.empty?
         'fusermount3 -uz'
