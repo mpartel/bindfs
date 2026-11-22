@@ -2928,7 +2928,11 @@ int main(int argc, char *argv[])
         fuse_opt_add_arg(&args, "-ononempty");
 
     /* Open mount source for chrooting in bindfs_init */
+#ifdef O_DIRECTORY
+    settings.mntsrc_fd = open(settings.mntsrc, O_RDONLY | O_DIRECTORY);
+#else
     settings.mntsrc_fd = open(settings.mntsrc, O_RDONLY);
+#endif
     if (settings.mntsrc_fd == -1) {
         fprintf(stderr, "Could not open source directory\n");
         return 1;
