@@ -110,10 +110,8 @@
 
 #endif
 
-/* We pessimistically assume signed uid_t and gid_t in our overflow checks,
-   mostly because supporting both cases would require a bunch more code. */
-static const int64_t UID_T_MAX = ((1LL << (sizeof(uid_t)*8-1)) - 1);
-static const int64_t GID_T_MAX = ((1LL << (sizeof(gid_t)*8-1)) - 1);
+static const uint64_t UID_T_MAX = ((1ULL << (sizeof(uid_t)*8)) - 1);
+static const uint64_t GID_T_MAX = ((1ULL << (sizeof(gid_t)*8)) - 1);
 static const int UID_GID_OVERFLOW_ERRNO = EIO;
 
 /* SETTINGS */
@@ -242,7 +240,8 @@ static bool apply_uid_offset(uid_t *uid);
 static bool apply_gid_offset(gid_t *gid);
 static bool unapply_uid_offset(uid_t *uid);
 static bool unapply_gid_offset(gid_t *gid);
-static bool bounded_add(int64_t* a, int64_t b, int64_t max);
+static bool bounded_add(uint64_t* a, int64_t b, uint64_t max);
+static bool bounded_sub(uint64_t* a, int64_t b, uint64_t max);
 
 #ifdef __linux__
 static size_t round_up_buffer_size_for_direct_io(size_t size);
@@ -634,7 +633,7 @@ static int delete_file(const char *path, int (*target_delete_func)(const char *)
 }
 
 static bool apply_uid_offset(uid_t *uid) {
-    int64_t value = (int64_t)*uid;
+    uint64_t value = (uint64_t)*uid;
     if (bounded_add(&value, settings.uid_offset, UID_T_MAX)) {
         *uid = (uid_t)value;
         return true;
@@ -645,7 +644,7 @@ static bool apply_uid_offset(uid_t *uid) {
 }
 
 static bool apply_gid_offset(gid_t *gid) {
-    int64_t value = (int64_t)*gid;
+    uint64_t value = (uint64_t)*gid;
     if (bounded_add(&value, settings.gid_offset, GID_T_MAX)) {
         *gid = (uid_t)value;
         return true;
@@ -656,8 +655,8 @@ static bool apply_gid_offset(gid_t *gid) {
 }
 
 static bool unapply_uid_offset(uid_t *uid) {
-    int64_t value = (int64_t)*uid;
-    if (bounded_add(&value, -settings.uid_offset, UID_T_MAX)) {
+    uint64_t value = (uint64_t)*uid;
+    if (bounded_sub(&value, settings.uid_offset, UID_T_MAX)) {
         *uid = (uid_t)value;
         return true;
     } else {
@@ -667,8 +666,8 @@ static bool unapply_uid_offset(uid_t *uid) {
 }
 
 static bool unapply_gid_offset(gid_t *gid) {
-    int64_t value = (int64_t)*gid;
-    if (bounded_add(&value, -settings.gid_offset, GID_T_MAX)) {
+    uint64_t value = (uint64_t)*gid;
+    if (bounded_sub(&value, settings.gid_offset, GID_T_MAX)) {
         *gid = (uid_t)value;
         return true;
     } else {
@@ -677,9 +676,18 @@ static bool unapply_gid_offset(gid_t *gid) {
     }
 }
 
-static bool bounded_add(int64_t* a, int64_t b, int64_t max) {
-    int64_t result;
-    if (!__builtin_add_overflow(*a, b, &result) && 0 <= result && result <= max) {
+static bool bounded_add(uint64_t* a, int64_t b, uint64_t max) {
+    uint64_t result;
+    if (!__builtin_add_overflow(*a, b, &result) && result <= max) {
+        *a = result;
+        return true;
+    }
+    return false;
+}
+
+static bool bounded_sub(uint64_t* a, int64_t b, uint64_t max) {
+    uint64_t result;
+    if (!__builtin_sub_overflow(*a, b, &result) && result <= max) {
         *a = result;
         return true;
     }
